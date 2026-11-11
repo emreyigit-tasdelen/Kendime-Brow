@@ -1,35 +1,47 @@
 # Kendime-Brow
 
-Gizlilik odaklı, performanslı ve kaynak tasarruflu kişisel masaüstü web tarayıcısı.
-Teknik kullanıcıya (developer / power user) yönelik; dosya işleme ve uzak erişimde
-uzman araçlara yakın bir deneyim hedefler.
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-support-ea4aaa?logo=githubsponsors\&logoColor=white)](https://github.com/sponsors/emreyigit-tasdelen)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-ffdd00?logo=buymeacoffee\&logoColor=black)](https://buymeacoffee.com/emreyigit.tasdelen)
 
-> **Durum:** Mimari tasarım tamamlandı (CEF + Rust). Henüz kod yok.
+**English** · [Türkçe](README.tr.md)
 
-## Hedef modüller
+A privacy-focused, high-performance, resource-efficient personal desktop web browser.
+Aimed at technical users (developers / power users), it targets an experience close to
+specialist tools for file processing and remote access.
 
-- **PDF** — görüntüleme, düzenleme, form, imza, OCR, birleştir/böl, sıkıştırma, metin/tablo çıkarma
-- **Ofis belgeleri** — docx/xlsx/pptx/odt/ods/odp görüntüleme, düzenleme, dönüştürme
-- **Video ve fotoğraf** — önizleme, kırpma, codec/format dönüştürme, metadata/EXIF, toplu işleme
-- **Ağ analizi** — tarayıcının kendi trafiğini paket seviyesinde izleme, filtre dili, pcap
-- **Uzak bağlantı** — SSH, Telnet, SFTP, FTP, SCP, RDP; profiller, anahtar tabanlı kimlik, tünelleme
-- **VPN / Mesh** — WireGuard + self-hosted Headscale; "tek tıkla bağlan"
-- **Kendime-Brow Companion** — uzak uçlarda çalışan hafif servis (mesh istemcisi + RDP/SSH hazırlığı)
-- **Dosya yönetimi** — indirilenler, toplu işlemler, arşiv formatları
+> **Status:** Architecture design complete (CEF + Rust). No code yet.
 
-## Dokümanlar
+## Planned modules
 
-| Dosya | İçerik |
+- **PDF** — viewing, editing, forms, signatures, OCR, merge/split, compression, text/table extraction
+- **Office documents** — view, edit and convert docx/xlsx/pptx/odt/ods/odp
+- **Video and photo** — preview, trimming, codec/format conversion, metadata/EXIF, batch processing
+- **Network analysis** — packet-level inspection of the browser's own traffic, filter language, pcap
+- **Remote connections** — SSH, Telnet, SFTP, FTP, SCP, RDP; profiles, key-based auth, tunneling
+- **VPN / Mesh** — WireGuard + self-hosted Headscale; one-click connect
+- **Kendime-Brow Companion** — lightweight service on remote hosts (mesh client + RDP/SSH preparation)
+- **File management** — downloads, batch operations, archive formats
+
+## Documents
+
+| File | Contents |
 |---|---|
-| [ROADMAP.md](ROADMAP.md) | Fazlar, görevler, durumlar |
-| [ilerleme-notlari.md](ilerleme-notlari.md) | Karar günlüğü ve sonraki adımlar |
-| [docs/mimari.md](docs/mimari.md) | Mimari tasarım dokümanı |
+| [ROADMAP.md](ROADMAP.md) | Phases, tasks, statuses |
+| [PROGRESS.md](PROGRESS.md) | Decision log and next steps |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture design document |
 
-## Güvenlik notu
+## Security note
 
-Bu repoya anahtar, token, kişisel veri veya sunucu kimlik bilgisi konmaz.
-Yapılandırma örnekleri yalnızca `*.example` dosyaları olarak yer alır.
+No keys, tokens, personal data or server credentials are stored in this repository.
+Configuration samples exist only as `*.example` files.
 
-## Lisans
+## Support
+
+If you find this project useful, you can support its development:
+
+- GitHub Sponsors: <https://github.com/sponsors/emreyigit-tasdelen>
+- Buy Me a Coffee: <https://buymeacoffee.com/emreyigit.tasdelen>
+
+## License
 
 [Apache License 2.0](LICENSE) — © 2026 Emre Yiğit Taşdelen

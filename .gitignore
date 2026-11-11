@@ -1,4 +1,4 @@
-# --- Hassas veriler (ASLA commit edilmez) ---
+# --- Sensitive data (NEVER committed) ---
 .env
 .env.*
 !.env.example
@@ -25,13 +25,13 @@ headscale/noise_private.key
 derp*.key
 authkey*
 preauth*
-# Ağ yakalamaları ve oturum logları (kişisel veri içerebilir)
+# Network captures and session logs (may contain personal data)
 *.pcap
 *.pcapng
 *.har
 session-logs/
 
-# --- Build çıktıları ---
+# --- Build outputs ---
 out/
 build/
 dist/
@@ -54,7 +54,7 @@ obj/
 *.rpm
 *.AppImage
 
-# --- Bağımlılıklar / önbellekler ---
+# --- Dependencies / caches ---
 node_modules/
 .pnpm-store/
 .npm/
@@ -76,7 +76,7 @@ venv/
 .ccache/
 .sccache/
 
-# --- Tarayıcı kullanıcı verisi / profil ---
+# --- Browser user data / profiles ---
 User Data/
 user-data/
 profile/
@@ -100,10 +100,10 @@ crash-reports/
 Thumbs.db
 desktop.ini
 
-# --- Claude yerel ayarları ---
+# --- Claude local settings ---
 .claude/settings.local.json
 
-# --- Geçici ---
+# --- Temporary ---
 tmp/
 temp/
 *.tmp

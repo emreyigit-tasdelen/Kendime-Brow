@@ -1,172 +1,172 @@
 # Roadmap — Kendime-Brow
 
-Tüm işler buradan takip edilir. Tasarım ayrıntısı: [docs/mimari.md](docs/mimari.md)
-(parantez içindeki numaralar o dokümanın bölümleridir).
+All work is tracked here. Design details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+(numbers in parentheses refer to sections of that document).
 
-**Kural:** Bir görev biter bitmez (ne kadar küçük olursa olsun) durumu burada güncelle ve
-[ilerleme-notlari.md](ilerleme-notlari.md) → "Görev kayıtları" bölümüne giriş ekle, commit at.
+**Rule:** As soon as a task is finished (however small), update its status here, add an entry to
+[PROGRESS.md](PROGRESS.md) → "Task log", and commit.
 
-**Durumlar:** `[ ]` bekliyor · `[~]` devam ediyor · `[x]` bitti · `[!]` engelli / karar bekliyor · `[-]` iptal
+**Statuses:** `[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked / awaiting decision · `[-]` cancelled
 
-**Şu anki faz:** Faz 0 tamamlandı. Sıradaki iş: Faz 1, görev 1.1.
+**Current phase:** Phase 0 complete. Next: Phase 1, task 1.1.
 
-**Platform kuralı (mimari §3.8):** Çok platformlu, öncelik yok. Her görev önce Windows'ta, sonra
-Ubuntu VM'de doğrulanır; her faz Ubuntu'da da çalışmadan "bitti" sayılmaz. macOS en son (Faz 7).
+**Platform rule (architecture §3.8):** Cross-platform, no primary platform. Every task is verified first
+on Windows, then in an Ubuntu VM; no phase counts as "done" until it also works on Ubuntu. macOS comes last (Phase 7).
 
 ---
 
-## Faz 0 — Kurulum ve mimari tasarım (kod yok)
+## Phase 0 — Setup and architecture design (no code)
 
-- [x] 0.1 Çalışma klasörü, git, public GitHub repo
+- [x] 0.1 Working folder, git, public GitHub repo
 - [x] 0.2 LICENSE (Apache 2.0), .gitignore, README
-- [x] 0.3 Roadmap ve ilerleme notları iskeleti
-- [x] 0.4 Teknoloji temeli kararı → CEF + Rust
-- [x] 0.5 `docs/mimari.md` — tam mimari tasarım dokümanı
-- [x] 0.6 Ek özellik seçimi (mimari §12) → P1 listesi kapsamda; P2 ertelendi, P3 kapsam dışı
-- [x] 0.7 Faz 1+ görevlerinin ayrıntılandırılması (bu dosya)
-- [x] 0.8 Mimari onayı + teyitler → çok platformlu (Windows → Ubuntu → macOS); LICENSE adı doğru
+- [x] 0.3 Roadmap and progress notes skeleton
+- [x] 0.4 Technology foundation decision → CEF + Rust
+- [x] 0.5 `docs/ARCHITECTURE.md` — full architecture design document
+- [x] 0.6 Extra feature selection (architecture §12) → P1 list in scope; P2 deferred, P3 out of scope
+- [x] 0.7 Detailing Phase 1+ tasks (this file)
+- [x] 0.8 Architecture approval + confirmations → cross-platform (Windows → Ubuntu → macOS); LICENSE name correct
 
-## Faz 1 — Temel tarayıcı kabuğu
+## Phase 1 — Basic browser shell
 
-Çıktı: gezilebilen, sekmeli, kendi arayüzü olan pencere. Sürüm `0.1`.
+Output: a navigable, tabbed window with its own UI. Version `0.1`.
 
-- [ ] 1.1 **Doğrulama (spike):** V1, V3, V4 — CEF binary indir, Rust `cef` crate ile tek pencere aç, codec durumunu test et (§2, §14)
-- [ ] 1.1b **Doğrulama:** V13 — aynı denemeyi Ubuntu VM'de tekrarla
-- [ ] 1.2 **Doğrulama:** V2 — codec'li kendi CEF build'i denemesi; sonuca göre karar kaydı
-- [ ] 1.3 Workspace iskeleti: `kb-platform` crate'i dahil `crates/`, `ui/`, `proto/`, `scripts/`, `justfile`, `cef.lock` (§13)
-- [ ] 1.4 CI (Windows + Ubuntu matrisi): fmt, clippy, test, `cargo-deny` lisans denetimi, `gitleaks` (§13)
-- [ ] 1.5 `kb://` özel şema + gömülü varlıklar + CSP (§3.4)
-- [ ] 1.6 Pencere düzeni (CEF Views), sekme oluştur/kapat/değiştir, gezinme (§2.4)
-- [ ] 1.7 `kb://ui`: sekme şeridi, adres çubuğu, geri/ileri/yenile (§3.4)
-- [ ] 1.8 Arayüz ↔ kabuk köprüsü (message router, yalnız `kb://` kökenine açık) (§3.3)
-- [ ] 1.9 `kb-ipc`: named pipe (Windows) + Unix socket (Linux) taşıma, protobuf, belirteçli el sıkışma (§3.3)
-- [ ] 1.10 Modül konağı başlatıcı (Windows): AppContainer/kısıtlı token + Job Object, çökünce yeniden başlatma (§3.2)
-- [ ] 1.10b **Doğrulama:** V14 → modül konağı sandbox'ı (Linux): user namespace + seccomp + Landlock (§3.8)
-- [ ] 1.11 Eylem kaydı + komut paleti (§3.5)
-- [ ] 1.12 Profil, ayarlar (`kb://settings`), `kb.sqlite`: yer imleri, geçmiş, oturum geri yükleme (§3.7)
-- [ ] 1.13 İndirme yöneticisi (temel) (§8.3)
-- [ ] 1.14 Paketleme: Windows kurucu + Linux `.deb`/AppImage, tek görev çubuğu simgesi, `just install-dev` (§13)
-- [ ] 1.15 Faz kapanışı: tüm Faz 1 işlevlerinin Ubuntu VM'de doğrulanması
+- [ ] 1.1 **Validation (spike):** V1, V3, V4 — download CEF binary, open a single window with the Rust `cef` crate, test codec status (§2, §14)
+- [ ] 1.1b **Validation:** V13 — repeat the same experiment in the Ubuntu VM
+- [ ] 1.2 **Validation:** V2 — try our own CEF build with codecs; record a decision based on the result
+- [ ] 1.3 Workspace skeleton: `crates/` (including the `kb-platform` crate), `ui/`, `proto/`, `scripts/`, `justfile`, `cef.lock` (§13)
+- [ ] 1.4 CI (Windows + Ubuntu matrix): fmt, clippy, test, `cargo-deny` license check, `gitleaks` (§13)
+- [ ] 1.5 `kb://` custom scheme + embedded assets + CSP (§3.4)
+- [ ] 1.6 Window layout (CEF Views), create/close/switch tabs, navigation (§2.4)
+- [ ] 1.7 `kb://ui`: tab strip, address bar, back/forward/reload (§3.4)
+- [ ] 1.8 UI ↔ shell bridge (message router, open only to the `kb://` origin) (§3.3)
+- [ ] 1.9 `kb-ipc`: named pipe (Windows) + Unix socket (Linux) transport, protobuf, token-based handshake (§3.3)
+- [ ] 1.10 Module host launcher (Windows): AppContainer/restricted token + Job Object, restart on crash (§3.2)
+- [ ] 1.10b **Validation:** V14 → module host sandbox (Linux): user namespace + seccomp + Landlock (§3.8)
+- [ ] 1.11 Action registry + command palette (§3.5)
+- [ ] 1.12 Profile, settings (`kb://settings`), `kb.sqlite`: bookmarks, history, session restore (§3.7)
+- [ ] 1.13 Download manager (basic) (§8.3)
+- [ ] 1.14 Packaging: Windows installer + Linux `.deb`/AppImage, single taskbar icon, `just install-dev` (§13)
+- [ ] 1.15 Phase close: verify all Phase 1 features in the Ubuntu VM
 
-## Faz 2 — Gizlilik ve performans çekirdeği
+## Phase 2 — Privacy and performance core
 
-Çıktı: günlük kullanılabilir, Chrome'dan hafif ve reklamsız tarayıcı. Sürüm `0.2`.
+Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 
-- [ ] 2.1 Google servislerini kapatan bayrak/tercih seti + "sıfır istenmeyen bağlantı" CI testi (§4.1)
-- [ ] 2.2 `kb-privacy`: adblock-rust entegrasyonu, istek engelleme (§4.2)
-- [ ] 2.3 Filtre listesi yönetimi + güncelleme, kozmetik filtreleme, scriptlet'ler (§4.2)
-- [ ] 2.4 İzleme parametresi temizleme, site başına kalkan düğmesi (§4.2)
-- [ ] 2.5 Konteynerler (ayrı `CefRequestContext`), gizli pencere, üçüncü taraf çerez engeli (§4.3)
-- [ ] 2.6 **Doğrulama:** V6 → parmak izi koruması enjeksiyonu, Standart/Sıkı seviyeler (§4.4)
-- [ ] 2.7 HTTPS-Only, DoH, WebRTC politikası, ön yükleme kapatma, konteyner başına proxy (§4.5)
-- [ ] 2.8 **Doğrulama:** V7 → sekme yaşam döngüsü: dondurma, atma, uyku, istisnalar (§5.2)
-- [ ] 2.9 Bellek baskısı tepkisi, pil/ölçülü bağlantı modları (§5.2, §5.4)
-- [ ] 2.10 Kaynak monitörü + `kb://tasks` (§5.5)
-- [ ] 2.11 Performans ölçüm betikleri, bütçelerin CI'da izlenmesi (§5.1)
-- [ ] 2.12 Otomatik güncelleyici (imzalı) (§13)
+- [ ] 2.1 Flag/preference set disabling Google services + "zero unwanted connections" CI test (§4.1)
+- [ ] 2.2 `kb-privacy`: adblock-rust integration, request blocking (§4.2)
+- [ ] 2.3 Filter list management + updates, cosmetic filtering, scriptlets (§4.2)
+- [ ] 2.4 Tracking parameter stripping, per-site shield button (§4.2)
+- [ ] 2.5 Containers (separate `CefRequestContext`), private window, third-party cookie blocking (§4.3)
+- [ ] 2.6 **Validation:** V6 → fingerprinting protection injection, Standard/Strict levels (§4.4)
+- [ ] 2.7 HTTPS-Only, DoH, WebRTC policy, disable preloading, per-container proxy (§4.5)
+- [ ] 2.8 **Validation:** V7 → tab lifecycle: freezing, discarding, sleeping, exceptions (§5.2)
+- [ ] 2.9 Memory pressure response, battery/metered connection modes (§5.2, §5.4)
+- [ ] 2.10 Resource monitor + `kb://tasks` (§5.5)
+- [ ] 2.11 Performance measurement scripts, budgets tracked in CI (§5.1)
+- [ ] 2.12 Auto-updater (signed) (§13)
 
-## Faz 3 — Dosya işleme modülleri
+## Phase 3 — File processing modules
 
-Her alt grup bağımsız yayınlanabilir. Sürüm `0.3`–`0.5`.
+Each subgroup can be released independently. Versions `0.3`–`0.5`.
 
 **3A — PDF (§6)**
-- [ ] 3A.1 `kb-doc` konağı + PDFium render, `kb://pdf` görüntüleyici (döşeme, yakınlaştırma, arama)
-- [ ] 3A.2 Birleştir / böl / sırala / döndür (lopdf)
-- [ ] 3A.3 Form doldurma, açıklama ekleme
-- [ ] 3A.4 qpdf: şifreleme, parola kaldırma, doğrusallaştırma, onarım
-- [ ] 3A.5 Sıkıştırma: görsel yeniden örnekleme (DPI), renk profili (lcms2)
-- [ ] 3A.6 OCR hattı (Tesseract) + dil paketi indirme
-- [ ] 3A.7 Metin ve tablo çıkarma
-- [ ] 3A.8 İmzalama (PAdES-B-B) + imza doğrulama
-- [ ] 3A.9 Toplu işlem + eylem kaydına tüm PDF eylemleri
+- [ ] 3A.1 `kb-doc` host + PDFium rendering, `kb://pdf` viewer (tiling, zoom, search)
+- [ ] 3A.2 Merge / split / reorder / rotate (lopdf)
+- [ ] 3A.3 Form filling, annotations
+- [ ] 3A.4 qpdf: encryption, password removal, linearization, repair
+- [ ] 3A.5 Compression: image resampling (DPI), color profile (lcms2)
+- [ ] 3A.6 OCR pipeline (Tesseract) + language pack download
+- [ ] 3A.7 Text and table extraction
+- [ ] 3A.8 Signing (PAdES-B-B) + signature verification
+- [ ] 3A.9 Batch processing + all PDF actions in the action registry
 
-**3B — Ofis (§7)**
-- [ ] 3B.1 `calamine` ile hızlı tablo önizleme (7a)
-- [ ] 3B.2 Bileşen indirici (LibreOffice), `kb-doc-lok` alt süreci
-- [ ] 3B.3 LOK döşeme render + `kb://office` görüntüleyici (7b)
-- [ ] 3B.4 Format dönüştürme + toplu dönüştürme (7b)
-- [ ] 3B.5 Yerinde düzenleme: girdi olayları, UNO komutlu araç çubuğu (7c)
-- [ ] 3B.6 Stil/şablon yöneticisi, formül çubuğu, makro politikası (7d)
+**3B — Office (§7)**
+- [ ] 3B.1 Fast spreadsheet preview with `calamine` (7a)
+- [ ] 3B.2 Component downloader (LibreOffice), `kb-doc-lok` subprocess
+- [ ] 3B.3 LOK tile rendering + `kb://office` viewer (7b)
+- [ ] 3B.4 Format conversion + batch conversion (7b)
+- [ ] 3B.5 In-place editing: input events, UNO-command toolbar (7c)
+- [ ] 3B.6 Style/template manager, formula bar, macro policy (7d)
 
-**3C — Medya ve dosyalar (§8)**
-- [ ] 3C.1 `kb-media` konağı + FFmpeg bileşeni, `ffprobe` ile bilgi paneli
-- [ ] 3C.2 Video: kırpma, dönüştürme, hazır ayarlar, ham argüman düzenleyici, kuyruk
-- [ ] 3C.3 Fotoğraf: görüntüleyici, yıkıcı olmayan düzenleme, format dönüştürme
-- [ ] 3C.4 **Doğrulama:** V11 → metadata/EXIF görüntüleme ve seçici silme
-- [ ] 3C.5 RAW, AVIF, JXL, HEIC desteği; renk yönetimi
-- [ ] 3C.6 `kb://files`: çift panelli gezgin, sürükle-bırak, arşiv (libarchive)
-- [ ] 3C.7 İndirilenler: otomatik checksum, "şununla aç" eylemleri, kurallar
+**3C — Media and files (§8)**
+- [ ] 3C.1 `kb-media` host + FFmpeg component, info panel via `ffprobe`
+- [ ] 3C.2 Video: trimming, conversion, presets, raw argument editor, queue
+- [ ] 3C.3 Photo: viewer, non-destructive editing, format conversion
+- [ ] 3C.4 **Validation:** V11 → metadata/EXIF viewing and selective removal
+- [ ] 3C.5 RAW, AVIF, JXL, HEIC support; color management
+- [ ] 3C.6 `kb://files`: dual-pane explorer, drag and drop, archives (libarchive)
+- [ ] 3C.7 Downloads: automatic checksum, "open with" actions, rules
 
-## Faz 4 — Uzak bağlantı ve ağ analizi
+## Phase 4 — Remote connections and network analysis
 
-Sürüm `0.6`–`0.7`.
+Versions `0.6`–`0.7`.
 
-**4A — Kasa ve uzak bağlantı (§10)**
-- [ ] 4A.1 `kb-vault`: kasa biçimi, keyring, ana parola, otomatik kilit (§10.2)
-- [ ] 4A.2 Terminal altyapısı: xterm.js, `kb://term`, yerel kabuk (ConPTY)
-- [ ] 4A.3 SSH (russh): parola + anahtar (kasa imzalama), `known_hosts`
-- [ ] 4A.4 Bağlantı profilleri + içe aktarma (`ssh config`, PuTTY, `.rdp`) (§10.3)
-- [ ] 4A.5 SFTP/SCP → `kb://files` uzak panel
-- [ ] 4A.6 Tünelleme (yerel/uzak/dinamik) + konteyner proxy bağlama (§10.4)
+**4A — Vault and remote connections (§10)**
+- [ ] 4A.1 `kb-vault`: vault format, keyring, master password, auto-lock (§10.2)
+- [ ] 4A.2 Terminal infrastructure: xterm.js, `kb://term`, local shell (ConPTY)
+- [ ] 4A.3 SSH (russh): password + key (vault signing), `known_hosts`
+- [ ] 4A.4 Connection profiles + import (`ssh config`, PuTTY, `.rdp`) (§10.3)
+- [ ] 4A.5 SFTP/SCP → `kb://files` remote pane
+- [ ] 4A.6 Tunneling (local/remote/dynamic) + container proxy binding (§10.4)
 - [ ] 4A.7 Telnet, FTP/FTPS
-- [ ] 4A.8 **Doğrulama:** V8 → RDP (IronRDP), yerel alt pencere render, pano
-- [ ] 4A.9 Çoklu oturum: bölünmüş panel, gruplar, broadcast, şifreli oturum logu (§10.5)
+- [ ] 4A.8 **Validation:** V8 → RDP (IronRDP), native child window rendering, clipboard
+- [ ] 4A.9 Multi-session: split panes, groups, broadcast, encrypted session log (§10.5)
 
-**4B — Ağ analizi (§9)**
-- [ ] 4B.1 `kb-net` + CDP Network gözlemcisi, `kb://net` istek listesi ve ayrıntı
-- [ ] 4B.2 NetLog entegrasyonu (DNS/TLS/soket olayları)
-- [ ] 4B.3 Filtre dili (DSL) + alan kaydı
-- [ ] 4B.4 HAR/cURL dışa aktarma, isteği düzenle–tekrar gönder
-- [ ] 4B.5 `kb-capture`: Npcap/pktmon yakalama, tarayıcıya özel filtreleme
-- [ ] 4B.6 TLS anahtar günlüğü + pcapng (DSB) yazma
-- [ ] 4B.7 Protokol ayrıştırıcılar, akış birleştirme, üç bölmeli görünüm, istatistikler
+**4B — Network analysis (§9)**
+- [ ] 4B.1 `kb-net` + CDP Network observer, `kb://net` request list and details
+- [ ] 4B.2 NetLog integration (DNS/TLS/socket events)
+- [ ] 4B.3 Filter language (DSL) + field registry
+- [ ] 4B.4 HAR/cURL export, edit-and-resend request
+- [ ] 4B.5 `kb-capture`: Npcap/pktmon capture, browser-specific filtering
+- [ ] 4B.6 TLS key log + pcapng (DSB) writing
+- [ ] 4B.7 Protocol dissectors, stream reassembly, three-pane view, statistics
 
-## Faz 5 — VPN/Mesh, Companion, Headscale
+## Phase 5 — VPN/Mesh, Companion, Headscale
 
-Sürüm `0.8`. (§11)
+Version `0.8`. (§11)
 
-- [ ] 5.1 `docs/sunucu-kurulum.md`: Headscale kurulum + sertleştirme + yedek/geri yükleme adımları; `deploy/headscale/*.example`
-- [ ] 5.2 Sunucu kurulumu (kullanıcıyla birlikte; kimlik bilgileri repoya girmez)
-- [ ] 5.3 **Doğrulama:** V10 → `kb-mesh` (Go/tsnet): Up/Down/Status/Dial, durum kasada
-- [ ] 5.4 `kb://mesh`: kurulum sihirbazı, cihaz listesi, yol türü/gecikme
-- [ ] 5.5 `kb-remote` ağ yolu = mesh; SOCKS5 → konteyner proxy
-- [ ] 5.6 **Doğrulama:** V9 → `kb-companion`: tsnet düğümü, servis vekili, Windows servisi
-- [ ] 5.7 Companion hazırlık denetçisi + durum API'si
-- [ ] 5.8 Companion kurucu + kayıt akışı (ön anahtar)
-- [ ] 5.9 Tek tıkla bağlan (RDP/SSH/SFTP) uçtan uca
-- [ ] 5.10 ACL şablonu, Headscale yönetim paneli (isteğe bağlı)
+- [ ] 5.1 `docs/SERVER-SETUP.md`: Headscale installation + hardening + backup/restore steps; `deploy/headscale/*.example`
+- [ ] 5.2 Server setup (together with the user; credentials never enter the repo)
+- [ ] 5.3 **Validation:** V10 → `kb-mesh` (Go/tsnet): Up/Down/Status/Dial, state in the vault
+- [ ] 5.4 `kb://mesh`: setup wizard, device list, path type/latency
+- [ ] 5.5 `kb-remote` network path = mesh; SOCKS5 → container proxy
+- [ ] 5.6 **Validation:** V9 → `kb-companion`: tsnet node, service proxy, Windows service
+- [ ] 5.7 Companion readiness checker + status API
+- [ ] 5.8 Companion installer + enrollment flow (pre-auth key)
+- [ ] 5.9 One-click connect (RDP/SSH/SFTP) end to end
+- [ ] 5.10 ACL template, Headscale admin panel (optional)
 
-## Faz 6 — Ek teknik kullanıcı araçları
+## Phase 6 — Extra power-user tools
 
-Kapsam: P1 listesi (0.6 kararı). Sürüm `0.9`.
+Scope: P1 list (decision 0.6). Version `0.9`.
 
-P1'in diğer maddeleri önceki fazlarda zaten var: komut paleti → 1.11, kaynak monitörü → 2.10,
-yerel terminal → 4A.2, arşiv → 3C.6, checksum → 3C.7.
+The other P1 items already exist in earlier phases: command palette → 1.11, resource monitor → 2.10,
+local terminal → 4A.2, archives → 3C.6, checksum → 3C.7.
 
-- [ ] 6.1 Şifre yöneticisi: `kb-vault` üzerine giriş kayıtları, parola üretici, `kb://vault` arayüzü
-- [ ] 6.2 Şifre yöneticisi: güvenli otomatik doldurma (köken eşleştirme, yalnız kullanıcı eylemiyle)
-- [ ] 6.3 Şifre yöneticisi: KeePass (KDBX) ve CSV içe/dışa aktarma
-- [ ] 6.4 `kb://tools`: regex test, JSON biçimle/sorgula, hash, base64/URL/JWT kodlama; hepsi eylem kaydında
-- [ ] 6.5 Kullanıcı scriptleri: yönetici, `@match`, `GM_*` alt kümesi, düzenleyici (CodeMirror)
-- [ ] 6.6 **Doğrulama:** V5 → Chrome eklentisi (MV3) yükleme, en iyi çaba
+- [ ] 6.1 Password manager: login entries on top of `kb-vault`, password generator, `kb://vault` UI
+- [ ] 6.2 Password manager: secure autofill (origin matching, only on user action)
+- [ ] 6.3 Password manager: KeePass (KDBX) and CSV import/export
+- [ ] 6.4 `kb://tools`: regex tester, JSON format/query, hash, base64/URL/JWT encoding; all in the action registry
+- [ ] 6.5 User scripts: manager, `@match`, `GM_*` subset, editor (CodeMirror)
+- [ ] 6.6 **Validation:** V5 → Chrome extension (MV3) loading, best effort
 
-Not: Faz 2–6'daki her görev, platforma özgü parçasını `kb-platform` üzerinden iki platformda da
-uygular (keyring, PTY, bellek baskısı, paket yakalama, servis kurulumu — tablo: mimari §3.8).
-Her fazın son adımı Ubuntu doğrulamasıdır.
+Note: every task in Phases 2–6 implements its platform-specific part on both platforms via `kb-platform`
+(keyring, PTY, memory pressure, packet capture, service installation — table: architecture §3.8).
+The last step of every phase is Ubuntu verification.
 
-## Faz 7 — macOS (donanım bulunduğunda)
+## Phase 7 — macOS (when hardware is available)
 
-- [ ] 7.1 **Doğrulama:** macOS'ta CEF uygulama paketi + yardımcı süreçler, tek pencere
-- [ ] 7.2 `kb-platform` macOS uygulamaları: sandbox, Keychain, Touch ID, PTY, bellek baskısı
-- [ ] 7.3 Companion: launchd daemon, SSH/Ekran Paylaşımı hazırlık denetimi; V15 kararı (VNC)
-- [ ] 7.4 İmzalama, noterleştirme, `.dmg`; CI matrisine macOS
-- [ ] 7.5 Tüm modüllerin macOS'ta doğrulanması
+- [ ] 7.1 **Validation:** CEF app bundle + helper processes on macOS, single window
+- [ ] 7.2 `kb-platform` macOS implementations: sandbox, Keychain, Touch ID, PTY, memory pressure
+- [ ] 7.3 Companion: launchd daemon, SSH/Screen Sharing readiness check; V15 decision (VNC)
+- [ ] 7.4 Signing, notarization, `.dmg`; macOS in the CI matrix
+- [ ] 7.5 Verify all modules on macOS
 
-## Ertelenenler (P2 — Faz 6 bitince yeniden değerlendirilecek)
+## Deferred (P2 — to be re-evaluated after Phase 6)
 
-REST/API istemcisi · şifreli senkronizasyon · port tarayıcı/ping/traceroute · genel OCR ·
-toplu yeniden adlandırma · ekran kaydı + GIF
+REST/API client · encrypted sync · port scanner/ping/traceroute · general OCR ·
+batch renaming · screen recording + GIF
 
-## Kapsam dışı (P3)
+## Out of scope (P3)
 
-Git entegrasyonu · ses dosyası düzenleyici (dönüştürme/kırpma 3C.2 ile zaten geliyor)
+Git integration · audio editor (conversion/trimming already comes with 3C.2)
