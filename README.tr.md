@@ -31,11 +31,13 @@ uzman araçlara yakın bir deneyim hedefler.
 | [ROADMAP.md](ROADMAP.md) | Fazlar, görevler, durumlar |
 | [PROGRESS.md](PROGRESS.md) | Karar günlüğü ve sonraki adımlar |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Mimari tasarım dokümanı |
+| [SECURITY.md](SECURITY.md) | Hassas veri politikası ve koruma katmanları |
 
 ## Güvenlik notu
 
 Bu repoya anahtar, token, kişisel veri veya sunucu kimlik bilgisi konmaz.
 Yapılandırma örnekleri yalnızca `*.example` dosyaları olarak yer alır.
+Politika ve uygulanan koruma katmanları için [SECURITY.md](SECURITY.md) (İngilizce).
 
 ## Destek
 

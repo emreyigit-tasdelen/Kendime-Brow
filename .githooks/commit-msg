@@ -1,0 +1,10 @@
+#!/bin/sh
+# Blocks AI attribution lines and non-noreply author emails.
+if grep -qiE '^(Co-Authored-By:.*(claude|anthropic)|.*Generated with \[?Claude)' "$1"; then
+  echo "commit-msg: AI attribution lines are not allowed in this repo." >&2
+  exit 1
+fi
+case "$(git config user.email)" in
+  *@users.noreply.github.com) ;;
+  *) echo "commit-msg: author email must be the GitHub noreply address." >&2; exit 1 ;;
+esac

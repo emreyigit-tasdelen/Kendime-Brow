@@ -1,0 +1,15 @@
+# gitleaks configuration: default rules + project-specific rules.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "personal-email"
+description = "Email address (only noreply/example addresses are allowed in this public repo)"
+regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'''
+[[rules.allowlists]]
+regexes = ['''@users\.noreply\.github\.com''', '''noreply@''', '''@example\.(com|org|net)''']
+
+[[rules]]
+id = "private-key-file-content"
+description = "WireGuard / Headscale private key line"
+regex = '''(?i)(PrivateKey|private_key)\s*[=:]\s*[A-Za-z0-9+/=]{40,}'''

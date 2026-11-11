@@ -14,7 +14,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 - **Note-taking rule:** As soon as EVERY task/step in the roadmap is finished (however small), add an entry to the "Task log" section below: which task, what was done, decisions made, next step. No task is skipped; this file is the single source of continuity after `/clear` or running out of tokens. When an entry is added, the ROADMAP status is also updated and a commit is made.
 
-- The repo is public. Keys, tokens, personal data and Headscale credentials never enter the repo; `git diff --cached` is checked before every commit.
+- The repo is public. Keys, tokens, personal data and Headscale credentials never enter the repo. Enforced by the layers in [SECURITY.md](SECURITY.md); after cloning run `git config core.hooksPath .githooks`.
 - The commit identity is the GitHub noreply address (no personal email in the public repo).
 - Claude never appears as a contributor: no `Co-Authored-By` or "Generated with" attribution lines in commits or PRs.
 - License is Apache 2.0. The license compatibility of every added library is noted in the architecture document (GPL/AGPL components are isolated in separate processes).
@@ -36,6 +36,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### Sensitive data protection (2026-11-12)
+- **Done:** Added `SECURITY.md` (policy + 7 protection layers + leak response). Local hooks in `.githooks/` (gitleaks `pre-commit` with `.gitleaks.toml` incl. personal-email rule; `commit-msg` blocking AI attribution and non-noreply emails), tested with fake data. Enabled GitHub secret scanning + push protection. Added CI workflow `.github/workflows/secret-scan.yml` (full-history gitleaks + author check). User enabled the GitHub email privacy push block.
+- **Decision:** Layered defense; on a leak, revoke first, then rewrite history.
+- **Next step:** Phase 1.1.
 
 ### Docs in English + sponsor links (2026-11-12)
 - **Done:** `README.md` rewritten in English (default) with GitHub Sponsors / Buy Me a Coffee badges and a Support section; `README.tr.md` added as the Turkish translation. `ROADMAP.md`, this file and the architecture document translated to English. Renamed `ilerleme-notlari.md` → `PROGRESS.md`, `docs/mimari.md` → `docs/ARCHITECTURE.md`. Added `.github/FUNDING.yml`. GitHub repo description set in English.

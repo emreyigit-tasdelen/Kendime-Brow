@@ -29,11 +29,13 @@ specialist tools for file processing and remote access.
 | [ROADMAP.md](ROADMAP.md) | Phases, tasks, statuses |
 | [PROGRESS.md](PROGRESS.md) | Decision log and next steps |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture design document |
+| [SECURITY.md](SECURITY.md) | Sensitive data policy and protection layers |
 
 ## Security note
 
 No keys, tokens, personal data or server credentials are stored in this repository.
 Configuration samples exist only as `*.example` files.
+See [SECURITY.md](SECURITY.md) for the policy and the enforced protection layers.
 
 ## Support
 
