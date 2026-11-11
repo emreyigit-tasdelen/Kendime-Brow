@@ -11,7 +11,7 @@ uzman araçlara yakın bir deneyim hedefler.
 
 > Not: Projenin tüm dokümanları İngilizcedir; bu dosya README.md'nin Türkçe çevirisidir.
 
-> **Durum:** Mimari tasarım tamamlandı (CEF + Rust). Henüz kod yok.
+> **Durum:** Faz 1 sürüyor — Cargo workspace ve ilk CEF penceresi (CEF + Rust).
 
 ## Hedef modüller
 

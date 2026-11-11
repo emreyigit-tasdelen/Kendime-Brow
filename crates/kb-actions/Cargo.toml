@@ -1,0 +1,7 @@
+[package]
+name = "kb-actions"
+description = "Action registry types and chain executor (architecture §3.5)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true

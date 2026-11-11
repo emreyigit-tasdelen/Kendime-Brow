@@ -1,0 +1,6 @@
+# Pinned CEF version (architecture §2.5). Update together with the `cef` crate in Cargo.toml.
+cef_crate = "156.4.0"
+cef_version = "156.0.26+g8ea0c73"
+chromium_version = "156.0.8078.88"
+windows64_minimal_archive = "cef_binary_156.0.26+g8ea0c73+chromium-156.0.8078.88_windows64_minimal.tar.bz2"
+windows64_minimal_sha1 = "15d29eea209d857c22dc163706080295aea69b5c"

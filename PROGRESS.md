@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.3 workspace skeleton, then 1.4 CI, then 1.5+ in order.
+- **Next step:** 1.4 CI, then 1.5+ in order.
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
 - **Platform:** Cross-platform, no primary platform. Verification order Windows → Ubuntu (local VM; Kali also available) → macOS (if hardware becomes available).
@@ -38,6 +38,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.3 Workspace skeleton — DONE (2026-11-12)
+- **Done:** Root `Cargo.toml` workspace (resolver 3, edition 2024, `cef = "=156.4.0"` pinned), `cef.lock` (CEF 156.0.26, Chromium 156.0.8078.88, archive SHA-1). Crates: `kb-shell` (binary `kendime-brow` + `kb-shell-helper`, bootstrapped from the spike, default page `about:blank`), `kb-platform` (platform detection + data directory per §3.7/§3.8, tested), `kb-ipc` (4-byte length-prefixed framing, tested), `kb-actions` (action registry, search, chain type-checking, tested). `ui/`, `proto/`, `scripts/` placeholders, `justfile` (build/dev/test/check/scan). 11 tests pass; fmt + clippy `-D warnings` clean; the shell window opens.
+- **Decision:** Crates are added only when their task starts (no empty `kb-vault`, `kb-doc` … yet). macOS code from cefsimple stays in `kb-shell/src/shared` until 1.6 replaces it.
+- **Next step:** 1.4.
 
 ### 1.1 CEF + Rust spike — DONE (2026-11-12)
 - **Done:** `spikes/cef-spike`: cefsimple port on `cef = 156.4.0` (Chromium 156), builds with MSVC + CMake + Ninja (installed via winget). A single window opens in Chrome style and in Alloy style. Results in `spikes/cef-spike/README.md`.

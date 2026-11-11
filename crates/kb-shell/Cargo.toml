@@ -1,0 +1,31 @@
+[package]
+name = "kb-shell"
+description = "Kendime-Brow browser main process: window, tabs, request filter, action registry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "kendime-brow"
+path = "src/main.rs"
+
+[[bin]]
+name = "kb-shell-helper"
+path = "src/bin/kb-shell-helper.rs"
+
+[features]
+default = []
+sandbox = ["cef/sandbox"]
+linux-x11 = ["x11-dl"]
+
+[dependencies]
+cef.workspace = true
+kb-platform.workspace = true
+kb-actions.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+x11-dl = { workspace = true, optional = true }

@@ -9,7 +9,7 @@ A privacy-focused, high-performance, resource-efficient personal desktop web bro
 Aimed at technical users (developers / power users), it targets an experience close to
 specialist tools for file processing and remote access.
 
-> **Status:** Architecture design complete (CEF + Rust). No code yet.
+> **Status:** Phase 1 in progress — Cargo workspace and a first CEF window (CEF + Rust).
 
 ## Planned modules
 

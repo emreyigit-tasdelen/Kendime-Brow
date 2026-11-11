@@ -1,0 +1,23 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/emreyigit-tasdelen/Kendime-Brow"
+publish = false
+
+[workspace.dependencies]
+# Pinned together with cef.lock — update both at once.
+cef = { version = "=156.4.0", features = ["build-util"] }
+windows-sys = "0.60"
+x11-dl = "2"
+kb-platform = { path = "crates/kb-platform" }
+kb-ipc = { path = "crates/kb-ipc" }
+kb-actions = { path = "crates/kb-actions" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

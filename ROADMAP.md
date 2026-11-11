@@ -33,7 +33,7 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 - [x] 1.1 **Validation (spike):** V1, V3, V4 — download CEF binary, open a single window with the Rust `cef` crate, test codec status (§2, §14) → V1, V3, V4 confirmed (`spikes/cef-spike`)
 - [!] 1.1b **Validation:** V13 — repeat the same experiment in the Ubuntu VM → blocked: needs SSH access to the Ubuntu VM (user)
 - [!] 1.2 **Validation:** V2 — try our own CEF build with codecs; record a decision based on the result → blocked: Chromium checkout needs ~100+ GB, only ~60 GB free on D:
-- [ ] 1.3 Workspace skeleton: `crates/` (including the `kb-platform` crate), `ui/`, `proto/`, `scripts/`, `justfile`, `cef.lock` (§13)
+- [x] 1.3 Workspace skeleton: `crates/` (including the `kb-platform` crate), `ui/`, `proto/`, `scripts/`, `justfile`, `cef.lock` (§13)
 - [ ] 1.4 CI (Windows + Ubuntu matrix): fmt, clippy, test, `cargo-deny` license check, `gitleaks` (§13)
 - [ ] 1.5 `kb://` custom scheme + embedded assets + CSP (§3.4)
 - [ ] 1.6 Window layout (CEF Views), create/close/switch tabs, navigation (§2.4)
