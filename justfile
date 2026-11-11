@@ -17,6 +17,7 @@ test:
 check:
     cargo fmt --all -- --check
     cargo clippy --workspace --all-targets -- -D warnings
+    cargo deny check licenses bans sources
 
 # Secret scan over the full history
 scan:
