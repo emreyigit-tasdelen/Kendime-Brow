@@ -2,12 +2,16 @@
 
 default: test
 
+# Build the kb:// UI (ui/dist is embedded into kb-shell; debug builds read it from disk)
+ui:
+    cd ui && npm ci && npm run build
+
 # Build the whole workspace
-build:
+build: ui
     cargo build --workspace
 
 # Run the browser shell
-dev:
+dev: ui
     cargo run -p kb-shell --bin kendime-brow
 
 # Tests, formatting and lints (same as CI)

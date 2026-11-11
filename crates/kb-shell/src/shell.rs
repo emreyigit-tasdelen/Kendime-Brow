@@ -18,7 +18,7 @@ use crate::tabs::{TabId, Tabs};
 
 pub const UI_URL: &str = "kb://ui/";
 pub const NEW_TAB_URL: &str = "kb://newtab/";
-pub const UI_STRIP_HEIGHT: i32 = 44;
+pub const UI_STRIP_HEIGHT: i32 = 76;
 pub const DEFAULT_WINDOW_SIZE: (i32, i32) = (1280, 800);
 
 /// Window accelerator command ids.
@@ -84,7 +84,7 @@ impl Tab {
 struct Shell {
     window: Window,
     client: Client,
-    content: Panel,
+    ui: BrowserView,
     tabs: Tabs<Tab>,
 }
 
@@ -100,27 +100,11 @@ fn with_shell<R>(f: impl FnOnce(&mut Shell) -> R) -> Option<R> {
 
 /// Builds the layout inside a freshly created window. Called from `on_window_created`.
 pub fn init_window(window: &mut Window, ui_view: BrowserView, client: Client) {
-    let settings = BoxLayoutSettings {
-        horizontal: 0,
-        ..Default::default()
-    };
-    let layout = window.set_to_box_layout(Some(&settings));
-
+    // Manual layout: CEF's BoxLayout ignored `set_flex_for_view` here (the strip always took
+    // the full height, see PROGRESS 1.7), so `apply_layout` positions the views itself after
+    // every window layout pass (`WindowDelegate::on_layout_changed`).
     let mut ui = View::from(&ui_view);
     window.add_child_view(Some(&mut ui));
-
-    let content = panel_create(None).expect("panel_create failed");
-    let content_settings = BoxLayoutSettings {
-        horizontal: 0,
-        default_flex: 1,
-        ..Default::default()
-    };
-    content.set_to_box_layout(Some(&content_settings));
-    let mut content_view = View::from(&content);
-    window.add_child_view(Some(&mut content_view));
-    if let Some(layout) = layout {
-        layout.set_flex_for_view(Some(&mut content_view), 1);
-    }
 
     // Window accelerators (also matched in the key handlers, see app.rs `handle_key`).
     for (cmd, key, shift, ctrl, alt) in ACCELERATORS {
@@ -131,7 +115,7 @@ pub fn init_window(window: &mut Window, ui_view: BrowserView, client: Client) {
         *s.borrow_mut() = Some(Shell {
             window: window.clone(),
             client,
-            content,
+            ui: ui_view,
             tabs: Tabs::new(),
         })
     });
@@ -161,14 +145,48 @@ pub fn new_tab(url: &str) {
 
 /// Adds an existing BrowserView (new tab or popup) as the active tab.
 pub fn add_tab_view(view: BrowserView) {
-    let content = with_shell(|s| {
+    let window = with_shell(|s| {
         s.tabs.open(Tab::new(view.clone()), true);
-        s.content.clone()
+        s.window.clone()
     });
-    if let Some(content) = content {
+    if let Some(window) = window {
         let mut v = View::from(&view);
-        content.add_child_view(Some(&mut v));
+        window.add_child_view(Some(&mut v));
         refresh();
+    }
+}
+
+/// Positions the UI strip and the tab views inside a client area of `width`×`height`.
+pub fn apply_layout(width: i32, height: i32) {
+    let Some((ui, views)) = with_shell(|s| {
+        let views: Vec<BrowserView> = s.tabs.iter().map(|(_, t)| t.view.clone()).collect();
+        (s.ui.clone(), views)
+    }) else {
+        return;
+    };
+    let strip = UI_STRIP_HEIGHT.min(height);
+    ui.set_bounds(Some(&Rect {
+        x: 0,
+        y: 0,
+        width,
+        height: strip,
+    }));
+    let content = Rect {
+        x: 0,
+        y: strip,
+        width,
+        height: (height - strip).max(0),
+    };
+    for view in views {
+        view.set_bounds(Some(&content));
+    }
+}
+
+/// Re-runs the manual layout with the current window size.
+fn relayout() {
+    if let Some(window) = with_shell(|s| s.window.clone()) {
+        let b = window.client_area_bounds_in_screen();
+        apply_layout(b.width, b.height);
     }
 }
 
@@ -181,9 +199,9 @@ pub fn refresh() {
             .iter()
             .map(|(id, t)| (Some(id) == active, t.view.clone()))
             .collect();
-        (s.window.clone(), s.content.clone(), views)
+        (s.window.clone(), views)
     });
-    let Some((window, content, views)) = snapshot else {
+    let Some((window, views)) = snapshot else {
         return;
     };
     let mut title = String::from("Kendime-Brow");
@@ -203,9 +221,10 @@ pub fn refresh() {
             }
         }
     }
-    content.layout();
+    relayout();
     window.set_title(Some(&CefString::from(title.as_str())));
     crate::bridge::broadcast(&state());
+    debug_bounds();
 }
 
 /// Snapshot of all tabs for the UI strip.
@@ -388,6 +407,26 @@ pub fn on_after_created() {
     debug_log(&format!("browser created, count={n}"));
 }
 
+/// Logs view bounds (KB_DEBUG) — layout diagnostics.
+pub fn debug_bounds() {
+    if std::env::var_os("KB_DEBUG").is_none() {
+        return;
+    }
+    with_shell(|s| {
+        let w = s.window.bounds();
+        eprintln!(
+            "[kb] window {}x{} children={}",
+            w.width,
+            w.height,
+            s.window.child_view_count()
+        );
+        if let Some(t) = s.tabs.active_item() {
+            let b = t.view.bounds();
+            eprintln!("[kb] active tab y={} {}x{}", b.y, b.width, b.height);
+        }
+    });
+}
+
 fn debug_log(msg: &str) {
     if std::env::var_os("KB_DEBUG").is_some() {
         eprintln!("[kb] {msg}");
@@ -408,14 +447,14 @@ pub fn do_close(browser: &mut Browser) -> bool {
         if s.tabs.len() <= 1 {
             return None; // last tab: let the window close
         }
-        s.tabs.close(id).map(|t| (t.view, s.content.clone()))
+        s.tabs.close(id).map(|t| (t.view, s.window.clone()))
     })
     .flatten();
-    let Some((view, content)) = removed else {
+    let Some((view, window)) = removed else {
         return false;
     };
     let mut v = View::from(&view);
-    content.remove_child_view(Some(&mut v));
+    window.remove_child_view(Some(&mut v));
     drop(v);
     drop(view);
     refresh();

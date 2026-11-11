@@ -109,3 +109,7 @@ tmp/
 temp/
 *.tmp
 *.bak
+
+# --- UI build ---
+ui/dist/
+ui/node_modules/

@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.7 (kb://ui: tab strip, address bar). Then 1.8 bridge, 1.9 IPC …
+- **Next step:** 1.9 kb-ipc transport (named pipe / Unix socket, protobuf, token handshake), then 1.10+.
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.7 `kb://ui` tab strip + address bar — DONE (2026-11-12)
+- **Done:** `ui/` Vite + SolidJS + TypeScript project (solid-js 1.9.17, vite 8.3.5, vite-plugin-solid 2.11.14, typescript 7.0.2 — exact pins, each ≥ 2 weeks old). `strip/` → `kb://ui/` (tab row with spinner, close button, middle-click close, "+"; toolbar back/forward/reload-stop, address bar), `newtab/` → `kb://newtab/` (search box), `src/bridge.ts` typed client. `ui/dist` embedded with `rust-embed` (debug builds read from disk); `scheme.rs` maps hosts to dist folders, shared bundles under `assets/`. CI builds the UI before cargo; `just ui`. Strip height 76 px. Verified with real mouse/keyboard input: "+" opens a tab, clicking a tab switches, typing in the address bar + Enter navigates; screenshots look right (dark theme).
+- **Decision / gotcha:** CEF Views `BoxLayout` did not honour `set_flex_for_view` (strip always got the full height, nested Panels stayed 0×0). Replaced with a manual layout: `WindowDelegate::on_layout_changed` → `shell::apply_layout` sets the strip and tab bounds. Vite module-preload polyfill disabled (inline script vs. CSP).
+- **Next step:** 1.9.
 
 ### 1.8 UI ↔ shell bridge — DONE (2026-11-12)
 - **Done:** `protocol.rs` (JSON commands `state`, `subscribe`, `new-tab`, `close-tab`, `activate-tab`, `navigate`, `back`, `forward`, `reload`, `stop`; `State`/`TabState`; address bar rule `input_to_url`; `is_trusted_origin`; 4 tests) and `bridge.rs` (cef-rs message router: `window.kbQuery` / `kbQueryCancel`). Renderer side injects the functions ONLY into `kb://` frames; browser side re-checks the frame URL (403 otherwise). `subscribe` is a persistent query that receives the full state on every change. Shell keeps per-tab title/url/loading/back/forward (load + display handlers) and broadcasts on change. Verified with `scripts/bridge-smoke.mjs`: web page has no `kbQuery`, `kb://ui` does; commands work; bad command → 400.

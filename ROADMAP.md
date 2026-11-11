@@ -37,7 +37,7 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 - [x] 1.4 CI (Windows + Ubuntu matrix): fmt, clippy, test, `cargo-deny` license check, `gitleaks` (§13)
 - [x] 1.5 `kb://` custom scheme + embedded assets + CSP (§3.4)
 - [x] 1.6 Window layout (CEF Views), create/close/switch tabs, navigation (§2.4) → all Alloy style (CEF limits, see §2.4); shortcuts need a manual check
-- [ ] 1.7 `kb://ui`: tab strip, address bar, back/forward/reload (§3.4)
+- [x] 1.7 `kb://ui`: tab strip, address bar, back/forward/reload (§3.4)
 - [x] 1.8 UI ↔ shell bridge (message router, open only to the `kb://` origin) (§3.3)
 - [ ] 1.9 `kb-ipc`: named pipe (Windows) + Unix socket (Linux) transport, protobuf, token-based handshake (§3.3)
 - [ ] 1.10 Module host launcher (Windows): AppContainer/restricted token + Job Object, restart on crash (§3.2)

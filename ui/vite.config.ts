@@ -1,0 +1,22 @@
+import { defineConfig } from 'vite';
+import solid from 'vite-plugin-solid';
+import { resolve } from 'node:path';
+
+// Every top-level folder is one kb:// host: strip/ → kb://ui/, newtab/ → kb://newtab/.
+// Relative base: kb://ui/../assets/x.js normalizes to kb://ui/assets/x.js, which the shell
+// maps to dist/assets/x.js (see crates/kb-shell/src/scheme.rs).
+export default defineConfig({
+  plugins: [solid()],
+  base: './',
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    modulePreload: { polyfill: false }, // the polyfill is an inline script, blocked by our CSP
+    rollupOptions: {
+      input: {
+        ui: resolve(import.meta.dirname, 'strip/index.html'),
+        newtab: resolve(import.meta.dirname, 'newtab/index.html'),
+      },
+    },
+  },
+});

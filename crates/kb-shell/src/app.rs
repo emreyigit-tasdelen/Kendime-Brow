@@ -79,6 +79,14 @@ wrap_window_delegate! {
             let (width, height) = shell::DEFAULT_WINDOW_SIZE;
             Size { width, height }
         }
+
+        fn on_layout_changed(&self, view: Option<&mut View>, _new_bounds: Option<&Rect>) {
+            // Children are positioned relative to the client area.
+            if let Some(window) = view.and_then(|v| v.window()) {
+                let b = window.client_area_bounds_in_screen();
+                shell::apply_layout(b.width, b.height);
+            }
+        }
     }
 
     impl PanelDelegate {}
@@ -91,6 +99,7 @@ wrap_window_delegate! {
             shell::init_window(window, ui_view, self.client.clone());
             shell::new_tab(&self.start_url);
             window.show();
+            shell::debug_bounds();
         }
 
         fn on_window_destroyed(&self, _window: Option<&mut Window>) {
@@ -128,6 +137,18 @@ wrap_browser_view_delegate! {
     impl ViewDelegate {
         fn preferred_size(&self, _view: Option<&mut View>) -> Size {
             Size { width: 0, height: shell::UI_STRIP_HEIGHT }
+        }
+
+        fn minimum_size(&self, _view: Option<&mut View>) -> Size {
+            Size { width: 0, height: shell::UI_STRIP_HEIGHT }
+        }
+
+        fn maximum_size(&self, _view: Option<&mut View>) -> Size {
+            Size { width: 0, height: shell::UI_STRIP_HEIGHT }
+        }
+
+        fn height_for_width(&self, _view: Option<&mut View>, _width: i32) -> i32 {
+            shell::UI_STRIP_HEIGHT
         }
     }
 

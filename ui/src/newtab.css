@@ -1,0 +1,8 @@
+.newtab { display: flex; flex-direction: column; align-items: center; padding-top: 22vh; gap: 20px; }
+.newtab h1 { margin: 0; font-weight: 600; font-size: 28px; letter-spacing: -.01em; }
+.newtab form { width: min(560px, 90vw); }
+.newtab input {
+  width: 100%; height: 44px; padding: 0 18px; border: 1px solid var(--border); border-radius: 22px;
+  background: var(--bg-input); color: var(--fg); font: inherit; font-size: 15px; outline: none;
+}
+.newtab input:focus { border-color: var(--accent); }

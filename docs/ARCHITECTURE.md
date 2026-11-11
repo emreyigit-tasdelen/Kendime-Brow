@@ -98,8 +98,9 @@ Chrome-style BrowserView. A tabbed window with a `kb://ui` strip therefore uses 
 throughout. Consequences: Chrome extension support (V5) would need a separate Chrome-style window;
 Alloy has its own PDF viewer and permission callbacks (handled by us).
 
-The window layout is built with CEF Views: a vertical box with the `kb://ui` strip on top and a
-content panel holding one BrowserView per tab (only the active one visible).
+The window layout is built with CEF Views: the `kb://ui` strip on top and one BrowserView per
+tab below it (only the active one visible). Views are positioned manually in
+`WindowDelegate::on_layout_changed`, because `BoxLayout` flex settings had no effect (task 1.7).
 Closing a tab: `LifeSpanHandler::do_close` returns true and the BrowserView is removed from the
 hierarchy (CEF would otherwise close the whole window).
 

@@ -53,7 +53,7 @@ wrap_scheme_handler_factory! {
     }
 }
 
-// Serves one embedded (`'static`) body. Headers are written directly in `response_headers`
+// Serves one embedded body. Headers are written directly in `response_headers`
 // (the stock StreamResourceHandler drops its header map, so the CSP never arrived).
 wrap_resource_handler! {
     pub struct KbResourceHandler {
