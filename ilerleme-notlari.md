@@ -5,9 +5,11 @@ Yeni oturumda önce bu dosyayı ve [ROADMAP.md](ROADMAP.md) dosyasını oku.
 
 ## Şu anki durum (özet)
 
-- **Faz:** 0 — mimari tasarım. Kod yazılmıyor.
-- **Bekleyen karar:** Teknoloji temeli (Roadmap 0.4).
-- **Sonraki adım:** Karar gelince `docs/mimari.md` yazılacak (Roadmap 0.5).
+- **Faz:** 0 — mimari tasarım tamamlandı, kullanıcı onayı bekleniyor. Kod yazılmadı.
+- **Bekleyen kararlar:** (1) Ek özellik seçimi — mimari §12, Roadmap 0.6. (2) Mimari onayı,
+  hedef platform (Windows öncelikli varsayıldı) ve LICENSE'taki ad teyidi — Roadmap 0.8.
+- **Sonraki adım:** Onay gelince Faz 1, görev 1.1 (CEF doğrulama denemesi). İlk kod bu görevle başlar.
+- **Okuma sırası (yeni oturum):** bu dosya → `ROADMAP.md` → `docs/mimari.md` içinden yalnız ilgili bölüm.
 
 ## Kalıcı kurallar
 
@@ -24,15 +26,34 @@ Yeni oturumda önce bu dosyayı ve [ROADMAP.md](ROADMAP.md) dosyasını oku.
 |---|---|---|
 | 2026-11-12 | Repo: `emreyigit-tasdelen/Kendime-Brow`, public, Apache 2.0 | Kullanıcı talebi |
 | 2026-11-12 | VPN/Mesh: WireGuard + self-hosted Headscale | Kullanıcı talebi; üçüncü parti VPN'e bağımlılık yok |
+| 2026-11-12 | Teknoloji temeli: CEF + Rust | Hazır motor binary'si, düşük bakım yükü, modüller motordan bağımsız |
+| 2026-11-12 | Mimari kararlar K1–K16 | `docs/mimari.md` §1 |
 
 ## Görev kayıtları
 
 En yeni üstte. Biçim: görev · yapılan · karar · sonraki adım.
 
-### 0.4 Teknoloji temeli kararı — KARAR BEKLİYOR (2026-11-12)
-- **Yapılan:** 5 seçenek (Chromium fork, Electron, CEF + native kabuk, Gecko fork, Tauri) karşılaştırıldı, kullanıcıya sunuldu. Tablo aşağıda "Günlük" bölümünde.
-- **Karar:** Henüz yok. Öneri: C (CEF + Rust native kabuk). Ayrıca soruldu: hedef platform Windows öncelikli mi, LICENSE'taki ad doğru mu.
-- **Sonraki adım:** Kullanıcı yanıtı → bu kaydı kapat, ROADMAP 0.4'ü `[x]` yap, 0.5'e (`docs/mimari.md`) başla.
+### 0.7 Faz 1+ görevlerinin ayrıntılandırılması — BİTTİ (2026-11-12)
+- **Yapılan:** `ROADMAP.md` yeniden yazıldı: Faz 1–6, toplam ~70 görev, her biri mimari bölümüne referanslı. Doğrulama (spike) görevleri V1–V12 ile eşlendi.
+- **Karar:** Her faz bağımsız yayınlanabilir sürüm üretir (0.1 … 0.8). Faz 3 üç bağımsız gruba bölündü (PDF / ofis / medya).
+- **Sonraki adım:** 0.6 ve 0.8 kullanıcı kararları.
+
+### 0.5 Mimari tasarım dokümanı — BİTTİ (2026-11-12)
+- **Yapılan:** `docs/mimari.md` yazıldı (14 bölüm): süreç modeli, sandbox, IPC, gizlilik, performans, PDF/ofis/medya, ağ analizi, uzak bağlantı, mesh + Companion + Headscale sunucu önerileri, ek özellik önceliklendirmesi, repo yapısı, doğrulanacak varsayımlar.
+- **Kararlar (K1–K16, ayrıntı dokümanda §1):**
+  - Arayüz HTML/TS (SolidJS), `kb://` şeması. Ağır modüller ayrı süreç, isteğe bağlı başlar.
+  - Güvenilmeyen dosya ayrıştıran süreçlerin (kb-doc, kb-media) ağ erişimi yok.
+  - PDF: PDFium + qpdf + lopdf + Tesseract. Ofis: LibreOfficeKit (isteğe bağlı indirme). Medya: FFmpeg LGPL build, alt süreç.
+  - SSH: russh. RDP: IronRDP (yedek FreeRDP). Kasa: ayrı süreç, özel anahtar kasadan çıkmaz.
+  - Mesh: `tsnet` (Go) — sürücü/yönetici yetkisi gerektirmez, sistem geneli VPN değildir. Companion: Go, tsnet gömülü, RDP/SSH'ı loopback'ten vekiller.
+  - GPL/AGPL bileşenler (Ghostscript, MuPDF, x264, exiv2, OnlyOffice) koda bağlanmaz.
+- **Önemli bulgu:** Resmi CEF binary'lerinde H.264/AAC kapalı olabilir (V1). Öyleyse yamasız ama codec argümanlı kendi CEF build'imiz gerekir (V2). Faz 1'in ilk iki görevi bunu doğrular.
+- **Sonraki adım:** 0.7.
+
+### 0.4 Teknoloji temeli kararı — BİTTİ (2026-11-12)
+- **Yapılan:** 5 seçenek karşılaştırıldı (tablo aşağıda "Günlük" bölümünde), kullanıcıya sunuldu.
+- **Karar:** **C — CEF + Rust native kabuk** (kullanıcı onayı). Gerekirse ileride ungoogled-chromium yamalı CEF build'ine geçiş yolu açık (mimari §2.3).
+- **Sonraki adım:** 0.5.
 
 ### 0.3 Roadmap ve ilerleme notları iskeleti — BİTTİ (2026-11-12)
 - **Yapılan:** `ROADMAP.md` (Faz 0 ayrıntılı, Faz 1–6 yer tutucu) ve `ilerleme-notlari.md` oluşturuldu.
@@ -67,4 +88,4 @@ En yeni üstte. Biçim: görev · yapılan · karar · sonraki adım.
 | Güvenlik güncellemesi yükü | Yüksek (sürekli rebase) | Orta | Orta | Yüksek | Düşük |
 | Tek geliştirici için uygunluk | Zor | Kolay ama tarayıcı için zayıf | Uygun | Zor | Tarayıcı için uygun değil |
 
-**Öneri:** C (CEF + Rust native kabuk; modüller ayrı süreçlerde). Ayrıntı sohbette sunuldu.
+**Seçilen:** C (CEF + Rust native kabuk).

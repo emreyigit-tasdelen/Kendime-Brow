@@ -4,7 +4,7 @@ Gizlilik odaklı, performanslı ve kaynak tasarruflu kişisel masaüstü web tar
 Teknik kullanıcıya (developer / power user) yönelik; dosya işleme ve uzak erişimde
 uzman araçlara yakın bir deneyim hedefler.
 
-> **Durum:** Mimari tasarım aşaması. Henüz kod yok.
+> **Durum:** Mimari tasarım tamamlandı (CEF + Rust). Henüz kod yok.
 
 ## Hedef modüller
 
@@ -23,7 +23,7 @@ uzman araçlara yakın bir deneyim hedefler.
 |---|---|
 | [ROADMAP.md](ROADMAP.md) | Fazlar, görevler, durumlar |
 | [ilerleme-notlari.md](ilerleme-notlari.md) | Karar günlüğü ve sonraki adımlar |
-| `docs/mimari.md` | Mimari tasarım dokümanı (hazırlanıyor) |
+| [docs/mimari.md](docs/mimari.md) | Mimari tasarım dokümanı |
 
 ## Güvenlik notu
 
