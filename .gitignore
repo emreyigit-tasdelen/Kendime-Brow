@@ -36,7 +36,8 @@ out/
 build/
 dist/
 target/
-bin/
+/bin/
+!src/bin/
 obj/
 *.exe
 *.dll
