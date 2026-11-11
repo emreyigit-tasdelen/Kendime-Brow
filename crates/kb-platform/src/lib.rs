@@ -5,6 +5,8 @@
 
 use std::path::PathBuf;
 
+pub mod ipc;
+
 /// Application directory name used on Windows and macOS.
 pub const APP_DIR_NAME: &str = "Kendime-Brow";
 /// Application directory name used on Linux (XDG convention: lowercase).

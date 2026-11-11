@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.9 kb-ipc transport (named pipe / Unix socket, protobuf, token handshake), then 1.10+.
+- **Next step:** 1.10 module host launcher (Windows: AppContainer/restricted token + Job Object), then 1.11+.
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.9 kb-ipc transport — DONE (2026-11-12)
+- **Done:** `proto/kb/ipc/v1/ipc.proto` (`Hello`, `HelloAck`, `Envelope`) compiled by `kb-ipc/build.rs` with prost-build + protox (no protoc). `kb-platform::ipc`: endpoint names `kb-<pid>-<module>-<random>`, Windows named pipe (first instance, remote clients rejected), Unix socket in a 0700 runtime dir with 0600 socket file, removed on drop. `kb-ipc`: sync + async length-prefixed framing, `send`/`recv` for protobuf, `Token` (256-bit, hex, constant-time compare, redacted Debug), `accept_handshake` / `client_handshake`. Integration tests over a real named pipe: handshake + envelope round trip, wrong token → PermissionDenied on both sides, second listener on the same name fails. 31 tests pass.
+- **Decision / open:** Windows pipe still uses the default DACL (+ token auth). An explicit DACL limited to the current user SID is a follow-up hardening item (do it with 1.10, which needs `windows-sys` security APIs anyway). Linux uses `SOCK_STREAM` + length prefix (not `SEQPACKET`) — same framing on every platform.
+- **Next step:** 1.10.
 
 ### 1.7 `kb://ui` tab strip + address bar — DONE (2026-11-12)
 - **Done:** `ui/` Vite + SolidJS + TypeScript project (solid-js 1.9.17, vite 8.3.5, vite-plugin-solid 2.11.14, typescript 7.0.2 — exact pins, each ≥ 2 weeks old). `strip/` → `kb://ui/` (tab row with spinner, close button, middle-click close, "+"; toolbar back/forward/reload-stop, address bar), `newtab/` → `kb://newtab/` (search box), `src/bridge.ts` typed client. `ui/dist` embedded with `rust-embed` (debug builds read from disk); `scheme.rs` maps hosts to dist folders, shared bundles under `assets/`. CI builds the UI before cargo; `just ui`. Strip height 76 px. Verified with real mouse/keyboard input: "+" opens a tab, clicking a tab switches, typing in the address bar + Enter navigates; screenshots look right (dark theme).

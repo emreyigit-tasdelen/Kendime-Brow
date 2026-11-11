@@ -1,0 +1,26 @@
+// IPC between kb-shell and module hosts (architecture §3.3, task 1.9).
+syntax = "proto3";
+
+package kb.ipc.v1;
+
+// First message from the connecting side. The token is the single-use 256-bit secret the
+// shell handed to the child process at launch (inherited handle / environment).
+message Hello {
+  bytes token = 1;
+  string module = 2;          // e.g. "kb-doc"
+  uint32 protocol_version = 3;
+}
+
+// Reply from the listening side. On failure the connection is closed afterwards.
+message HelloAck {
+  bool ok = 1;
+  string error = 2;
+}
+
+// Generic request/response/event envelope used after the handshake.
+message Envelope {
+  uint64 id = 1;              // request id; responses echo it; events use 0
+  string method = 2;          // e.g. "pdf.render"
+  bytes body = 3;             // method-specific protobuf message
+  string error = 4;           // non-empty on failure (responses only)
+}
