@@ -5,8 +5,10 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
 
-- **Phase:** 0 complete (architecture design). No code written. No pending decisions.
-- **Next step:** Phase 1, task 1.1 — download the CEF binary, open a single window with the Rust `cef` crate, validate V1/V3/V4; then 1.1b, repeat the same experiment in the Ubuntu VM.
+- **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
+- **Next step:** 1.3 workspace skeleton, then 1.4 CI, then 1.5+ in order.
+- **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
+- **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
 - **Platform:** Cross-platform, no primary platform. Verification order Windows → Ubuntu (local VM; Kali also available) → macOS (if hardware becomes available).
 - **Reading order (new session):** this file → `ROADMAP.md` → only the relevant section of `docs/ARCHITECTURE.md`.
 
@@ -36,6 +38,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.1 CEF + Rust spike — DONE (2026-11-12)
+- **Done:** `spikes/cef-spike`: cefsimple port on `cef = 156.4.0` (Chromium 156), builds with MSVC + CMake + Ninja (installed via winget). A single window opens in Chrome style and in Alloy style. Results in `spikes/cef-spike/README.md`.
+- **Decision:** V1 confirmed (no H.264/AAC/HEVC in official CEF; VP9/AV1/Opus/MP3 OK). V3 confirmed per style. V4 confirmed: the crate covers Views, request handler, DevTools messages, schemes, request contexts, render process handler and ships a Rust message router — no C++ bridge needed.
+- **Blocked:** 1.1b (no SSH access to the Ubuntu VM; VMs are powered off and need guest credentials). 1.2 (a Chromium source build needs ~100+ GB; ~60 GB free on D:). Continue without proprietary codecs until decided.
+- **Next step:** 1.3.
 
 ### Sensitive data protection (2026-11-12)
 - **Done:** Added `SECURITY.md` (policy + 7 protection layers + leak response). Local hooks in `.githooks/` (gitleaks `pre-commit` with `.gitleaks.toml` incl. personal-email rule; `commit-msg` blocking AI attribution and non-noreply emails), tested with fake data. Enabled GitHub secret scanning + push protection. Added CI workflow `.github/workflows/secret-scan.yml` (full-history gitleaks + author check). User enabled the GitHub email privacy push block.
