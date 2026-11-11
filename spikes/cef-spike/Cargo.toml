@@ -1,0 +1,32 @@
+[package]
+name = "cef-spike"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+# Phase 1.1 spike (V1/V3/V4): based on the cefsimple example from tauri-apps/cef-rs.
+
+[[bin]]
+name = "cef-spike"
+path = "src/main.rs"
+
+[[bin]]
+name = "cef-spike-helper"
+path = "src/bin/cefsimple_helper.rs"
+
+[features]
+default = []
+sandbox = ["cef/sandbox"]
+linux-x11 = ["x11-dl"]
+
+[dependencies]
+cef = { version = "=156.4.0", features = ["build-util"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+x11-dl = { version = "2", optional = true }
+
+[workspace]

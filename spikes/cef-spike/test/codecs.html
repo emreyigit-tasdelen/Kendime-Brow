@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>codec test</title>
+<script>
+const v = document.createElement('video'), a = document.createElement('audio');
+const r = {
+  h264: v.canPlayType('video/mp4; codecs="avc1.42E01E"'),
+  aac: a.canPlayType('audio/mp4; codecs="mp4a.40.2"'),
+  hevc: v.canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"'),
+  vp9: v.canPlayType('video/webm; codecs="vp9"'),
+  av1: v.canPlayType('video/mp4; codecs="av01.0.05M.08"'),
+  opus: a.canPlayType('audio/ogg; codecs="opus"'),
+  mp3: a.canPlayType('audio/mpeg'),
+};
+document.title = 'CODECS ' + Object.entries(r).map(([k, x]) => k + '=' + (x || 'no')).join(' ');
+document.body.textContent = document.title;
+</script>
