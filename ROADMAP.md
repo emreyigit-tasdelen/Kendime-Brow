@@ -8,7 +8,10 @@ Tüm işler buradan takip edilir. Tasarım ayrıntısı: [docs/mimari.md](docs/m
 
 **Durumlar:** `[ ]` bekliyor · `[~]` devam ediyor · `[x]` bitti · `[!]` engelli / karar bekliyor · `[-]` iptal
 
-**Şu anki faz:** Faz 0 bitmek üzere — yalnız 0.8 (hedef platform ve LICENSE adı teyidi) açık. Sıradaki iş: 1.1.
+**Şu anki faz:** Faz 0 tamamlandı. Sıradaki iş: Faz 1, görev 1.1.
+
+**Platform kuralı (mimari §3.8):** Çok platformlu, öncelik yok. Her görev önce Windows'ta, sonra
+Ubuntu VM'de doğrulanır; her faz Ubuntu'da da çalışmadan "bitti" sayılmaz. macOS en son (Faz 7).
 
 ---
 
@@ -21,26 +24,29 @@ Tüm işler buradan takip edilir. Tasarım ayrıntısı: [docs/mimari.md](docs/m
 - [x] 0.5 `docs/mimari.md` — tam mimari tasarım dokümanı
 - [x] 0.6 Ek özellik seçimi (mimari §12) → P1 listesi kapsamda; P2 ertelendi, P3 kapsam dışı
 - [x] 0.7 Faz 1+ görevlerinin ayrıntılandırılması (bu dosya)
-- [!] 0.8 Mimari onayı + açık sorular: hedef platform (K15), LICENSE'taki ad
+- [x] 0.8 Mimari onayı + teyitler → çok platformlu (Windows → Ubuntu → macOS); LICENSE adı doğru
 
 ## Faz 1 — Temel tarayıcı kabuğu
 
 Çıktı: gezilebilen, sekmeli, kendi arayüzü olan pencere. Sürüm `0.1`.
 
 - [ ] 1.1 **Doğrulama (spike):** V1, V3, V4 — CEF binary indir, Rust `cef` crate ile tek pencere aç, codec durumunu test et (§2, §14)
+- [ ] 1.1b **Doğrulama:** V13 — aynı denemeyi Ubuntu VM'de tekrarla
 - [ ] 1.2 **Doğrulama:** V2 — codec'li kendi CEF build'i denemesi; sonuca göre karar kaydı
-- [ ] 1.3 Workspace iskeleti: `crates/`, `ui/`, `proto/`, `scripts/`, `justfile`, `cef.lock` (§13)
-- [ ] 1.4 CI: fmt, clippy, test, `cargo-deny` lisans denetimi, `gitleaks` (§13)
+- [ ] 1.3 Workspace iskeleti: `kb-platform` crate'i dahil `crates/`, `ui/`, `proto/`, `scripts/`, `justfile`, `cef.lock` (§13)
+- [ ] 1.4 CI (Windows + Ubuntu matrisi): fmt, clippy, test, `cargo-deny` lisans denetimi, `gitleaks` (§13)
 - [ ] 1.5 `kb://` özel şema + gömülü varlıklar + CSP (§3.4)
 - [ ] 1.6 Pencere düzeni (CEF Views), sekme oluştur/kapat/değiştir, gezinme (§2.4)
 - [ ] 1.7 `kb://ui`: sekme şeridi, adres çubuğu, geri/ileri/yenile (§3.4)
 - [ ] 1.8 Arayüz ↔ kabuk köprüsü (message router, yalnız `kb://` kökenine açık) (§3.3)
-- [ ] 1.9 `kb-ipc`: named pipe taşıma, protobuf, belirteçli el sıkışma (§3.3)
-- [ ] 1.10 Modül konağı başlatıcı: AppContainer/kısıtlı token + Job Object, çökünce yeniden başlatma (§3.2)
+- [ ] 1.9 `kb-ipc`: named pipe (Windows) + Unix socket (Linux) taşıma, protobuf, belirteçli el sıkışma (§3.3)
+- [ ] 1.10 Modül konağı başlatıcı (Windows): AppContainer/kısıtlı token + Job Object, çökünce yeniden başlatma (§3.2)
+- [ ] 1.10b **Doğrulama:** V14 → modül konağı sandbox'ı (Linux): user namespace + seccomp + Landlock (§3.8)
 - [ ] 1.11 Eylem kaydı + komut paleti (§3.5)
 - [ ] 1.12 Profil, ayarlar (`kb://settings`), `kb.sqlite`: yer imleri, geçmiş, oturum geri yükleme (§3.7)
 - [ ] 1.13 İndirme yöneticisi (temel) (§8.3)
-- [ ] 1.14 Paketleme: Windows kurucu, tek görev çubuğu simgesi, `just install-dev` (§13)
+- [ ] 1.14 Paketleme: Windows kurucu + Linux `.deb`/AppImage, tek görev çubuğu simgesi, `just install-dev` (§13)
+- [ ] 1.15 Faz kapanışı: tüm Faz 1 işlevlerinin Ubuntu VM'de doğrulanması
 
 ## Faz 2 — Gizlilik ve performans çekirdeği
 
@@ -143,7 +149,18 @@ yerel terminal → 4A.2, arşiv → 3C.6, checksum → 3C.7.
 - [ ] 6.4 `kb://tools`: regex test, JSON biçimle/sorgula, hash, base64/URL/JWT kodlama; hepsi eylem kaydında
 - [ ] 6.5 Kullanıcı scriptleri: yönetici, `@match`, `GM_*` alt kümesi, düzenleyici (CodeMirror)
 - [ ] 6.6 **Doğrulama:** V5 → Chrome eklentisi (MV3) yükleme, en iyi çaba
-- [ ] 6.7 Linux desteği (sandbox: seccomp + Landlock; paketleme)
+
+Not: Faz 2–6'daki her görev, platforma özgü parçasını `kb-platform` üzerinden iki platformda da
+uygular (keyring, PTY, bellek baskısı, paket yakalama, servis kurulumu — tablo: mimari §3.8).
+Her fazın son adımı Ubuntu doğrulamasıdır.
+
+## Faz 7 — macOS (donanım bulunduğunda)
+
+- [ ] 7.1 **Doğrulama:** macOS'ta CEF uygulama paketi + yardımcı süreçler, tek pencere
+- [ ] 7.2 `kb-platform` macOS uygulamaları: sandbox, Keychain, Touch ID, PTY, bellek baskısı
+- [ ] 7.3 Companion: launchd daemon, SSH/Ekran Paylaşımı hazırlık denetimi; V15 kararı (VNC)
+- [ ] 7.4 İmzalama, noterleştirme, `.dmg`; CI matrisine macOS
+- [ ] 7.5 Tüm modüllerin macOS'ta doğrulanması
 
 ## Ertelenenler (P2 — Faz 6 bitince yeniden değerlendirilecek)
 

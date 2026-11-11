@@ -47,7 +47,7 @@ teyit edilmelidir. Hepsi [Bölüm 14](#14-doğrulanacak-varsayımlar-ve-riskler)
 | K12 | Mesh istemcisi | `tsnet` (Tailscale'in Go kütüphanesi, userspace WireGuard), Headscale'e bağlanır |
 | K13 | Companion | Go ile tek dosya Windows servisi, `tsnet` gömülü |
 | K14 | Kimlik bilgisi kasası | Ayrı süreç (`kb-vault`), OS keyring + XChaCha20-Poly1305 |
-| K15 | Hedef platform | Windows 10/11 x64 öncelikli; Linux ikinci; macOS kapsam dışı (varsayım, kullanıcı teyidi bekliyor) |
+| K15 | Hedef platform | Çok platformlu, öncelikli platform yok: Windows, Linux, macOS. Doğrulama sırası: Windows → Ubuntu → macOS (bkz. 3.8) |
 | K16 | Telemetri | Yok. Tarayıcı kendiliğinden hiçbir sunucuya bağlanmaz (güncelleme denetimi hariç, kapatılabilir) |
 
 **Lisans ilkesi:** Proje Apache 2.0. Statik/dinamik bağlanan her şey Apache/MIT/BSD/MPL/LGPL
@@ -161,7 +161,7 @@ flowchart TB
    sekmede hata gösterir.
 4. Hiçbir modül başlangıçta yüklenmez. Soğuk açılışta yalnız `kb-shell` + CEF çalışır.
 
-### 3.2 Sandbox (Windows)
+### 3.2 Sandbox (Windows ayrıntısı; diğer platformlar için 3.8)
 
 - **CEF süreçleri:** Chromium sandbox açık kalır (`--no-sandbox` asla kullanılmaz).
 - **Modül konakları:** `kb-shell`, alt süreci şu kısıtlarla başlatır:
@@ -170,7 +170,8 @@ flowchart TB
   - Job Object: bellek üst sınırı, alt süreç üretme yasağı (`kb-media` için yalnız FFmpeg izni),
     `KILL_ON_JOB_CLOSE`.
   - Dosyalar yol olarak değil, `kb-shell`'in açıp devrettiği **handle** olarak verilir.
-- **Linux (ikinci aşama):** user namespace + seccomp-bpf + Landlock; aynı handle devri modeli.
+- **Linux:** user namespace + seccomp-bpf + Landlock; tanıtıcılar `SCM_RIGHTS` ile devredilir.
+- **macOS:** `sandbox_init` profili (ağ ve dosya erişimi kapalı); tanıtıcılar `SCM_RIGHTS` ile.
 
 ### 3.3 IPC
 
@@ -230,6 +231,48 @@ işlevleri (reklam engelleme, şifre yöneticisi, userscript) yerleşik sunulur.
   components\               isteğe bağlı bileşenler (LibreOffice, FFmpeg, Tesseract dilleri)
   logs\                     yerel loglar (varsayılan: yalnız hata, 7 gün)
 ```
+
+### 3.8 Çok platformluluk
+
+Öncelikli platform yoktur; kod ilk günden platformdan bağımsız yazılır. Geliştirme Windows
+makinede yapıldığı için özellikler önce Windows'ta, ardından yerel Ubuntu VM'de, en son
+(donanım bulunursa) macOS'ta doğrulanır. Kali, Ubuntu ile aynı Debian tabanlı paketle kapsanır.
+
+**Kurallar**
+
+1. Platforma özgü kod yalnız `kb-platform` crate'inde ve Go tarafında `internal/platform`
+   paketinde yaşar; diğer crate'ler `#[cfg(target_os)]` kullanmaz, bu crate'in trait'lerini çağırır.
+2. Bir platformda karşılığı olmayan özellik sessizce yok sayılmaz: arayüzde "bu platformda
+   desteklenmiyor" olarak görünür ve aşağıdaki tabloya işlenir.
+3. CI, Faz 1'den itibaren Windows + Ubuntu matrisinde derler ve test eder; macOS işi
+   başladığında matrise eklenir. Bir platformda kırılan build birleştirilmez.
+4. Her faz, Ubuntu'da da çalıştığı doğrulanmadan "bitti" sayılmaz.
+
+| Soyutlama (`kb-platform`) | Windows | Linux | macOS |
+|---|---|---|---|
+| Modül konağı sandbox'ı | AppContainer / kısıtlı token + Job Object | user namespace + seccomp-bpf + Landlock | App Sandbox profili (`sandbox_init`) |
+| IPC taşıma | Named pipe | Unix socket (`SOCK_SEQPACKET`) | Unix socket (`SOCK_STREAM` + uzunluk öneki) |
+| Tanıtıcı devri | Handle devralma | `SCM_RIGHTS` | `SCM_RIGHTS` |
+| Keyring | Credential Manager / DPAPI | Secret Service (GNOME Keyring, KWallet) | Keychain |
+| Biyometrik açma | Windows Hello | Yok (parola) | Touch ID |
+| Bellek baskısı | `QueryMemoryResourceNotification` | PSI (`/proc/pressure/memory`) | `dispatch` bellek baskısı kaynağı |
+| Yerel kabuk PTY | ConPTY | `openpty` | `openpty` |
+| Paket yakalama | Npcap / pktmon | libpcap (`CAP_NET_RAW`) | libpcap (BPF aygıt izni) |
+| Yetki yükseltme | UAC | polkit (`pkexec`) | Authorization Services |
+| Servis (Companion) | Windows servisi | systemd birimi | launchd daemon |
+| HEIC kod çözme | WIC | libheif (kullanıcı kurarsa) | ImageIO |
+| Veri dizini | `%LOCALAPPDATA%\Kendime-Brow` | `$XDG_DATA_HOME/kendime-brow` | `~/Library/Application Support/Kendime-Brow` |
+| Paketleme | MSI/EXE | `.deb` + AppImage | imzalı `.app` / `.dmg` |
+| Donanım video kodlayıcı | NVENC, QSV, AMF, Media Foundation | NVENC, VAAPI | VideoToolbox |
+
+**Companion hazırlık denetçisi platforma göre:** Windows'ta RDP + OpenSSH Server (11.4);
+Linux'ta `sshd` ve varsa `xrdp` / GNOME Remote Desktop; macOS'ta Uzaktan Oturum Açma (SSH) ve
+Ekran Paylaşımı. macOS'ta RDP sunucusu yoktur (Ekran Paylaşımı VNC kullanır); bu yüzden
+macOS hedefleri için VNC istemcisi ayrı bir karar konusudur (V15).
+
+**macOS'a özgü maliyetler:** Ücretli Apple Developer hesabı olmadan imzalama ve
+noterleştirme yapılamaz; imzasız uygulama Gatekeeper uyarısıyla açılır. Derleme için macOS
+donanımı veya CI'da macOS koşucusu gerekir.
 
 ---
 
@@ -855,7 +898,8 @@ Kendime-Brow/
   cef.lock                   Sabitlenmiş CEF sürümü + SHA-256
   crates/
     kb-shell/                Ana süreç: pencere, sekme, istek filtresi, eylem kaydı
-    kb-ipc/                  Taşıma, protobuf türleri, süreç başlatma + sandbox
+    kb-platform/             Platforma özgü her şey: sandbox, keyring, PTY, bellek baskısı (3.8)
+    kb-ipc/                  Taşıma, protobuf türleri, süreç başlatma
     kb-privacy/              adblock-rust sarmalayıcı, liste yönetimi, parmak izi enjeksiyonu
     kb-vault/                Kasa süreci
     kb-doc/                  PDF + ofis konağı
@@ -875,7 +919,8 @@ Kendime-Brow/
   ROADMAP.md  ilerleme-notlari.md  README.md  LICENSE
 ```
 
-- **Araç zinciri:** Rust stable, Go ≥ 1.23, Node LTS + pnpm, MSVC build araçları. `just` ile
+- **Araç zinciri:** Rust stable, Go ≥ 1.23, Node LTS + pnpm; Windows'ta MSVC build araçları,
+  Linux'ta `build-essential` + GTK/X11/Wayland geliştirme paketleri, macOS'ta Xcode komut satırı araçları. `just` ile
   tek komutlu görevler (`just dev`, `just build`, `just test`).
 - **Geliştirme döngüsü:** `just dev` kabuğu başlatır; arayüz Vite'tan canlı yüklenir, Rust
   değişikliğinde yalnız ilgili crate yeniden derlenir.
@@ -883,8 +928,8 @@ Kendime-Brow/
   bağlar (junction); yayın sürümü için otomatik güncelleyici GitHub Releases'tan imzalı
   (`minisign`, ed25519) paketi indirir ve yeniden başlatmada uygular. İmza anahtarı repoda
   **bulunmaz**.
-- **Paketleme:** Windows için tek MSI/EXE kurucu; görev çubuğunda tek sabit simge
-  (tüm alt süreçler aynı AppUserModelID).
+- **Paketleme:** Windows MSI/EXE, Linux `.deb` + AppImage, macOS `.dmg`. Her platformda
+  görev çubuğunda/dock'ta tek sabit simge (Windows'ta tüm alt süreçler aynı AppUserModelID).
 - **CI (GitHub Actions):** `cargo fmt/clippy/test`, `go vet/test`, arayüz testleri, lisans
   denetimi (`cargo-deny`: GPL/AGPL bağımlılığı build'i kırar), sır taraması (`gitleaks`),
   4.1'deki "sıfır istenmeyen bağlantı" testi.
@@ -910,6 +955,9 @@ Kendime-Brow/
 | V10 | `tsnet` güncel Headscale sürümüyle uyumlu | 11.2 | Deneme ortamı | Uyumlu sürüm çifti sabitlenir |
 | V11 | Metadata yazma crate'i yeterli | 8.2 | Deneme | Kendi EXIF yazıcı (dar kapsam) |
 | V12 | Widevine CEF'te çalışmıyor/lisans gerektiriyor | 2.2 | Araştırma | DRM kapsam dışı kalır |
+| V13 | Rust `cef` crate Linux ve macOS'ta da çalışıyor (macOS'ta uygulama paketi + yardımcı süreç yapısı farklı) | 3.8 | Ubuntu VM'de Faz 1.1 tekrarı | C++ köprüsü |
+| V14 | Landlock + seccomp, Ubuntu LTS çekirdeğinde modül konakları için yeterli | 3.8 | Deneme | `bubblewrap` ile sarmalama |
+| V15 | macOS hedeflerine uzak masaüstü için VNC istemcisi gerekli mi | 3.8 | Kullanıcı kararı (macOS aşamasında) | Yalnız SSH |
 
 ### Riskler
 
@@ -922,3 +970,5 @@ Kendime-Brow/
 | İki dil (Rust + Go) + TypeScript | Orta | Go yalnız mesh/companion; sınır protobuf |
 | JS tabanlı parmak izi koruması atlatılabilir | Orta | Sınır açıkça belgelendi; gerekirse C+ yolu (2.3) |
 | Npcap dağıtılamaz | Düşük | Katman 1 çoğu ihtiyacı karşılar; pktmon yedeği |
+| Üç platformun bakım yükü | Orta-yüksek | `kb-platform` sınırı; CI matrisi; macOS en sona |
+| macOS donanımı / geliştirici hesabı yok | Orta | macOS en son aşama; kod platformdan bağımsız tutulur |

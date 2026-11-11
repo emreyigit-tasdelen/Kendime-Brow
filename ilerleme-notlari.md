@@ -5,9 +5,9 @@ Yeni oturumda önce bu dosyayı ve [ROADMAP.md](ROADMAP.md) dosyasını oku.
 
 ## Şu anki durum (özet)
 
-- **Faz:** 0 — mimari tasarım tamamlandı, kullanıcı onayı bekleniyor. Kod yazılmadı.
-- **Bekleyen kararlar:** Hedef platform (Windows öncelikli varsayıldı) ve LICENSE'taki ad teyidi — Roadmap 0.8. İkisi de Faz 1.1'i engellemez.
-- **Sonraki adım:** Faz 1, görev 1.1 (CEF doğrulama denemesi). İlk kod bu görevle başlar.
+- **Faz:** 0 tamamlandı (mimari tasarım). Kod yazılmadı. Bekleyen karar yok.
+- **Sonraki adım:** Faz 1, görev 1.1 — CEF binary indir, Rust `cef` crate ile tek pencere aç, V1/V3/V4'ü doğrula; ardından 1.1b aynı denemeyi Ubuntu VM'de tekrarla.
+- **Platform:** Çok platformlu, öncelik yok. Doğrulama sırası Windows → Ubuntu (yerel VM; Kali de var) → macOS (donanım bulunursa).
 - **Okuma sırası (yeni oturum):** bu dosya → `ROADMAP.md` → `docs/mimari.md` içinden yalnız ilgili bölüm.
 
 ## Kalıcı kurallar
@@ -27,11 +27,17 @@ Yeni oturumda önce bu dosyayı ve [ROADMAP.md](ROADMAP.md) dosyasını oku.
 | 2026-11-12 | VPN/Mesh: WireGuard + self-hosted Headscale | Kullanıcı talebi; üçüncü parti VPN'e bağımlılık yok |
 | 2026-11-12 | Teknoloji temeli: CEF + Rust | Hazır motor binary'si, düşük bakım yükü, modüller motordan bağımsız |
 | 2026-11-12 | Mimari kararlar K1–K16 | `docs/mimari.md` §1 |
+| 2026-11-12 | Çok platformlu; sıra Windows → Ubuntu → macOS | Kullanıcı kararı; geliştirme ortamı Windows + Ubuntu/Kali VM |
 | 2026-11-12 | Ek özellikler: P1 kapsamda, P2 ertelendi, P3 kapsam dışı | Kullanıcı kararı; P1 mevcut altyapıyı yeniden kullanıyor |
 
 ## Görev kayıtları
 
 En yeni üstte. Biçim: görev · yapılan · karar · sonraki adım.
+
+### 0.8 Mimari onayı ve teyitler — BİTTİ (2026-11-12)
+- **Yapılan:** Kullanıcı teyitleri alındı. Mimariye §3.8 "Çok platformluluk" eklendi (platform soyutlama tablosu, `kb-platform` crate'i, kurallar); K15, §3.2, §13, §14 (V13–V15, iki yeni risk) güncellendi. Roadmap: CI Windows + Ubuntu matrisi, 1.1b / 1.10b / 1.15 Ubuntu görevleri, yeni Faz 7 (macOS); eski 6.7 "Linux desteği" kaldırıldı çünkü Linux artık her fazın parçası.
+- **Karar:** Ürün **çok platformlu**, öncelikli platform yok. Doğrulama sırası: Windows → Ubuntu → macOS (en son, donanım bulunursa). Platforma özgü kod yalnız `kb-platform` içinde. Her faz Ubuntu'da da çalışmadan bitmiş sayılmaz. LICENSE'taki ad "Emre Yiğit Taşdelen" doğru.
+- **Sonraki adım:** Faz 1.1.
 
 ### 0.6 Ek özellik seçimi — BİTTİ (2026-11-12)
 - **Yapılan:** Kullanıcı mimari §12'deki önceliklendirmeyi onayladı. `ROADMAP.md` Faz 6 P1'e göre görevlere bölündü (6.1–6.7); mimari §12'ye karar notu eklendi.
