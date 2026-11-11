@@ -1,0 +1,110 @@
+# --- Hassas veriler (ASLA commit edilmez) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+*.ppk
+secrets/
+credentials/
+*.secret
+*.token
+# WireGuard / Headscale / Tailscale
+*.conf.wg
+wg*.conf
+headscale/config.yaml
+headscale/*.sqlite*
+headscale/private.key
+headscale/noise_private.key
+derp*.key
+authkey*
+preauth*
+# Ağ yakalamaları ve oturum logları (kişisel veri içerebilir)
+*.pcap
+*.pcapng
+*.har
+session-logs/
+
+# --- Build çıktıları ---
+out/
+build/
+dist/
+target/
+bin/
+obj/
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.o
+*.obj
+*.lib
+*.a
+*.msi
+*.msix
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+
+# --- Bağımlılıklar / önbellekler ---
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+.cache/
+.gclient
+.gclient_entries
+.cipd/
+depot_tools/
+chromium/
+src/third_party/chromium/
+vendor/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.gradle/
+.cargo/
+.ccache/
+.sccache/
+
+# --- Tarayıcı kullanıcı verisi / profil ---
+User Data/
+user-data/
+profile/
+profiles/
+*.sqlite
+*.sqlite-journal
+*.db
+*.log
+logs/
+crash-reports/
+*.dmp
+
+# --- IDE / OS ---
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Claude yerel ayarları ---
+.claude/settings.local.json
+
+# --- Geçici ---
+tmp/
+temp/
+*.tmp
+*.bak
