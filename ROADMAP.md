@@ -8,7 +8,7 @@ Tüm işler buradan takip edilir. Tasarım ayrıntısı: [docs/mimari.md](docs/m
 
 **Durumlar:** `[ ]` bekliyor · `[~]` devam ediyor · `[x]` bitti · `[!]` engelli / karar bekliyor · `[-]` iptal
 
-**Şu anki faz:** Faz 0 bitmek üzere — 0.6 (ek özellik seçimi) ve mimari onayı bekleniyor.
+**Şu anki faz:** Faz 0 bitmek üzere — yalnız 0.8 (hedef platform ve LICENSE adı teyidi) açık. Sıradaki iş: 1.1.
 
 ---
 
@@ -19,7 +19,7 @@ Tüm işler buradan takip edilir. Tasarım ayrıntısı: [docs/mimari.md](docs/m
 - [x] 0.3 Roadmap ve ilerleme notları iskeleti
 - [x] 0.4 Teknoloji temeli kararı → CEF + Rust
 - [x] 0.5 `docs/mimari.md` — tam mimari tasarım dokümanı
-- [!] 0.6 Ek özellik seçimi (mimari §12) — kullanıcı kararı bekleniyor
+- [x] 0.6 Ek özellik seçimi (mimari §12) → P1 listesi kapsamda; P2 ertelendi, P3 kapsam dışı
 - [x] 0.7 Faz 1+ görevlerinin ayrıntılandırılması (bu dosya)
 - [!] 0.8 Mimari onayı + açık sorular: hedef platform (K15), LICENSE'taki ad
 
@@ -132,9 +132,24 @@ Sürüm `0.8`. (§11)
 
 ## Faz 6 — Ek teknik kullanıcı araçları
 
-_0.6 kararına göre kesinleşecek. Öneri sırası (mimari §12):_
+Kapsam: P1 listesi (0.6 kararı). Sürüm `0.9`.
 
-- [ ] 6.1 P1: şifre yöneticisi (otomatik doldurma, KDBX), kullanıcı scriptleri, `kb://tools` (regex/JSON/hash)
-- [ ] 6.2 P2: REST/API istemcisi, şifreli senkronizasyon, port tarayıcı/ping/traceroute, genel OCR, toplu yeniden adlandırma, ekran kaydı + GIF
-- [ ] 6.3 **Doğrulama:** V5 → Chrome eklentisi (MV3) yükleme, en iyi çaba
-- [ ] 6.4 Linux desteği (sandbox: seccomp + Landlock; paketleme)
+P1'in diğer maddeleri önceki fazlarda zaten var: komut paleti → 1.11, kaynak monitörü → 2.10,
+yerel terminal → 4A.2, arşiv → 3C.6, checksum → 3C.7.
+
+- [ ] 6.1 Şifre yöneticisi: `kb-vault` üzerine giriş kayıtları, parola üretici, `kb://vault` arayüzü
+- [ ] 6.2 Şifre yöneticisi: güvenli otomatik doldurma (köken eşleştirme, yalnız kullanıcı eylemiyle)
+- [ ] 6.3 Şifre yöneticisi: KeePass (KDBX) ve CSV içe/dışa aktarma
+- [ ] 6.4 `kb://tools`: regex test, JSON biçimle/sorgula, hash, base64/URL/JWT kodlama; hepsi eylem kaydında
+- [ ] 6.5 Kullanıcı scriptleri: yönetici, `@match`, `GM_*` alt kümesi, düzenleyici (CodeMirror)
+- [ ] 6.6 **Doğrulama:** V5 → Chrome eklentisi (MV3) yükleme, en iyi çaba
+- [ ] 6.7 Linux desteği (sandbox: seccomp + Landlock; paketleme)
+
+## Ertelenenler (P2 — Faz 6 bitince yeniden değerlendirilecek)
+
+REST/API istemcisi · şifreli senkronizasyon · port tarayıcı/ping/traceroute · genel OCR ·
+toplu yeniden adlandırma · ekran kaydı + GIF
+
+## Kapsam dışı (P3)
+
+Git entegrasyonu · ses dosyası düzenleyici (dönüştürme/kırpma 3C.2 ile zaten geliyor)

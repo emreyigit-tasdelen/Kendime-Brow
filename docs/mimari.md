@@ -809,7 +809,10 @@ gerçek yapılandırma ve anahtarlar `.gitignore` ile dışlanmıştır.
 ## 12. Ek özellikler: önceliklendirme
 
 Değerlendirme ölçütü: tarayıcıya kattığı değer ÷ ek maliyet (mevcut altyapıyı ne kadar
-yeniden kullandığı). **Seçim kullanıcıya aittir**; aşağısı öneridir.
+yeniden kullandığı).
+
+**Karar (2026-11-12):** P1 listesi kapsamda. P2 ertelendi (Faz 6 sonrası yeniden
+değerlendirilecek), P3 kapsam dışı.
 
 ### P1 — Öneriyorum (yüksek değer, altyapısı zaten var)
 

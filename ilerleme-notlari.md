@@ -6,9 +6,8 @@ Yeni oturumda önce bu dosyayı ve [ROADMAP.md](ROADMAP.md) dosyasını oku.
 ## Şu anki durum (özet)
 
 - **Faz:** 0 — mimari tasarım tamamlandı, kullanıcı onayı bekleniyor. Kod yazılmadı.
-- **Bekleyen kararlar:** (1) Ek özellik seçimi — mimari §12, Roadmap 0.6. (2) Mimari onayı,
-  hedef platform (Windows öncelikli varsayıldı) ve LICENSE'taki ad teyidi — Roadmap 0.8.
-- **Sonraki adım:** Onay gelince Faz 1, görev 1.1 (CEF doğrulama denemesi). İlk kod bu görevle başlar.
+- **Bekleyen kararlar:** Hedef platform (Windows öncelikli varsayıldı) ve LICENSE'taki ad teyidi — Roadmap 0.8. İkisi de Faz 1.1'i engellemez.
+- **Sonraki adım:** Faz 1, görev 1.1 (CEF doğrulama denemesi). İlk kod bu görevle başlar.
 - **Okuma sırası (yeni oturum):** bu dosya → `ROADMAP.md` → `docs/mimari.md` içinden yalnız ilgili bölüm.
 
 ## Kalıcı kurallar
@@ -28,10 +27,16 @@ Yeni oturumda önce bu dosyayı ve [ROADMAP.md](ROADMAP.md) dosyasını oku.
 | 2026-11-12 | VPN/Mesh: WireGuard + self-hosted Headscale | Kullanıcı talebi; üçüncü parti VPN'e bağımlılık yok |
 | 2026-11-12 | Teknoloji temeli: CEF + Rust | Hazır motor binary'si, düşük bakım yükü, modüller motordan bağımsız |
 | 2026-11-12 | Mimari kararlar K1–K16 | `docs/mimari.md` §1 |
+| 2026-11-12 | Ek özellikler: P1 kapsamda, P2 ertelendi, P3 kapsam dışı | Kullanıcı kararı; P1 mevcut altyapıyı yeniden kullanıyor |
 
 ## Görev kayıtları
 
 En yeni üstte. Biçim: görev · yapılan · karar · sonraki adım.
+
+### 0.6 Ek özellik seçimi — BİTTİ (2026-11-12)
+- **Yapılan:** Kullanıcı mimari §12'deki önceliklendirmeyi onayladı. `ROADMAP.md` Faz 6 P1'e göre görevlere bölündü (6.1–6.7); mimari §12'ye karar notu eklendi.
+- **Karar:** **P1 kapsamda** (komut paleti, kaynak monitörü, yerel terminal, şifre yöneticisi, checksum, arşiv, regex/JSON/hash araçları, kullanıcı scriptleri). **P2 ertelendi** (REST istemcisi, senkronizasyon, port tarayıcı, genel OCR, toplu yeniden adlandırma, ekran kaydı). **P3 kapsam dışı** (Git entegrasyonu, ses düzenleyici).
+- **Sonraki adım:** 0.8 teyitleri (engelleyici değil) → Faz 1.1: CEF binary indir, Rust `cef` crate ile tek pencere aç, V1/V3/V4'ü doğrula.
 
 ### 0.7 Faz 1+ görevlerinin ayrıntılandırılması — BİTTİ (2026-11-12)
 - **Yapılan:** `ROADMAP.md` yeniden yazıldı: Faz 1–6, toplam ~70 görev, her biri mimari bölümüne referanslı. Doğrulama (spike) görevleri V1–V12 ile eşlendi.
