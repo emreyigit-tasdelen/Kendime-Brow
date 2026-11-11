@@ -46,6 +46,13 @@ impl<T> Tabs<T> {
         self.items.iter().find(|(i, _)| *i == id).map(|(_, t)| t)
     }
 
+    pub fn get_mut(&mut self, id: TabId) -> Option<&mut T> {
+        self.items
+            .iter_mut()
+            .find(|(i, _)| *i == id)
+            .map(|(_, t)| t)
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (TabId, &T)> {
         self.items.iter().map(|(i, t)| (*i, t))
     }

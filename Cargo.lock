@@ -644,6 +644,8 @@ dependencies = [
  "cef",
  "kb-actions",
  "kb-platform",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

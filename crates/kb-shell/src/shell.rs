@@ -13,6 +13,7 @@ use std::cell::RefCell;
 
 use cef::*;
 
+use crate::protocol::{self, Command};
 use crate::tabs::{TabId, Tabs};
 
 pub const UI_URL: &str = "kb://ui/";
@@ -50,11 +51,41 @@ pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
     (command::RELOAD, VK_F5, false, false, false),
 ];
 
+/// One tab: its view plus the state shown in the UI strip.
+#[derive(Clone)]
+struct Tab {
+    view: BrowserView,
+    title: String,
+    url: String,
+    loading: bool,
+    can_go_back: bool,
+    can_go_forward: bool,
+}
+
+impl Tab {
+    fn new(view: BrowserView) -> Self {
+        Self {
+            view,
+            title: String::new(),
+            url: String::new(),
+            loading: true,
+            can_go_back: false,
+            can_go_forward: false,
+        }
+    }
+
+    fn is(&self, browser: &mut Browser) -> bool {
+        self.view
+            .browser()
+            .is_some_and(|b| b.is_same(Some(browser)) != 0)
+    }
+}
+
 struct Shell {
     window: Window,
     client: Client,
     content: Panel,
-    tabs: Tabs<BrowserView>,
+    tabs: Tabs<Tab>,
 }
 
 thread_local! {
@@ -131,7 +162,7 @@ pub fn new_tab(url: &str) {
 /// Adds an existing BrowserView (new tab or popup) as the active tab.
 pub fn add_tab_view(view: BrowserView) {
     let content = with_shell(|s| {
-        s.tabs.open(view.clone(), true);
+        s.tabs.open(Tab::new(view.clone()), true);
         s.content.clone()
     });
     if let Some(content) = content {
@@ -148,7 +179,7 @@ pub fn refresh() {
         let views: Vec<(bool, BrowserView)> = s
             .tabs
             .iter()
-            .map(|(id, v)| (Some(id) == active, v.clone()))
+            .map(|(id, t)| (Some(id) == active, t.view.clone()))
             .collect();
         (s.window.clone(), s.content.clone(), views)
     });
@@ -174,18 +205,109 @@ pub fn refresh() {
     }
     content.layout();
     window.set_title(Some(&CefString::from(title.as_str())));
+    crate::bridge::broadcast(&state());
+}
+
+/// Snapshot of all tabs for the UI strip.
+pub fn state() -> protocol::State {
+    with_shell(|s| {
+        let active = s.tabs.active();
+        protocol::State {
+            tabs: s
+                .tabs
+                .iter()
+                .map(|(id, t)| protocol::TabState {
+                    id: id.0,
+                    title: t.title.clone(),
+                    url: t.url.clone(),
+                    loading: t.loading,
+                    active: Some(id) == active,
+                    can_go_back: t.can_go_back,
+                    can_go_forward: t.can_go_forward,
+                })
+                .collect(),
+        }
+    })
+    .unwrap_or_default()
+}
+
+/// Runs a command received from a `kb://` page.
+pub fn run_bridge_command(cmd: Command) {
+    match cmd {
+        Command::NewTab { url } => {
+            let url = url.map_or_else(|| NEW_TAB_URL.to_string(), |u| protocol::input_to_url(&u));
+            new_tab(&url);
+        }
+        Command::CloseTab { id } => close_tab(TabId(id)),
+        Command::ActivateTab { id } => {
+            with_shell(|s| s.tabs.activate(TabId(id)));
+            refresh();
+        }
+        Command::Navigate { text } => {
+            let url = protocol::input_to_url(&text);
+            if let Some(frame) = active_view()
+                .and_then(|v| v.browser())
+                .and_then(|b| b.main_frame())
+            {
+                frame.load_url(Some(&CefString::from(url.as_str())));
+            }
+        }
+        Command::Back => {
+            run_command(command::BACK);
+        }
+        Command::Forward => {
+            run_command(command::FORWARD);
+        }
+        Command::Reload => {
+            run_command(command::RELOAD);
+        }
+        Command::Stop => {
+            if let Some(b) = active_view().and_then(|v| v.browser()) {
+                b.stop_load();
+            }
+        }
+        Command::State | Command::Subscribe => {}
+    }
+}
+
+#[derive(Default)]
+pub struct TabUpdate {
+    pub title: Option<String>,
+    pub url: Option<String>,
+    /// (loading, can_go_back, can_go_forward)
+    pub loading: Option<(bool, bool, bool)>,
+}
+
+/// Updates the stored state of the tab showing `browser` and notifies the UI.
+pub fn update_tab(browser: &mut Browser, upd: TabUpdate) {
+    let changed = with_shell(|s| {
+        let id = s.tabs.find(|t| t.is(browser))?;
+        let tab = s.tabs.get_mut(id)?;
+        if let Some(t) = upd.title {
+            tab.title = t;
+        }
+        if let Some(u) = upd.url {
+            tab.url = u;
+        }
+        if let Some((l, b, fw)) = upd.loading {
+            tab.loading = l;
+            tab.can_go_back = b;
+            tab.can_go_forward = fw;
+        }
+        Some(())
+    })
+    .flatten();
+    if changed.is_some() {
+        refresh();
+    }
 }
 
 fn active_view() -> Option<BrowserView> {
-    with_shell(|s| s.tabs.active_item().cloned()).flatten()
+    with_shell(|s| s.tabs.active_item().map(|t| t.view.clone())).flatten()
 }
 
 fn tab_of(browser: &mut Browser) -> Option<TabId> {
-    with_shell(|s| {
-        s.tabs
-            .find(|v| v.browser().is_some_and(|b| b.is_same(Some(browser)) != 0))
-    })
-    .flatten()
+    with_shell(|s| s.tabs.find(|t| t.is(browser))).flatten()
 }
 
 /// Maps a key-down (Windows virtual key code + modifiers) to a command.
@@ -224,7 +346,14 @@ pub fn run_command(cmd: i32) -> bool {
 
 /// Closes the active tab; closing the last tab closes the window.
 pub fn close_active_tab() {
-    let Some(view) = active_view() else {
+    if let Some(id) = with_shell(|s| s.tabs.active()).flatten() {
+        close_tab(id);
+    }
+}
+
+/// Closes a tab; closing the last tab closes the window.
+pub fn close_tab(id: TabId) {
+    let Some(view) = with_shell(|s| s.tabs.get(id).map(|t| t.view.clone())).flatten() else {
         return;
     };
     let last = with_shell(|s| s.tabs.len() == 1).unwrap_or(true);
@@ -240,12 +369,15 @@ pub fn close_active_tab() {
     }
 }
 
-/// Title of a browser changed: update the window title if it is the active tab.
-pub fn on_title_change(browser: &mut Browser) {
-    let active = with_shell(|s| s.tabs.active()).flatten();
-    if active.is_some() && tab_of(browser) == active {
-        refresh();
-    }
+/// Title of a browser changed.
+pub fn on_title_change(browser: &mut Browser, title: String) {
+    update_tab(
+        browser,
+        TabUpdate {
+            title: Some(title),
+            ..Default::default()
+        },
+    );
 }
 
 pub fn on_after_created() {
@@ -276,7 +408,7 @@ pub fn do_close(browser: &mut Browser) -> bool {
         if s.tabs.len() <= 1 {
             return None; // last tab: let the window close
         }
-        s.tabs.close(id).map(|v| (v, s.content.clone()))
+        s.tabs.close(id).map(|t| (t.view, s.content.clone()))
     })
     .flatten();
     let Some((view, content)) = removed else {
@@ -311,7 +443,7 @@ pub fn on_before_close(browser: &mut Browser) {
 pub fn can_close_window(ui_view: Option<&BrowserView>) -> bool {
     WINDOW_CLOSING.with(|c| *c.borrow_mut() = true);
     let mut views: Vec<BrowserView> =
-        with_shell(|s| s.tabs.iter().map(|(_, v)| v.clone()).collect()).unwrap_or_default();
+        with_shell(|s| s.tabs.iter().map(|(_, t)| t.view.clone()).collect()).unwrap_or_default();
     views.extend(ui_view.cloned());
     let mut all = true;
     for view in views {

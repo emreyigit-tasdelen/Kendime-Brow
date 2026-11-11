@@ -8,7 +8,9 @@ use std::rc::Rc;
 
 use cef::*;
 
-use crate::{kb_scheme, shell};
+use cef::wrapper::message_router::MessageRouterBrowserSideHandlerCallbacks;
+
+use crate::{bridge, kb_scheme, shell};
 
 wrap_app! {
     pub struct KbApp;
@@ -20,6 +22,10 @@ wrap_app! {
 
         fn browser_process_handler(&self) -> Option<BrowserProcessHandler> {
             Some(KbBrowserProcessHandler::new())
+        }
+
+        fn render_process_handler(&self) -> Option<RenderProcessHandler> {
+            Some(bridge::new_render_process_handler())
         }
     }
 }
@@ -33,6 +39,7 @@ wrap_browser_process_handler! {
                 kb_scheme::install_handler_factory(),
                 "failed to register the kb:// scheme handler"
             );
+            bridge::init_browser_side();
 
             let command_line = command_line_get_global().expect("no global command line");
             let url = CefString::from(&command_line.switch_value(Some(&CefString::from("url"))))
@@ -177,6 +184,87 @@ wrap_client! {
         fn keyboard_handler(&self) -> Option<KeyboardHandler> {
             Some(KbKeyboardHandler::new())
         }
+
+        fn load_handler(&self) -> Option<LoadHandler> {
+            Some(KbLoadHandler::new())
+        }
+
+        fn request_handler(&self) -> Option<RequestHandler> {
+            Some(KbRequestHandler::new())
+        }
+
+        fn on_process_message_received(
+            &self,
+            browser: Option<&mut Browser>,
+            frame: Option<&mut Frame>,
+            source_process: ProcessId,
+            message: Option<&mut ProcessMessage>,
+        ) -> i32 {
+            bridge::browser_router().is_some_and(|r| {
+                r.on_process_message_received(
+                    browser.cloned(),
+                    frame.cloned(),
+                    source_process,
+                    message.cloned(),
+                )
+            }) as i32
+        }
+    }
+}
+
+wrap_load_handler! {
+    struct KbLoadHandler;
+
+    impl LoadHandler {
+        fn on_loading_state_change(
+            &self,
+            browser: Option<&mut Browser>,
+            is_loading: i32,
+            can_go_back: i32,
+            can_go_forward: i32,
+        ) {
+            if let Some(browser) = browser {
+                shell::update_tab(
+                    browser,
+                    shell::TabUpdate {
+                        loading: Some((is_loading != 0, can_go_back != 0, can_go_forward != 0)),
+                        ..Default::default()
+                    },
+                );
+            }
+        }
+    }
+}
+
+wrap_request_handler! {
+    struct KbRequestHandler;
+
+    impl RequestHandler {
+        fn on_before_browse(
+            &self,
+            browser: Option<&mut Browser>,
+            frame: Option<&mut Frame>,
+            _request: Option<&mut Request>,
+            _user_gesture: i32,
+            _is_redirect: i32,
+        ) -> i32 {
+            if let Some(r) = bridge::browser_router() {
+                r.on_before_browse(browser.cloned(), frame.cloned());
+            }
+            0
+        }
+
+        fn on_render_process_terminated(
+            &self,
+            browser: Option<&mut Browser>,
+            _status: TerminationStatus,
+            _error_code: i32,
+            _error_string: Option<&CefString>,
+        ) {
+            if let Some(r) = bridge::browser_router() {
+                r.on_render_process_terminated(browser.cloned());
+            }
+        }
     }
 }
 
@@ -228,10 +316,32 @@ wrap_display_handler! {
     struct KbDisplayHandler;
 
     impl DisplayHandler {
-        fn on_title_change(&self, browser: Option<&mut Browser>, _title: Option<&CefString>) {
+        fn on_title_change(&self, browser: Option<&mut Browser>, title: Option<&CefString>) {
             if let Some(browser) = browser {
-                shell::on_title_change(browser);
+                let title = title.map(CefString::to_string).unwrap_or_default();
+                shell::on_title_change(browser, title);
             }
+        }
+
+        fn on_address_change(
+            &self,
+            browser: Option<&mut Browser>,
+            frame: Option<&mut Frame>,
+            url: Option<&CefString>,
+        ) {
+            let (Some(browser), Some(frame)) = (browser, frame) else {
+                return;
+            };
+            if frame.is_main() == 0 {
+                return;
+            }
+            shell::update_tab(
+                browser,
+                shell::TabUpdate {
+                    url: Some(url.map(CefString::to_string).unwrap_or_default()),
+                    ..Default::default()
+                },
+            );
         }
     }
 }
@@ -249,6 +359,9 @@ wrap_life_span_handler! {
         }
 
         fn on_before_close(&self, browser: Option<&mut Browser>) {
+            if let Some(r) = bridge::browser_router() {
+                r.on_before_close(browser.as_deref().cloned());
+            }
             if let Some(browser) = browser {
                 shell::on_before_close(browser);
             }
