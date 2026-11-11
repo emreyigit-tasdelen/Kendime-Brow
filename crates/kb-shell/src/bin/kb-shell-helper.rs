@@ -22,7 +22,7 @@ fn main() {
 
     execute_process(
         Some(args.as_main_args()),
-        None::<&mut App>,
+        Some(&mut kb_shell::KbSubprocessApp::new()),
         std::ptr::null_mut(),
     );
 }

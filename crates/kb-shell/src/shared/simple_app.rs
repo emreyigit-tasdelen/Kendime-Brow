@@ -100,6 +100,10 @@ wrap_app! {
     pub struct SimpleApp;
 
     impl App {
+        fn on_register_custom_schemes(&self, registrar: Option<&mut SchemeRegistrar>) {
+            kb_shell::kb_scheme::register_custom_scheme(registrar);
+        }
+
         fn browser_process_handler(&self) -> Option<BrowserProcessHandler> {
             Some(SimpleBrowserProcessHandler::new(RefCell::new(None)))
         }
@@ -114,6 +118,10 @@ wrap_browser_process_handler! {
     impl BrowserProcessHandler {
         fn on_context_initialized(&self) {
             debug_assert_ne!(currently_on(ThreadId::UI), 0);
+            assert!(
+                kb_shell::kb_scheme::install_handler_factory(),
+                "failed to register the kb:// scheme handler"
+            );
 
             // Check if Alloy style will be used.
             let command_line = command_line_get_global().expect("Failed to get command line");
@@ -141,7 +149,7 @@ wrap_browser_process_handler! {
             let url = CefString::from(&command_line.switch_value(Some(&CefString::from("url"))))
                 .to_string();
             let url = if url.is_empty() {
-                "about:blank"
+                "kb://newtab/"
             } else {
                 url.as_str()
             };

@@ -37,7 +37,8 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
     let switch = CefString::from("type");
     let is_browser_process = cmd_line.has_switch(Some(&switch)) != 1;
 
-    let ret = execute_process(Some(main_args), None, sandbox_info);
+    let mut app = simple_app::SimpleApp::new();
+    let ret = execute_process(Some(main_args), Some(&mut app), sandbox_info);
 
     if is_browser_process {
         println!("launch browser process");
@@ -49,8 +50,6 @@ pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut
         // non-browser process does not initialize cef
         return;
     }
-
-    let mut app = simple_app::SimpleApp::new();
 
     let settings = Settings {
         no_sandbox: !cfg!(feature = "sandbox") as _,

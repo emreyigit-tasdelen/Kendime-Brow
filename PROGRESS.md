@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.4 CI, then 1.5+ in order.
+- **Next step:** 1.6 (window layout, tabs). 1.4 CI waiting for a green run.
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
 - **Platform:** Cross-platform, no primary platform. Verification order Windows → Ubuntu (local VM; Kali also available) → macOS (if hardware becomes available).
@@ -38,6 +38,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.5 `kb://` scheme + embedded assets + CSP — DONE (2026-11-12)
+- **Done:** `kb-shell/src/scheme.rs` (pure URL → asset resolution, traversal-safe, MIME table, CSP constant; 4 tests) and `kb_scheme.rs` (CEF glue: `kb` registered as standard + secure + CORS + fetch in every process via `App::on_register_custom_schemes`; helper binary now passes `KbSubprocessApp`; handler factory installed in `on_context_initialized`). Placeholder pages `kb://ui/` and `kb://newtab/` (new default start page). Responses carry `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`. Verified in the real window: headers present (`scripts/cdp-headers.mjs`), inline script blocked (the same page via `file://` runs it).
+- **Decision / gotcha:** `cef` wrapper macros CLONE struct fields; a cloned `CefStringMultimap` is only a borrowed pointer to the original, so the stock `StreamResourceHandler` loses its header map. Own `KbResourceHandler` writes headers in `response_headers` and keeps shared state in `Arc`. Remember this for every `wrap_*!` struct. Assets use `include_bytes!` until the Vite build exists (1.7 → `rust-embed`).
+- **Next step:** 1.6.
 
 ### 1.3 Workspace skeleton — DONE (2026-11-12)
 - **Done:** Root `Cargo.toml` workspace (resolver 3, edition 2024, `cef = "=156.4.0"` pinned), `cef.lock` (CEF 156.0.26, Chromium 156.0.8078.88, archive SHA-1). Crates: `kb-shell` (binary `kendime-brow` + `kb-shell-helper`, bootstrapped from the spike, default page `about:blank`), `kb-platform` (platform detection + data directory per §3.7/§3.8, tested), `kb-ipc` (4-byte length-prefixed framing, tested), `kb-actions` (action registry, search, chain type-checking, tested). `ui/`, `proto/`, `scripts/` placeholders, `justfile` (build/dev/test/check/scan). 11 tests pass; fmt + clippy `-D warnings` clean; the shell window opens.
