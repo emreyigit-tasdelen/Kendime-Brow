@@ -1,7 +1,10 @@
 //! kb-shell library: code shared by the browser binary and the helper (subprocess) binary.
 
+pub mod app;
 pub mod kb_scheme;
 pub mod scheme;
+pub mod shell;
+pub mod tabs;
 
 use cef::*;
 

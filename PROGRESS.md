@@ -6,7 +6,8 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.6 (window layout, tabs). 1.4 CI waiting for a green run.
+- **Next step:** 1.7 (kb://ui: tab strip, address bar). Then 1.8 bridge, 1.9 IPC …
+- **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
 - **Platform:** Cross-platform, no primary platform. Verification order Windows → Ubuntu (local VM; Kali also available) → macOS (if hardware becomes available).
@@ -38,6 +39,17 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.6 Window layout and tabs — DONE (2026-11-12), shortcuts need a manual check
+- **Done:** Replaced the cefsimple code with `app.rs` (App, BrowserProcessHandler, Client, Views delegates), `shell.rs` (UI-thread state: window, content panel, tabs; new/close/cycle tab, back/forward/reload, title, do_close/on_before_close, window close) and `tabs.rs` (pure tab list: insert-after-active, close → right then left, cycle; 5 tests). Layout: vertical box, `kb://ui` strip (44 px) + content panel with one BrowserView per tab, only the active one visible. Popups (`window.open`) open as new tabs. Verified via DevTools: popup → new tab, closing that tab keeps the window and updates the title, closing the last tab closes the window and the process exits.
+- **Decision:** CEF limits found: a Chrome-style BrowserView cannot be added to an Alloy-style window, and a window cannot hold more than one Chrome-style BrowserView → tabbed window is **Alloy style throughout** (ARCHITECTURE §2.4 and V3 updated; Chrome extensions would need a separate Chrome-style window). Closing a tab: `do_close` returns true and the BrowserView is removed, otherwise CEF closes the window.
+- **Not verified:** keyboard shortcuts (Ctrl+T/W/Tab, Alt+←/→, F5). Implemented in three places (window accelerators, `KeyboardHandler::on_pre_key_event`, `WindowDelegate::on_key_event`), but synthetic input (SendKeys / keybd_event) only produced CHAR events, never key-down, so they could not be tested automatically. **User: please try them by hand.** Debug output: run with `KB_DEBUG=1`.
+- **Next step:** 1.7.
+
+### 1.4 CI matrix — DONE (2026-11-12)
+- **Done:** `.github/workflows/ci.yml`: Windows + Ubuntu matrix (fmt, clippy `-D warnings`, test; CMake/Ninja/GTK deps on Linux), `cargo-deny` job (licenses/bans/sources, `deny.toml`). Fixed a `.gitignore` bug (`bin/` ignored `src/bin`). Both platforms green.
+- **Decision:** The Ubuntu CI build compiles the CEF shell on Linux — partial V13 evidence (compile only; running still needs the VM, 1.1b).
+- **Next step:** 1.5.
 
 ### 1.5 `kb://` scheme + embedded assets + CSP — DONE (2026-11-12)
 - **Done:** `kb-shell/src/scheme.rs` (pure URL → asset resolution, traversal-safe, MIME table, CSP constant; 4 tests) and `kb_scheme.rs` (CEF glue: `kb` registered as standard + secure + CORS + fetch in every process via `App::on_register_custom_schemes`; helper binary now passes `KbSubprocessApp`; handler factory installed in `on_context_initialized`). Placeholder pages `kb://ui/` and `kb://newtab/` (new default start page). Responses carry `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`. Verified in the real window: headers present (`scripts/cdp-headers.mjs`), inline script blocked (the same page via `file://` runs it).

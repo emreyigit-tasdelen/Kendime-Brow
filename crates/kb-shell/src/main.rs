@@ -1,26 +1,59 @@
-//! kb-shell main process. Bootstrapped from the Phase 1.1 spike (cefsimple port); replaced step by step in 1.5–1.8.
-
+//! kendime-brow: browser main process (architecture §3.1).
 #![cfg_attr(
     all(not(debug_assertions), not(feature = "sandbox"), target_os = "windows"),
     windows_subsystem = "windows"
 )]
 
-pub mod shared;
+use cef::*;
+use kb_shell::app::KbApp;
 
 #[cfg(not(all(feature = "sandbox", target_os = "windows")))]
 fn main() -> Result<(), &'static str> {
-    let _library = shared::load_cef();
+    // Initialize the CEF API version.
+    let _ = api_hash(sys::CEF_API_VERSION_LAST, 0);
 
-    let args = cef::args::Args::new();
+    let args = args::Args::new();
     let Some(cmd_line) = args.as_cmd_line() else {
         return Err("Failed to parse command line arguments");
     };
+    let is_browser_process = cmd_line.has_switch(Some(&CefString::from("type"))) != 1;
 
-    shared::run_main(args.as_main_args(), &cmd_line, std::ptr::null_mut());
+    // Subprocesses launched from this executable exit here (the dedicated helper binary is
+    // preferred; see `browser_subprocess_path`).
+    let mut app = KbApp::new();
+    let ret = execute_process(
+        Some(args.as_main_args()),
+        Some(&mut app),
+        std::ptr::null_mut(),
+    );
+    if !is_browser_process {
+        return if ret >= 0 {
+            Ok(())
+        } else {
+            Err("subprocess failed")
+        };
+    }
+
+    let settings = Settings {
+        no_sandbox: 1,
+        ..Default::default()
+    };
+    if initialize(
+        Some(args.as_main_args()),
+        Some(&settings),
+        Some(&mut app),
+        std::ptr::null_mut(),
+    ) != 1
+    {
+        return Err("CEF initialization failed");
+    }
+
+    run_message_loop();
+    shutdown();
     Ok(())
 }
 
 #[cfg(all(feature = "sandbox", target_os = "windows"))]
 fn main() -> Result<(), &'static str> {
-    Err("Running in sandbox mode on Windows requires bootstrap.exe or bootstrapc.exe.")
+    Err("The Windows sandbox build must be launched through bootstrap.exe (not implemented yet).")
 }

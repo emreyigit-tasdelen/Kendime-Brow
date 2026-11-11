@@ -1,0 +1,350 @@
+//! Browser window and tab management on the CEF UI thread (architecture §2.4, task 1.6).
+//!
+//! Layout (CEF Views):
+//! ```text
+//! Window (vertical box)
+//!  ├─ UI strip: BrowserView, Alloy style, kb://ui/     (fixed height)
+//!  └─ Content panel (flex 1): one Chrome-style BrowserView per tab, only the active one visible
+//! ```
+//! State lives in a UI-thread `thread_local`. Never call a CEF function that can re-enter our
+//! handlers while the state is borrowed: copy what you need out of `with_shell` first.
+
+use std::cell::RefCell;
+
+use cef::*;
+
+use crate::tabs::{TabId, Tabs};
+
+pub const UI_URL: &str = "kb://ui/";
+pub const NEW_TAB_URL: &str = "kb://newtab/";
+pub const UI_STRIP_HEIGHT: i32 = 44;
+pub const DEFAULT_WINDOW_SIZE: (i32, i32) = (1280, 800);
+
+/// Window accelerator command ids.
+pub mod command {
+    pub const NEW_TAB: i32 = 1;
+    pub const CLOSE_TAB: i32 = 2;
+    pub const NEXT_TAB: i32 = 3;
+    pub const PREV_TAB: i32 = 4;
+    pub const BACK: i32 = 5;
+    pub const FORWARD: i32 = 6;
+    pub const RELOAD: i32 = 7;
+}
+
+// Windows virtual key codes (CEF uses them on every platform for accelerators).
+const VK_TAB: i32 = 0x09;
+const VK_LEFT: i32 = 0x25;
+const VK_RIGHT: i32 = 0x27;
+const VK_T: i32 = 0x54;
+const VK_W: i32 = 0x57;
+const VK_F5: i32 = 0x74;
+
+/// (command, key, shift, ctrl, alt)
+pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
+    (command::NEW_TAB, VK_T, false, true, false),
+    (command::CLOSE_TAB, VK_W, false, true, false),
+    (command::NEXT_TAB, VK_TAB, false, true, false),
+    (command::PREV_TAB, VK_TAB, true, true, false),
+    (command::BACK, VK_LEFT, false, false, true),
+    (command::FORWARD, VK_RIGHT, false, false, true),
+    (command::RELOAD, VK_F5, false, false, false),
+];
+
+struct Shell {
+    window: Window,
+    client: Client,
+    content: Panel,
+    tabs: Tabs<BrowserView>,
+}
+
+thread_local! {
+    static SHELL: RefCell<Option<Shell>> = const { RefCell::new(None) };
+    static BROWSER_COUNT: RefCell<usize> = const { RefCell::new(0) };
+    static WINDOW_CLOSING: RefCell<bool> = const { RefCell::new(false) };
+}
+
+fn with_shell<R>(f: impl FnOnce(&mut Shell) -> R) -> Option<R> {
+    SHELL.with(|s| s.borrow_mut().as_mut().map(f))
+}
+
+/// Builds the layout inside a freshly created window. Called from `on_window_created`.
+pub fn init_window(window: &mut Window, ui_view: BrowserView, client: Client) {
+    let settings = BoxLayoutSettings {
+        horizontal: 0,
+        ..Default::default()
+    };
+    let layout = window.set_to_box_layout(Some(&settings));
+
+    let mut ui = View::from(&ui_view);
+    window.add_child_view(Some(&mut ui));
+
+    let content = panel_create(None).expect("panel_create failed");
+    let content_settings = BoxLayoutSettings {
+        horizontal: 0,
+        default_flex: 1,
+        ..Default::default()
+    };
+    content.set_to_box_layout(Some(&content_settings));
+    let mut content_view = View::from(&content);
+    window.add_child_view(Some(&mut content_view));
+    if let Some(layout) = layout {
+        layout.set_flex_for_view(Some(&mut content_view), 1);
+    }
+
+    // Window accelerators (also matched in the key handlers, see app.rs `handle_key`).
+    for (cmd, key, shift, ctrl, alt) in ACCELERATORS {
+        window.set_accelerator(*cmd, *key, *shift as i32, *ctrl as i32, *alt as i32, 0);
+    }
+
+    SHELL.with(|s| {
+        *s.borrow_mut() = Some(Shell {
+            window: window.clone(),
+            client,
+            content,
+            tabs: Tabs::new(),
+        })
+    });
+}
+
+/// Creates a new Chrome-style tab browser and shows it.
+pub fn new_tab(url: &str) {
+    let Some(mut client) = with_shell(|s| s.client.clone()) else {
+        return;
+    };
+    let mut delegate = crate::app::TabViewDelegate::new();
+    let view = browser_view_create(
+        Some(&mut client),
+        Some(&CefString::from(url)),
+        Some(&BrowserSettings::default()),
+        None,
+        None,
+        Some(&mut delegate),
+    );
+    if std::env::var_os("KB_DEBUG").is_some() {
+        eprintln!("[kb] new_tab {url} -> view created: {}", view.is_some());
+    }
+    if let Some(view) = view {
+        add_tab_view(view);
+    }
+}
+
+/// Adds an existing BrowserView (new tab or popup) as the active tab.
+pub fn add_tab_view(view: BrowserView) {
+    let content = with_shell(|s| {
+        s.tabs.open(view.clone(), true);
+        s.content.clone()
+    });
+    if let Some(content) = content {
+        let mut v = View::from(&view);
+        content.add_child_view(Some(&mut v));
+        refresh();
+    }
+}
+
+/// Shows only the active tab, focuses it and updates the window title.
+pub fn refresh() {
+    let snapshot = with_shell(|s| {
+        let active = s.tabs.active();
+        let views: Vec<(bool, BrowserView)> = s
+            .tabs
+            .iter()
+            .map(|(id, v)| (Some(id) == active, v.clone()))
+            .collect();
+        (s.window.clone(), s.content.clone(), views)
+    });
+    let Some((window, content, views)) = snapshot else {
+        return;
+    };
+    let mut title = String::from("Kendime-Brow");
+    for (is_active, view) in &views {
+        view.set_visible(*is_active as i32);
+        if *is_active {
+            view.request_focus();
+            if let Some(entry) = view
+                .browser()
+                .and_then(|b| b.host())
+                .and_then(|h| h.visible_navigation_entry())
+            {
+                let t = CefString::from(&entry.title()).to_string();
+                if !t.is_empty() {
+                    title = format!("{t} — Kendime-Brow");
+                }
+            }
+        }
+    }
+    content.layout();
+    window.set_title(Some(&CefString::from(title.as_str())));
+}
+
+fn active_view() -> Option<BrowserView> {
+    with_shell(|s| s.tabs.active_item().cloned()).flatten()
+}
+
+fn tab_of(browser: &mut Browser) -> Option<TabId> {
+    with_shell(|s| {
+        s.tabs
+            .find(|v| v.browser().is_some_and(|b| b.is_same(Some(browser)) != 0))
+    })
+    .flatten()
+}
+
+/// Maps a key-down (Windows virtual key code + modifiers) to a command.
+pub fn command_for_key(key: i32, shift: bool, ctrl: bool, alt: bool) -> Option<i32> {
+    ACCELERATORS
+        .iter()
+        .find(|(_, k, s, c, a)| (*k, *s, *c, *a) == (key, shift, ctrl, alt))
+        .map(|(cmd, ..)| *cmd)
+}
+
+/// Runs a shell command (from a shortcut or, later, the UI). Returns true if handled.
+pub fn run_command(cmd: i32) -> bool {
+    if std::env::var_os("KB_DEBUG").is_some() {
+        eprintln!("[kb] command {cmd}");
+    }
+    match cmd {
+        command::NEW_TAB => new_tab(NEW_TAB_URL),
+        command::CLOSE_TAB => close_active_tab(),
+        command::NEXT_TAB | command::PREV_TAB => {
+            with_shell(|s| s.tabs.cycle(cmd == command::NEXT_TAB));
+            refresh();
+        }
+        command::BACK | command::FORWARD | command::RELOAD => {
+            if let Some(browser) = active_view().and_then(|v| v.browser()) {
+                match cmd {
+                    command::BACK => browser.go_back(),
+                    command::FORWARD => browser.go_forward(),
+                    _ => browser.reload(),
+                }
+            }
+        }
+        _ => return false,
+    }
+    true
+}
+
+/// Closes the active tab; closing the last tab closes the window.
+pub fn close_active_tab() {
+    let Some(view) = active_view() else {
+        return;
+    };
+    let last = with_shell(|s| s.tabs.len() == 1).unwrap_or(true);
+    if last {
+        if let Some(window) = with_shell(|s| s.window.clone()) {
+            window.close();
+        }
+        return;
+    }
+    if let Some(host) = view.browser().and_then(|b| b.host()) {
+        // The tab is removed from the list in `on_before_close`.
+        host.close_browser(0);
+    }
+}
+
+/// Title of a browser changed: update the window title if it is the active tab.
+pub fn on_title_change(browser: &mut Browser) {
+    let active = with_shell(|s| s.tabs.active()).flatten();
+    if active.is_some() && tab_of(browser) == active {
+        refresh();
+    }
+}
+
+pub fn on_after_created() {
+    let n = BROWSER_COUNT.with(|c| {
+        *c.borrow_mut() += 1;
+        *c.borrow()
+    });
+    debug_log(&format!("browser created, count={n}"));
+}
+
+fn debug_log(msg: &str) {
+    if std::env::var_os("KB_DEBUG").is_some() {
+        eprintln!("[kb] {msg}");
+    }
+}
+
+/// `LifeSpanHandler::do_close`. Returns true to cancel CEF's default behaviour, which would
+/// close the whole window: a single tab is closed by removing its BrowserView from the
+/// hierarchy (dropping our references destroys the browser).
+pub fn do_close(browser: &mut Browser) -> bool {
+    if WINDOW_CLOSING.with(|c| *c.borrow()) {
+        return false;
+    }
+    let Some(id) = tab_of(browser) else {
+        return false; // kb://ui strip or unknown browser
+    };
+    let removed = with_shell(|s| {
+        if s.tabs.len() <= 1 {
+            return None; // last tab: let the window close
+        }
+        s.tabs.close(id).map(|v| (v, s.content.clone()))
+    })
+    .flatten();
+    let Some((view, content)) = removed else {
+        return false;
+    };
+    let mut v = View::from(&view);
+    content.remove_child_view(Some(&mut v));
+    drop(v);
+    drop(view);
+    refresh();
+    true
+}
+
+/// A browser is gone: drop any remaining tab entry and quit when nothing is left.
+pub fn on_before_close(browser: &mut Browser) {
+    if let Some(id) = tab_of(browser) {
+        with_shell(|s| s.tabs.close(id));
+    }
+    let left = BROWSER_COUNT.with(|c| {
+        let mut c = c.borrow_mut();
+        *c = c.saturating_sub(1);
+        *c
+    });
+    debug_log(&format!("browser closed, count={left}"));
+    if left == 0 {
+        SHELL.with(|s| s.borrow_mut().take());
+        quit_message_loop();
+    }
+}
+
+/// Window close requested: ask every browser to close; allow once all agree.
+pub fn can_close_window(ui_view: Option<&BrowserView>) -> bool {
+    WINDOW_CLOSING.with(|c| *c.borrow_mut() = true);
+    let mut views: Vec<BrowserView> =
+        with_shell(|s| s.tabs.iter().map(|(_, v)| v.clone()).collect()).unwrap_or_default();
+    views.extend(ui_view.cloned());
+    let mut all = true;
+    for view in views {
+        if let Some(host) = view.browser().and_then(|b| b.host()) {
+            all &= host.try_close_browser() == 1;
+        }
+    }
+    all
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shortcut_mapping() {
+        assert_eq!(
+            command_for_key(VK_T, false, true, false),
+            Some(command::NEW_TAB)
+        );
+        assert_eq!(
+            command_for_key(VK_TAB, true, true, false),
+            Some(command::PREV_TAB)
+        );
+        assert_eq!(
+            command_for_key(VK_TAB, false, true, false),
+            Some(command::NEXT_TAB)
+        );
+        assert_eq!(
+            command_for_key(VK_LEFT, false, false, true),
+            Some(command::BACK)
+        );
+        assert_eq!(command_for_key(VK_T, false, false, false), None);
+        assert_eq!(command_for_key(VK_T, true, true, false), None);
+    }
+}

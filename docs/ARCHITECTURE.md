@@ -85,15 +85,23 @@ the shell code does not change.
 
 ### 2.4 How CEF is used
 
-CEF offers two browser styles `(verify)`:
+CEF offers two browser styles (verified in tasks 1.1 and 1.6):
 
 | Style | Used for | Why |
 |---|---|---|
-| Chrome style | Web tabs | Chrome extensions, built-in PDF viewer, permission prompts |
-| Alloy style | `kb://` UI and tool pages | Full control, no Chrome UI |
+| Alloy style | **All tabs** and the `kb://` UI in the main multi-tab window | Full control, no Chrome UI; the only style that allows several BrowserViews in one window |
+| Chrome style | Reserved: a separate single-browser window if Chrome-only features are needed (extensions, Phase 6 / V5) | Chrome extensions, Chrome permission prompts |
 
-The window layout is built with CEF Views; Chrome's own toolbar is hidden
-(`CEF_CTT_NONE`), and the entire UI is our `kb://ui` page.
+**CEF limits found in 1.6 (decision changed from the original design):** a Chrome-style
+BrowserView cannot be added to an Alloy-style window, and a window cannot contain more than one
+Chrome-style BrowserView. A tabbed window with a `kb://ui` strip therefore uses Alloy style
+throughout. Consequences: Chrome extension support (V5) would need a separate Chrome-style window;
+Alloy has its own PDF viewer and permission callbacks (handled by us).
+
+The window layout is built with CEF Views: a vertical box with the `kb://ui` strip on top and a
+content panel holding one BrowserView per tab (only the active one visible).
+Closing a tab: `LifeSpanHandler::do_close` returns true and the BrowserView is removed from the
+hierarchy (CEF would otherwise close the whole window).
 
 ### 2.5 Version policy
 
@@ -934,7 +942,7 @@ Kendime-Brow/
 |---|---|---|---|---|
 | V1 | Official CEF binaries lack H.264/AAC | 2.2 | `canPlayType` on a test page | No need for our own build (good news) |
 | V2 | Our own CEF build (codec arguments only) finishes in reasonable time | 2.2 | Try once, measure time/disk | Continue without codecs + investigate OS decoders |
-| V3 | Chrome style + Alloy style in the same app, Chrome toolbar hidden | 2.4 | CEF sample app | All Alloy style; extension support drops |
+| V3 | Chrome style + Alloy style in the same app, Chrome toolbar hidden | 2.4 | **Done (1.1, 1.6): each style works, but they cannot be mixed in one window** | → All Alloy style in the tabbed window (2.4) |
 | V4 | The Rust `cef` crate covers the needed APIs (Views, request handler, DevTools messages) | K2 | Phase 1 skeleton | Thin C++ bridge for missing parts |
 | V5 | Unpacked MV3 extensions can be loaded | 3.6 | Try with uBlock Origin Lite | Extension support drops from scope |
 | V6 | JS injection at document start, in the main world, in all frames is possible | 4.4 | CDP `Page.addScriptToEvaluateOnNewDocument` | Renderer-side `OnContextCreated` |
