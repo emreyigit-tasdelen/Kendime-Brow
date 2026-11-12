@@ -96,7 +96,9 @@ export type Command =
   | { cmd: 'update-filters' }
   | { cmd: 'toggle-shield' }
   | { cmd: 'tasks' }
-  | { cmd: 'kill-process'; pid: number };
+  | { cmd: 'kill-process'; pid: number }
+  | { cmd: 'pdf-open'; path: string }
+  | { cmd: 'pdf-render'; page: number; dpi?: number };
 
 interface QueryOptions {
   request: string;

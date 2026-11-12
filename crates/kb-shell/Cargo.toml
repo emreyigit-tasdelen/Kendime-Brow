@@ -30,5 +30,8 @@ kb-privacy.workspace = true
 sysinfo = "0.40.3"
 minisign-verify = "0.3.0"
 ureq = "3.5"
+kb-ipc.workspace = true
+tokio = { version = "1.54.1", features = ["rt", "time", "macros"] }
+base64 = "0.23.1"
 
 

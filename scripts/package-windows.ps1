@@ -19,7 +19,7 @@ if (-not $SkipBuild) {
     npm ci
     npm run build
     Pop-Location
-    cargo build --release -p kb-shell
+    cargo build --release -p kb-shell -p kb-doc
     if ($LASTEXITCODE -ne 0) { throw 'cargo build failed' }
 }
 
@@ -31,7 +31,7 @@ New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
 # App binaries + the CEF runtime that cef-dll-sys copied next to them.
 $files = @(
-    'kendime-brow.exe', 'kb-shell-helper.exe',
+    'kendime-brow.exe', 'kb-shell-helper.exe', 'kb-doc-host.exe',
     'libcef.dll', 'chrome_elf.dll', 'd3dcompiler_47.dll', 'dxcompiler.dll', 'dxil.dll',
     'vk_swiftshader.dll', 'vk_swiftshader_icd.json', 'vulkan-1.dll',
     'icudtl.dat', 'v8_context_snapshot.bin',
@@ -42,6 +42,9 @@ foreach ($f in $files) {
     if (Test-Path $src) { Copy-Item $src $stage }
     elseif ($f -in @('kendime-brow.exe', 'kb-shell-helper.exe', 'libcef.dll')) { throw "missing $f" }
 }
+# PDFium (scripts/fetch-pdfium.ps1 puts it in target/pdfium/bin); without it the PDF viewer is unavailable.
+$pdfium = Join-Path $root 'target/pdfium/bin/pdfium.dll'
+if (Test-Path $pdfium) { Copy-Item $pdfium $stage } else { Write-Warning 'pdfium.dll not found - run scripts/fetch-pdfium.ps1 first' }
 Copy-Item -Recurse (Join-Path $release 'locales') $stage
 Copy-Item LICENSE, README.md $stage
 if (Test-Path (Join-Path $release 'CREDITS.html')) {

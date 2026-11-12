@@ -306,6 +306,18 @@ wrap_client! {
     }
 }
 
+wrap_task! {
+    struct OpenUrlTask {
+        url: String,
+    }
+
+    impl Task {
+        fn execute(&self) {
+            shell::new_tab(&self.url);
+        }
+    }
+}
+
 wrap_download_handler! {
     struct KbDownloadHandler;
 
@@ -407,6 +419,17 @@ wrap_request_handler! {
                 && f.is_main() != 0
             {
                 crate::content_blocking::reset_count(b.identifier());
+            }
+            // A local PDF opens in the built-in viewer instead of being downloaded.
+            if let (Some(f), Some(req)) = (frame.as_ref(), _request.as_ref())
+                && f.is_main() != 0
+            {
+                let url = CefString::from(&req.url()).to_string();
+                if let Some(viewer) = crate::pdf_url::viewer_url_for_file_url(&url) {
+                    let mut task = OpenUrlTask::new(viewer);
+                    post_task(ThreadId::UI, Some(&mut task));
+                    return 1;
+                }
             }
             if let Some(r) = bridge::browser_router() {
                 r.on_before_browse(browser.cloned(), frame.cloned());

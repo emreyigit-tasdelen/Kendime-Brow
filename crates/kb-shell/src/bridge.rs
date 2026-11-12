@@ -100,6 +100,33 @@ impl BrowserSideHandler for ShellQueryHandler {
                     cb.success_str(&json);
                 }
             }
+            Command::PdfOpen { path } => {
+                std::thread::spawn(move || {
+                    let r = crate::pdf::read_pdf(&path).and_then(crate::pdf::open);
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(json) => cb.success_str(&String::from_utf8_lossy(&json)),
+                            Err(e) => cb.failure(500, &e),
+                        }
+                    }
+                });
+            }
+            Command::PdfRender { page, dpi } => {
+                std::thread::spawn(move || {
+                    let r = crate::pdf::render(page, dpi.unwrap_or(96.0));
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(png) => {
+                                use base64::Engine;
+                                cb.success_str(
+                                    &base64::engine::general_purpose::STANDARD.encode(png),
+                                )
+                            }
+                            Err(e) => cb.failure(500, &e),
+                        }
+                    }
+                });
+            }
             Command::Tasks => {
                 let json = serde_json::to_string(&crate::tasks::list()).unwrap_or_default();
                 if let Ok(cb) = callback.lock() {

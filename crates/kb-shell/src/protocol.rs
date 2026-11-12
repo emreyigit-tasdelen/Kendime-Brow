@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Requests sent by `kb://` pages via `window.kbQuery({request: JSON})`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "cmd", rename_all = "kebab-case")]
 pub enum Command {
     /// One-shot: returns the current [`State`].
@@ -87,6 +87,16 @@ pub enum Command {
     Tasks,
     KillProcess {
         pid: u32,
+    },
+    /// Opens a PDF (absolute path) in the PDF host; answers `{pages,width,height}`.
+    PdfOpen {
+        path: String,
+    },
+    /// Renders a page of the open PDF; answers a base64 PNG.
+    PdfRender {
+        page: usize,
+        #[serde(default)]
+        dpi: Option<f32>,
     },
 }
 

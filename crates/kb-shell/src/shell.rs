@@ -755,7 +755,9 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::Subscribe
         | Command::Actions { .. }
         | Command::Profile { .. }
-        | Command::Tasks => {}
+        | Command::Tasks
+        | Command::PdfOpen { .. }
+        | Command::PdfRender { .. } => {}
     }
 }
 

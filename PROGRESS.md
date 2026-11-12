@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** Phase 3 (3A PDF first); open Phase 2 items: RAM (2.11), scriptlets (2.3), prefs (2.7), updater key+apply (2.12); then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 3A.2 PDF merge/split (lopdf); open Phase 2 items: RAM (2.11), scriptlets (2.3), prefs (2.7), updater key+apply (2.12); then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -40,10 +40,14 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 Newest on top. Format: task · done · decision · next step.
 
-### 3A.1 PDF engine (PDFium) — PARTIAL (2026-11-12)
+### 3A.1 PDF host + viewer — DONE (2026-11-12)
+- **Done (second part):** `kb-doc` host (`kb-doc-host`) with `service.rs` (`pdf.open` bytes → `{pages,width,height}`, `pdf.render` `{page,dpi}` → PNG, `pdf.close`), tested through the real sandbox (restricted token, low IL, Job Object): it loads PDFium and renders. Shell: `pdf.rs` (service thread with its own tokio runtime, lazy host start, restart + re-open after a crash, path validation: absolute `.pdf`, ≤ 16 MB), bridge `pdf-open` / `pdf-render` (base64 PNG, answered from worker threads), `pdf_url.rs` (file:// ↔ viewer URL; 2 tests), `on_before_browse` redirects `file://….pdf` main-frame navigations to `kb://pdf/?file=…`, viewer page `ui/pdf` (lazy rendering with IntersectionObserver, zoom 25–400 %). Packaging includes `kb-doc-host.exe` and `pdfium.dll` (from `scripts/fetch-pdfium.ps1`). Verified live: 2-page PDF rendered with crisp text; one `kb-doc-host` process.
+- **Limits / next:** files > 16 MB (IPC frame cap) need handle passing or chunked transfer; http(s) PDFs download instead of opening (open-after-download button pending); no text search/selection yet; CI does not fetch PDFium (kb-doc tests skip there); Linux packaging of `libpdfium.so` pending; `kb-doc-host` currently loads PDFium via `PDFIUM_PATH` or next to the exe.
+- **Next step:** 3A.2 merge/split/reorder/rotate (lopdf).
+
+### 3A.1 PDF engine (PDFium) — first part (2026-11-12)
 - **Done:** new crate `kb-doc` (`pdfium-render` 0.9.5 MIT/Apache; PDFium 8152 binary from bblanchon/pdfium-binaries, BSD-3, loaded at runtime from `PDFIUM_PATH` / next to the exe). `info` (page count, first page size) and `render_page_png(dpi)`; integration test builds a one-page PDF with correct xref, renders it at 144 dpi → 400×200 PNG with real text pixels, and checks errors (bad page, not a PDF) — passes with the pinned PDFium; skips when the library is absent (CI does not fetch it yet). `scripts/fetch-pdfium.{ps1,sh}` pin tag + SHA-256 (Windows hash verified against the release digest).
 - **Pending for 3A.1:** `kb-doc` host process on `kb-ipc` (methods info/render; file access by handle — the sandboxed low-IL host cannot read user files by path), `kb://pdf` viewer (tiles, zoom, search), CI step to fetch PDFium, bundling `pdfium.dll` into packages.
-- **Next step:** 3A.1 host + viewer.
 
 ### 2.12 Signed updater — PARTIAL (2026-11-12)
 - **Done:** `updater.rs`: version parsing/comparison, GitHub Releases `latest` check (pre-releases ignored), platform asset + mandatory `<asset>.minisig` selection (unsigned releases are never offered), minisign verification with `minisign-verify` (tested with a real vector: good / tampered / missing / bad key). `UPDATE_PUBLIC_KEY` is empty → updater disabled (`Check::Disabled`), nothing contacts GitHub.

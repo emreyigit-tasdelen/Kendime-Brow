@@ -1,0 +1,16 @@
+html, body { background: #3a3b40; }
+.viewer { display: flex; flex-direction: column; height: 100vh; }
+.viewer header {
+  display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 40px; flex: none;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.viewer .title { font-weight: 600; max-width: 50%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.viewer .spacer { flex: 1; }
+.viewer header button { width: 28px; height: 28px; border-radius: 6px; font-size: 16px; }
+.viewer header button:hover { background: var(--border); }
+.viewer .zoom { min-width: 48px; text-align: center; }
+.viewer main { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.page { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.4); display: grid; place-items: center; flex: none; }
+.page img { display: block; }
+.muted { color: var(--fg-muted); }
+.error { color: #e5594d; padding: 16px; }
