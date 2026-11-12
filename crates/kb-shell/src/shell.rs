@@ -764,6 +764,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::Tunnels { .. }
         | Command::Files { .. }
         | Command::Connections { .. }
+        | Command::Net { .. }
         | Command::TermOpen { .. }
         | Command::TermWrite { .. }
         | Command::TermResize { .. }

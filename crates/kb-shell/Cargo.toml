@@ -36,6 +36,7 @@ base64 = "0.23.1"
 portable-pty = "0.9.0"
 kb-vault = { path = "../kb-vault" }
 kb-ssh = { path = "../kb-ssh" }
+kb-net = { path = "../kb-net" }
 getrandom = "0.4"
 
 

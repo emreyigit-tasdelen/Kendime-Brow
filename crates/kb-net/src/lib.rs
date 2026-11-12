@@ -82,6 +82,14 @@ impl Log {
         &self.rows
     }
 
+    /// Drops the oldest rows beyond `max`.
+    pub fn trim(&mut self, max: usize) {
+        if self.rows.len() > max {
+            let drop = self.rows.len() - max;
+            self.rows.drain(..drop);
+        }
+    }
+
     pub fn clear(&mut self) {
         self.rows.clear();
     }

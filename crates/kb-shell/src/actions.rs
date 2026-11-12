@@ -73,6 +73,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "net.open",
+            "Open the network inspector",
+            Command::NewTab {
+                url: Some("kb://net/".into()),
+                container: None,
+            },
+        ),
+        (
             "connections.open",
             "Open saved connections (SSH)",
             Command::NewTab {

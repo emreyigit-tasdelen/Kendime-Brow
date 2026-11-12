@@ -217,6 +217,15 @@ impl BrowserSideHandler for ShellQueryHandler {
                     cb.success_str("{\"ok\":true}");
                 }
             }
+            Command::Net { op, args } => {
+                let r = crate::net::call(&op, &args);
+                if let Ok(cb) = callback.lock() {
+                    match r {
+                        Ok(json) => cb.success_str(&json),
+                        Err(e) => cb.failure(500, &e),
+                    }
+                }
+            }
             Command::Connections { op, args } => {
                 let r = crate::connections::call(&op, &args);
                 if let Ok(cb) = callback.lock() {

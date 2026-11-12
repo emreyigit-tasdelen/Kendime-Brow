@@ -1689,6 +1689,7 @@ dependencies = [
  "getrandom 0.4.3",
  "kb-actions",
  "kb-ipc",
+ "kb-net",
  "kb-platform",
  "kb-privacy",
  "kb-ssh",

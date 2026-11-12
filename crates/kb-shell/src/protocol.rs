@@ -151,6 +151,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Network inspector (see `net.rs`): list/har/curl/clear.
+    Net {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Saved connection profiles (see `connections.rs`): list/put/remove/import-ssh-config.
     Connections {
         op: String,

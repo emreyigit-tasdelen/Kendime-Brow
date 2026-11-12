@@ -558,6 +558,9 @@ wrap_life_span_handler! {
                     CefString::from(&ctx.cache_path()).to_string()
                 );
             }
+            if let Some(b) = browser {
+                crate::net::attach(b);
+            }
             shell::on_after_created();
         }
 
