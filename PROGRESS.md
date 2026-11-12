@@ -63,6 +63,7 @@ Newest on top. Format: task · done · decision · next step.
 ### 2.11 Performance scripts — PARTIAL (2026-11-12)
 - **Done:** `scripts/perf.mjs` (cold start until `kb://ui` is loaded; memory sum of the process tree after 10 s; exit 1 when over budget). Release build on this machine: **cold start 681 ms (budget 800 ✔)**; **memory 702 MB over 13 processes with one empty tab (budget 250 ✘)**.
 - **Why / next:** Windows working-set numbers double-count shared pages, and the tree includes spare renderers, GPU and network/storage utility processes. Real levers to try: `--renderer-process-limit`, `--disable-gpu`-style / in-process GPU options, `--disable-features` for spare renderer, single network service. Needs measuring with private-bytes instead of working set. CI does not run it (no desktop session); run locally.
+- **Update:** `--in-process-gpu` is now a default switch: 671 → 454 MB, 15 → 11 processes (`PERF_ARGS` env var of perf.mjs lets you try more flags). `--renderer-process-limit=1` saves another ~40 MB but would remove per-site isolation for multi-tab use, so it is NOT applied. Still above the 250 MB budget; remaining cost is mostly the browser process itself (462 MB debug / ~300 MB release) and the network/storage utilities.
 - **Next step:** 2.12.
 
 ### 2.10 Resource monitor — DONE (2026-11-12)

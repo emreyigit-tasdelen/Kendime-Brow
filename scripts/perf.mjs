@@ -20,7 +20,8 @@ const budgetRamMb = Number(process.env.BUDGET_RAM_MB ?? 250);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const profile = mkdtempSync(join(tmpdir(), 'kb-perf-'));
 const t0 = performance.now();
-const child = spawn(exe, ['--remote-debugging-port=9333', '--url=kb://newtab/'], {
+const extra = (process.env.PERF_ARGS ?? '').split(' ').filter(Boolean);
+const child = spawn(exe, ['--remote-debugging-port=9333', '--url=kb://newtab/', ...extra], {
   env: { ...process.env, KB_PROFILE_DIR: profile },
   stdio: 'ignore',
 });

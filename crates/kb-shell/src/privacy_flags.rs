@@ -20,6 +20,10 @@ pub const SWITCHES: &[&str] = &[
     "metrics-recording-only", // never upload metrics
     "disable-search-engine-choice-screen",
     "dns-prefetch-disable",
+    // Memory (task 2.11): GPU work runs inside the browser process instead of a separate GPU
+    // process: ~200 MB less on an empty window (measured 671 → 454 MB). Trade-off: the GPU
+    // stack is no longer process-isolated; web content still runs in sandboxed renderers.
+    "in-process-gpu",
 ];
 
 /// Features disabled through `--disable-features` (comma-joined).
