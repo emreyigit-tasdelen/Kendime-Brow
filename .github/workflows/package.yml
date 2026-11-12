@@ -1,0 +1,66 @@
+name: Package
+
+# Builds installable packages (task 1.14). Run manually or on version tags.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: choco install ninja --no-progress
+      - uses: Swatinem/rust-cache@v2
+      - name: Package
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kendime-brow-windows
+          path: |
+            target/package/*.zip
+            target/package/*.sha256
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build build-essential \
+            libgtk-3-dev libx11-dev libnss3 libasound2-dev file
+      - name: appimagetool
+        run: |
+          curl -sSfL -o /usr/local/bin/appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
+          chmod +x /usr/local/bin/appimagetool
+      - uses: Swatinem/rust-cache@v2
+      - name: Package
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: scripts/package-linux.sh
+      - name: Inspect .deb
+        run: |
+          dpkg-deb --info target/package/*.deb
+          dpkg-deb --contents target/package/*.deb | head -20
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kendime-brow-linux
+          path: |
+            target/package/*.deb
+            target/package/*.AppImage
+            target/package/SHA256SUMS

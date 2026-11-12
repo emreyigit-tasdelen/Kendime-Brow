@@ -9,6 +9,7 @@ use kb_shell::app::KbApp;
 
 #[cfg(not(all(feature = "sandbox", target_os = "windows")))]
 fn main() -> Result<(), &'static str> {
+    kb_platform::set_app_user_model_id();
     // Initialize the CEF API version.
     let _ = api_hash(sys::CEF_API_VERSION_LAST, 0);
 
@@ -38,8 +39,16 @@ fn main() -> Result<(), &'static str> {
     let cache = kb_shell::shell::profile_dir()
         .map(|d| d.join("cef").to_string_lossy().to_string())
         .unwrap_or_default();
+    // Renderer/GPU/utility processes run the small helper binary next to this executable.
+    let helper = std::env::current_exe()
+        .ok()
+        .map(|p| p.with_file_name(format!("kb-shell-helper{}", std::env::consts::EXE_SUFFIX)))
+        .filter(|p| p.exists())
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
     let settings = Settings {
         no_sandbox: 1,
+        browser_subprocess_path: CefString::from(helper.as_str()),
         root_cache_path: CefString::from(cache.as_str()),
         cache_path: CefString::from(cache.as_str()),
         persist_session_cookies: 1,

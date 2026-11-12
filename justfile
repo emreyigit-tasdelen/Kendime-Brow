@@ -26,3 +26,11 @@ check:
 # Secret scan over the full history
 scan:
     gitleaks git --redact --no-banner --config .gitleaks.toml .
+
+# Package: Windows zip + per-user installer / Linux .deb + AppImage (target/package)
+package:
+    {{ if os() == "windows" { "powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1" } else { "scripts/package-linux.sh" } }}
+
+# Windows: point a Start Menu shortcut at the debug build (re-run after `just build`)
+install-dev:
+    powershell -ExecutionPolicy Bypass -File scripts/install-dev.ps1

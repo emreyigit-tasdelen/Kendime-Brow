@@ -14,6 +14,25 @@ pub const APP_DIR_NAME: &str = "Kendime-Brow";
 /// Application directory name used on Linux (XDG convention: lowercase).
 pub const APP_DIR_NAME_LINUX: &str = "kendime-brow";
 
+/// AppUserModelID shared by every Kendime-Brow process, so Windows groups all windows and
+/// helper processes under one taskbar icon (architecture §13).
+pub const APP_USER_MODEL_ID: &str = "EmreYigitTasdelen.KendimeBrow";
+
+/// Sets the process AppUserModelID (Windows; no-op elsewhere). Call first thing in `main`.
+pub fn set_app_user_model_id() {
+    #[cfg(windows)]
+    {
+        let id: Vec<u16> = APP_USER_MODEL_ID
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        // SAFETY: valid NUL-terminated UTF-16 string for the duration of the call.
+        unsafe {
+            windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID(id.as_ptr());
+        }
+    }
+}
+
 /// The current platform, for features that must report "not supported on this platform".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {

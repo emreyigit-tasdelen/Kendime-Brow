@@ -1,6 +1,7 @@
 use cef::{args::Args, *};
 
 fn main() {
+    kb_platform::set_app_user_model_id();
     let args = Args::new();
 
     #[cfg(all(target_os = "macos", feature = "sandbox"))]
