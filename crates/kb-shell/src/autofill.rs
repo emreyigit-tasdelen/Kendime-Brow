@@ -8,10 +8,35 @@ use serde_json::json;
 /// JavaScript that fills the form (or shows a short in-page notice) for `page_url`.
 pub fn script_for(page_url: &str) -> String {
     match crate::vault::logins_for(page_url) {
-        Ok(found) if !found.is_empty() => fill_script(&found[0].0, &found[0].1),
+        Ok(found) if !found.is_empty() => {
+            let i = pick(page_url, found.len());
+            let (u, p) = &found[i];
+            let mut js = fill_script(u, p);
+            if found.len() > 1 {
+                js.push_str(&notice(&format!(
+                    "login {}/{}: run again for the next one",
+                    i + 1,
+                    found.len()
+                )));
+            }
+            js
+        }
         Ok(_) => notice("No saved login for this site."),
         Err(e) => notice(&e),
     }
+}
+
+/// Which match to use: repeated runs on the same URL cycle through the matches.
+fn pick(url: &str, n: usize) -> usize {
+    use std::sync::Mutex;
+    static LAST: Mutex<Option<(String, usize)>> = Mutex::new(None);
+    let mut g = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    let next = match &*g {
+        Some((u, i)) if u == url => (i + 1) % n,
+        _ => 0,
+    };
+    *g = Some((url.to_string(), next));
+    next
 }
 
 fn notice(text: &str) -> String {
@@ -52,6 +77,14 @@ mod tests {
         let s = fill_script("me\"; alert(1); //", "p\\w</script>");
         assert!(s.contains("U=\"me\\\"; alert(1); //\""));
         assert!(s.contains("P=\"p\\\\w</script>\""));
+    }
+
+    #[test]
+    fn repeated_runs_cycle_through_matches() {
+        assert_eq!(pick("https://cycle.test/", 2), 0);
+        assert_eq!(pick("https://cycle.test/", 2), 1);
+        assert_eq!(pick("https://cycle.test/", 2), 0);
+        assert_eq!(pick("https://other.test/", 2), 0);
     }
 
     #[test]

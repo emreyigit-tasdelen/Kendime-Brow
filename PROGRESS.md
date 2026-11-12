@@ -305,3 +305,4 @@ Newest on top. Format: task · done · decision · next step.
 
 - 6.2 autofill (partial): kb-vault origin::may_fill (exact origin, https-only except loopback) + user-triggered palette action "Fill saved login on this page" (main frame only, first match). Not live-smoked yet; KDBX and multi-match chooser still open.
 - 6.2 autofill live-verified (scripts/autofill-smoke.mjs): matching origin filled alice/password; same host other port left empty.
+- 6.2 multi-match: repeating "Fill saved login" on the same URL cycles through matching logins (no credentials of other matches ever enter the page). KDBX import still open.
