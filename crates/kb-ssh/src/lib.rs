@@ -311,6 +311,7 @@ pub fn open_shell(
     })
 }
 
+pub mod ftp;
 pub mod sftp;
 pub mod telnet;
 pub mod tunnel;

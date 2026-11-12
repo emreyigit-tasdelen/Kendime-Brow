@@ -35,21 +35,24 @@ const base: Target = {
   user: params.get('user') ?? '',
   vault_id: params.get('vault') ?? undefined,
 };
+const startProto = params.get('proto') ?? 'sftp';
 
 function connectForm(): void {
   const host = el('input', { value: base.host });
   const port = el('input', { value: String(base.port) });
   const user = el('input', { value: base.user });
+  const proto = el('select', {}, ...['sftp', 'ftps', 'ftp'].map((p) => el('option', { value: p, selected: p === startProto }, p === 'sftp' ? 'SFTP (SSH)' : p === 'ftps' ? 'FTPS (explicit TLS)' : 'FTP (unencrypted)')));
   const pw = el('input', { type: 'password', autocomplete: 'off', placeholder: base.vault_id ? 'using vault entry' : '' });
   pw.disabled = !!base.vault_id;
   const go = el('button', { class: 'primary', type: 'submit' }, 'Connect');
   const label = (t: string, i: HTMLElement) => el('label', {}, t, i);
-  const form = el('form', {}, label('Host', host), label('Port', port), label('User', user), label('Password', pw), status, go);
+  const form = el('form', {}, label('Protocol', proto), label('Host', host), label('Port', port), label('User', user), label('Password', pw), status, go);
   const attempt = async (trust: boolean) => {
     status.textContent = 'Connecting…';
     const t: Target = { host: host.value, port: Number(port.value) || 22, user: user.value, vault_id: base.vault_id, password: pw.value || undefined, trust_new_host: trust };
+    const extra = { proto: proto.value };
     try {
-      const r = JSON.parse(await files('connect', { ...t })) as { sid: number; home: string };
+      const r = JSON.parse(await files('connect', { ...t, ...extra })) as { sid: number; home: string };
       sid = r.sid;
       status.textContent = '';
       await browse(r.home);

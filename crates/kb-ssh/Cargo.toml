@@ -9,7 +9,10 @@ publish.workspace = true
 [dependencies]
 russh = { version = "0.65.1", default-features = false, features = ["flate2", "ring", "rsa"] }
 russh-sftp = "3.0.1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+suppaftp = { version = "12.2.1", default-features = false, features = ["rustls-ring"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "time", "macros", "net", "io-util"] }
+webpki-roots = "1"
 
 [dev-dependencies]
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "time", "macros", "net", "io-util"] }

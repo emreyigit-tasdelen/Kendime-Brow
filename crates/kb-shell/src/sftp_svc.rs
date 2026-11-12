@@ -7,7 +7,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use base64::Engine;
-use kb_ssh::sftp::Sftp;
+use kb_ssh::ftp::Ftp;
+use kb_ssh::sftp::{Entry, Sftp};
 use serde_json::{Value, json};
 
 use crate::protocol::SshRequest;
@@ -15,14 +16,87 @@ use crate::protocol::SshRequest;
 /// Largest upload accepted through the page (it travels base64-encoded over the bridge).
 const MAX_UPLOAD: usize = 64 * 1024 * 1024;
 
-static SESSIONS: OnceLock<Mutex<HashMap<u32, Arc<Sftp>>>> = OnceLock::new();
+/// A remote file session: SFTP over SSH, or FTP / explicit FTPS.
+enum Remote {
+    Sftp(Sftp),
+    Ftp(Ftp),
+}
+
+impl Remote {
+    fn list(&self, p: &str) -> Result<Vec<Entry>, String> {
+        match self {
+            Self::Sftp(s) => s.list(p).map_err(|e| e.to_string()),
+            Self::Ftp(f) => f.list(p),
+        }
+    }
+    fn download(&self, r: &str, l: &std::path::Path) -> Result<u64, String> {
+        match self {
+            Self::Sftp(s) => s.download(r, l).map_err(|e| e.to_string()),
+            Self::Ftp(f) => f.download(r, l),
+        }
+    }
+    fn upload(&self, l: &std::path::Path, r: &str) -> Result<u64, String> {
+        match self {
+            Self::Sftp(s) => s.upload(l, r).map_err(|e| e.to_string()),
+            Self::Ftp(f) => f.upload(l, r),
+        }
+    }
+    fn mkdir(&self, p: &str) -> Result<(), String> {
+        match self {
+            Self::Sftp(s) => s.mkdir(p).map_err(|e| e.to_string()),
+            Self::Ftp(f) => f.mkdir(p),
+        }
+    }
+    fn remove(&self, p: &str, dir: bool) -> Result<(), String> {
+        match (self, dir) {
+            (Self::Sftp(s), true) => s.remove_dir(p).map_err(|e| e.to_string()),
+            (Self::Sftp(s), false) => s.remove_file(p).map_err(|e| e.to_string()),
+            (Self::Ftp(f), true) => f.remove_dir(p),
+            (Self::Ftp(f), false) => f.remove_file(p),
+        }
+    }
+    fn rename(&self, a: &str, b: &str) -> Result<(), String> {
+        match self {
+            Self::Sftp(s) => s.rename(a, b).map_err(|e| e.to_string()),
+            Self::Ftp(f) => f.rename(a, b),
+        }
+    }
+}
+
+/// FTP credentials: the vault entry's password or the one typed on the page.
+fn ftp_connect(req: &SshRequest, secure: bool) -> Result<Ftp, String> {
+    let (user, password) = if let Some(id) = &req.vault_id {
+        let (_, s) = crate::vault::secret(id)?;
+        let user = if req.user.is_empty() {
+            s.username.clone()
+        } else {
+            req.user.clone()
+        };
+        (user, s.password.clone())
+    } else {
+        (
+            req.user.clone(),
+            req.password
+                .clone()
+                .ok_or("password or vault entry required")?,
+        )
+    };
+    let user = if user.is_empty() {
+        "anonymous".to_string()
+    } else {
+        user
+    };
+    Ftp::connect(req.host.trim(), req.port, &user, &password, secure)
+}
+
+static SESSIONS: OnceLock<Mutex<HashMap<u32, Arc<Remote>>>> = OnceLock::new();
 static NEXT: AtomicU32 = AtomicU32::new(1);
 
-fn sessions() -> &'static Mutex<HashMap<u32, Arc<Sftp>>> {
+fn sessions() -> &'static Mutex<HashMap<u32, Arc<Remote>>> {
     SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn session(args: &Value) -> Result<Arc<Sftp>, String> {
+fn session(args: &Value) -> Result<Arc<Remote>, String> {
     let id = args
         .get("sid")
         .and_then(Value::as_u64)
@@ -79,14 +153,22 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
         "connect" => {
             let req: SshRequest =
                 serde_json::from_value(args.clone()).map_err(|e| e.to_string())?;
-            let sftp = Sftp::connect(crate::terminal::ssh_config(&req)?)
-                .map_err(crate::terminal::ssh_err)?;
-            let home = sftp.realpath(".").map_err(|e| e.to_string())?;
+            let proto = text(args, "proto");
+            let (remote, home) = if proto == "ftp" || proto == "ftps" {
+                let f = ftp_connect(&req, proto == "ftps")?;
+                let home = f.pwd()?;
+                (Remote::Ftp(f), home)
+            } else {
+                let sftp = Sftp::connect(crate::terminal::ssh_config(&req)?)
+                    .map_err(crate::terminal::ssh_err)?;
+                let home = sftp.realpath(".").map_err(|e| e.to_string())?;
+                (Remote::Sftp(sftp), home)
+            };
             let sid = NEXT.fetch_add(1, Ordering::Relaxed);
             sessions()
                 .lock()
                 .map_err(|_| "poisoned")?
-                .insert(sid, Arc::new(sftp));
+                .insert(sid, Arc::new(remote));
             Ok(json!({ "sid": sid, "home": home }).to_string())
         }
         "close" => {
@@ -101,7 +183,7 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
         "list" => {
             let s = session(args)?;
             let path = text(args, "path");
-            let entries = s.list(path).map_err(|e| e.to_string())?;
+            let entries = s.list(path)?;
             let items: Vec<Value> = entries
                 .iter()
                 .map(|e| json!({ "name": e.name, "dir": e.is_dir, "size": e.size, "modified": e.modified }))
@@ -112,7 +194,7 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             let s = session(args)?;
             let remote = text(args, "path");
             let local = download_target(remote)?;
-            let n = s.download(remote, &local).map_err(|e| e.to_string())?;
+            let n = s.download(remote, &local)?;
             Ok(json!({ "saved": local.display().to_string(), "bytes": n }).to_string())
         }
         "upload" => {
@@ -130,29 +212,22 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             let r = s.upload(&tmp, remote);
             let _ = std::fs::remove_file(&tmp);
             r.map(|n| json!({ "bytes": n }).to_string())
-                .map_err(|e| e.to_string())
         }
         "mkdir" => {
-            session(args)?
-                .mkdir(text(args, "path"))
-                .map_err(|e| e.to_string())?;
+            session(args)?.mkdir(text(args, "path"))?;
             Ok("{}".into())
         }
         "remove" => {
             let s = session(args)?;
             let path = text(args, "path");
-            if args.get("dir").and_then(Value::as_bool).unwrap_or(false) {
-                s.remove_dir(path)
-            } else {
-                s.remove_file(path)
-            }
-            .map_err(|e| e.to_string())?;
+            s.remove(
+                path,
+                args.get("dir").and_then(Value::as_bool).unwrap_or(false),
+            )?;
             Ok("{}".into())
         }
         "rename" => {
-            session(args)?
-                .rename(text(args, "from"), text(args, "to"))
-                .map_err(|e| e.to_string())?;
+            session(args)?.rename(text(args, "from"), text(args, "to"))?;
             Ok("{}".into())
         }
         _ => Err(format!("unknown files op: {op}")),

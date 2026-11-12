@@ -65,6 +65,7 @@ async function render(): Promise<void> {
     files.onclick = () => {
       const q = new URLSearchParams({ host: c.host, port: String(c.port), user: c.user });
       if (c.vault_id) q.set('vault', c.vault_id);
+      if (c.port === 21) q.set('proto', 'ftps');
       void send({ cmd: 'new-tab', url: `kb://files/?${q}` });
     };
     const tun = el('button', {}, 'Tunnel');
