@@ -1,4 +1,5 @@
-//! Throwaway SSH server for live checks: user `tester`, password `pw`, echoes input.
+//! Throwaway SSH server for live checks: user `tester`, password `pw`, echoes shell input and
+//! forwards direct-tcpip channels (so tunnels can be tried).
 //! Run: `cargo run -p kb-ssh --example testserver -- 2222`
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,6 +36,31 @@ impl server::Handler for Srv {
         _s: &mut Session,
     ) -> Result<(), Self::Error> {
         reply.accept().await;
+        Ok(())
+    }
+
+    async fn channel_open_direct_tcpip(
+        &mut self,
+        channel: Channel<Msg>,
+        host: &str,
+        port: u32,
+        _oa: &str,
+        _op: u32,
+        reply: server::ChannelOpenHandle,
+        _s: &mut Session,
+    ) -> Result<(), Self::Error> {
+        match tokio::net::TcpStream::connect((host, port as u16)).await {
+            Ok(mut target) => {
+                reply.accept().await;
+                tokio::spawn(async move {
+                    let mut stream = channel.into_stream();
+                    let _ = tokio::io::copy_bidirectional(&mut stream, &mut target).await;
+                });
+            }
+            Err(_) => {
+                let _ = reply.reject(russh::ChannelOpenFailure::ConnectFailed).await;
+            }
+        }
         Ok(())
     }
 

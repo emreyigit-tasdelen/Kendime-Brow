@@ -531,3 +531,171 @@ mod sftp_tests {
         assert!(sftp.download("/missing", &back).is_err());
     }
 }
+
+// ----------------------------------------------------------------------- tunnels
+
+mod tunnel_tests {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpStream;
+
+    use super::*;
+    use crate::tunnel::{open_local, open_socks};
+
+    #[derive(Clone)]
+    struct FwdServer;
+
+    impl server::Server for FwdServer {
+        type Handler = Self;
+        fn new_client(&mut self, _: Option<std::net::SocketAddr>) -> Self {
+            Self
+        }
+    }
+
+    impl server::Handler for FwdServer {
+        type Error = russh::Error;
+
+        async fn auth_password(&mut self, _u: &str, _p: &str) -> Result<SAuth, Self::Error> {
+            Ok(SAuth::Accept)
+        }
+
+        async fn channel_open_direct_tcpip(
+            &mut self,
+            channel: Channel<Msg>,
+            host: &str,
+            port: u32,
+            _oa: &str,
+            _op: u32,
+            reply: server::ChannelOpenHandle,
+            _s: &mut Session,
+        ) -> Result<(), Self::Error> {
+            match TcpStream::connect((host, port as u16)).await {
+                Ok(mut target) => {
+                    reply.accept().await;
+                    tokio::spawn(async move {
+                        let mut stream = channel.into_stream();
+                        let _ = tokio::io::copy_bidirectional(&mut stream, &mut target).await;
+                    });
+                }
+                Err(_) => {
+                    let _ = reply.reject(russh::ChannelOpenFailure::ConnectFailed).await;
+                }
+            }
+            Ok(())
+        }
+    }
+
+    /// Echo server that upper-cases what it receives; returns its port.
+    fn start_echo() -> u16 {
+        let listener = runtime()
+            .block_on(TcpListener::bind(("127.0.0.1", 0)))
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        runtime().spawn(async move {
+            while let Ok((mut s, _)) = listener.accept().await {
+                tokio::spawn(async move {
+                    let mut buf = [0u8; 256];
+                    while let Ok(n) = s.read(&mut buf).await {
+                        if n == 0 {
+                            break;
+                        }
+                        let up = buf[..n].to_ascii_uppercase();
+                        if s.write_all(&up).await.is_err() {
+                            break;
+                        }
+                    }
+                });
+            }
+        });
+        port
+    }
+
+    fn start_ssh() -> u16 {
+        let key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+        let config = Arc::new(server::Config {
+            keys: vec![key],
+            auth_rejection_time: Duration::from_millis(1),
+            ..Default::default()
+        });
+        let listener = runtime()
+            .block_on(TcpListener::bind(("127.0.0.1", 0)))
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        runtime().spawn(async move {
+            let _ = FwdServer.run_on_socket(config, &listener).await;
+        });
+        port
+    }
+
+    async fn roundtrip(port: u16, send: &[u8]) -> Vec<u8> {
+        let mut c = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+        c.write_all(send).await.unwrap();
+        let mut got = vec![0u8; send.len()];
+        tokio::time::timeout(Duration::from_secs(5), c.read_exact(&mut got))
+            .await
+            .unwrap()
+            .unwrap();
+        got
+    }
+
+    #[test]
+    fn local_forward_reaches_the_target_through_ssh() {
+        let echo = start_echo();
+        let ssh = start_ssh();
+        let dir = tmp("fwd");
+        let tunnel = open_local(cfg(ssh, &dir, "x", true), 0, "127.0.0.1".into(), echo).unwrap();
+        let got = runtime().block_on(roundtrip(tunnel.local_port, b"through the tunnel"));
+        assert_eq!(got, b"THROUGH THE TUNNEL");
+    }
+
+    #[test]
+    fn socks5_proxy_connects_by_address_and_by_name() {
+        let echo = start_echo();
+        let ssh = start_ssh();
+        let dir = tmp("socks");
+        let tunnel = open_socks(cfg(ssh, &dir, "x", true), 0).unwrap();
+        runtime().block_on(async {
+            for domain in [false, true] {
+                let mut c = TcpStream::connect(("127.0.0.1", tunnel.local_port))
+                    .await
+                    .unwrap();
+                c.write_all(&[5, 1, 0]).await.unwrap();
+                let mut r = [0u8; 2];
+                c.read_exact(&mut r).await.unwrap();
+                assert_eq!(r, [5, 0]);
+                let mut req = vec![5, 1, 0];
+                if domain {
+                    req.extend([3, 9]);
+                    req.extend(b"localhost");
+                } else {
+                    req.extend([1, 127, 0, 0, 1]);
+                }
+                req.extend(echo.to_be_bytes());
+                c.write_all(&req).await.unwrap();
+                let mut reply = [0u8; 10];
+                c.read_exact(&mut reply).await.unwrap();
+                assert_eq!(reply[1], 0, "socks reply {reply:?}");
+                c.write_all(b"socks ok").await.unwrap();
+                let mut got = [0u8; 8];
+                c.read_exact(&mut got).await.unwrap();
+                assert_eq!(&got, b"SOCKS OK");
+            }
+        });
+    }
+
+    #[test]
+    fn stopping_a_tunnel_closes_the_listener() {
+        let echo = start_echo();
+        let ssh = start_ssh();
+        let dir = tmp("stop");
+        let mut tunnel =
+            open_local(cfg(ssh, &dir, "x", true), 0, "127.0.0.1".into(), echo).unwrap();
+        let port = tunnel.local_port;
+        tunnel.stop();
+        std::thread::sleep(Duration::from_millis(300));
+        assert!(
+            runtime()
+                .block_on(TcpStream::connect(("127.0.0.1", port)))
+                .is_err()
+        );
+    }
+}

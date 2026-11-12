@@ -79,26 +79,8 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
         "connect" => {
             let req: SshRequest =
                 serde_json::from_value(args.clone()).map_err(|e| e.to_string())?;
-            let t = crate::terminal::resolve_ssh(&req)?;
-            let sftp = Sftp::connect(kb_ssh::Config {
-                host: t.host,
-                port: t.port,
-                user: t.user,
-                auth: t.auth,
-                known_hosts: t.known_hosts,
-                trust_new_host: t.trust_new_host,
-                cols: 80,
-                rows: 24,
-            })
-            .map_err(|e| match e {
-                kb_ssh::SshError::UnknownHost { fingerprint } => {
-                    format!("unknown-host:{fingerprint}")
-                }
-                kb_ssh::SshError::HostKeyChanged { expected, got } => {
-                    format!("host-key-changed:{expected} -> {got}")
-                }
-                other => other.to_string(),
-            })?;
+            let sftp = Sftp::connect(crate::terminal::ssh_config(&req)?)
+                .map_err(crate::terminal::ssh_err)?;
             let home = sftp.realpath(".").map_err(|e| e.to_string())?;
             let sid = NEXT.fetch_add(1, Ordering::Relaxed);
             sessions()

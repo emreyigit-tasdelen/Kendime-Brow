@@ -160,6 +160,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// SSH tunnels (see `tunnels.rs`): list/start/stop.
+    Tunnels {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
     SheetPreview {
         path: String,

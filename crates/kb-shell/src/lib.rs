@@ -20,6 +20,7 @@ pub mod store;
 pub mod tabs;
 pub mod tasks;
 pub mod terminal;
+pub mod tunnels;
 pub mod updater;
 pub mod vault;
 

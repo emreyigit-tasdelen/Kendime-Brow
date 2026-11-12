@@ -174,6 +174,32 @@ pub fn open_ssh(cols: u16, rows: u16, target: SshTarget, emit: Emit) -> Result<u
     Ok(id)
 }
 
+/// Full `kb-ssh` configuration for a page request (terminal size is irrelevant for SFTP/tunnels).
+pub fn ssh_config(req: &crate::protocol::SshRequest) -> Result<kb_ssh::Config, String> {
+    let t = resolve_ssh(req)?;
+    Ok(kb_ssh::Config {
+        host: t.host,
+        port: t.port,
+        user: t.user,
+        auth: t.auth,
+        known_hosts: t.known_hosts,
+        trust_new_host: t.trust_new_host,
+        cols: 80,
+        rows: 24,
+    })
+}
+
+/// Error text for the pages: `unknown-host:<fp>` and `host-key-changed:<a> -> <b>` are parsed there.
+pub fn ssh_err(e: kb_ssh::SshError) -> String {
+    match e {
+        kb_ssh::SshError::UnknownHost { fingerprint } => format!("unknown-host:{fingerprint}"),
+        kb_ssh::SshError::HostKeyChanged { expected, got } => {
+            format!("host-key-changed:{expected} -> {got}")
+        }
+        other => other.to_string(),
+    }
+}
+
 /// Turns a page request into a connection target: credentials from the unlocked vault or the
 /// one-off password. Key entries keep the PEM in `password` and the passphrase in `notes`.
 pub fn resolve_ssh(req: &crate::protocol::SshRequest) -> Result<SshTarget, String> {
