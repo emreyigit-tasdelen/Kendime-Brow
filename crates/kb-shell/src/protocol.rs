@@ -163,6 +163,8 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Fill the saved login for the active tab (user-initiated only).
+    Autofill,
     /// Network inspector (see `net.rs`): list/har/curl/clear.
     Net {
         op: String,

@@ -302,3 +302,5 @@ Newest on top. Format: task · done · decision · next step.
 | Suitability for a solo developer | Hard | Easy but weak for a browser | Suitable | Hard | Not suitable for a browser |
 
 **Chosen:** C (CEF + Rust native shell).
+
+- 6.2 autofill (partial): kb-vault origin::may_fill (exact origin, https-only except loopback) + user-triggered palette action "Fill saved login on this page" (main frame only, first match). Not live-smoked yet; KDBX and multi-match chooser still open.

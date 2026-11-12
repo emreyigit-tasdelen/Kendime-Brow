@@ -659,6 +659,20 @@ pub fn run_bridge_command(cmd: Command) {
                 b.stop_load();
             }
         }
+        Command::Autofill => {
+            if let Some(frame) = active_view()
+                .and_then(|v| v.browser())
+                .and_then(|b| b.main_frame())
+            {
+                let url = CefString::from(&frame.url()).to_string();
+                let js = crate::autofill::script_for(&url);
+                frame.execute_java_script(
+                    Some(&CefString::from(js.as_str())),
+                    Some(&CefString::from("kb://autofill")),
+                    0,
+                );
+            }
+        }
         Command::CloseActiveTab => close_active_tab(),
         Command::CycleTab { forward } => {
             with_shell(|s| s.tabs.cycle(forward));

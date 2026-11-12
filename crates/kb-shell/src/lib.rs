@@ -2,6 +2,7 @@
 
 pub mod actions;
 pub mod app;
+pub mod autofill;
 pub mod bridge;
 pub mod connections;
 pub mod containers;

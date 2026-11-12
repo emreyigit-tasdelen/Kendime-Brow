@@ -124,6 +124,29 @@ pub fn secret(id: &str) -> Result<(Kind, Secret), String> {
     s.vault.as_ref().ok_or("no vault yet")?.get(id).map_err(err)
 }
 
+/// Logins whose saved URL may be filled on `page_url` (exact origin), as `(username, password)`.
+/// Errors when the vault is missing or locked.
+pub fn logins_for(page_url: &str) -> Result<Vec<(String, String)>, String> {
+    let mut s = state();
+    touch(&mut s);
+    load(&mut s)?;
+    let v = s.vault.as_ref().ok_or("no vault yet")?;
+    if !v.is_unlocked() {
+        return Err("vault is locked: unlock it in kb://vault first".into());
+    }
+    let mut out = Vec::new();
+    for (id, kind, _) in v.list().map_err(err)? {
+        if kind != Kind::Login {
+            continue;
+        }
+        let (_, sec) = v.get(&id).map_err(err)?;
+        if !sec.url.is_empty() && kb_vault::origin::may_fill(&sec.url, page_url) {
+            out.push((sec.username.clone(), sec.password.clone()));
+        }
+    }
+    Ok(out)
+}
+
 /// 32-byte key for encrypted session logs, created on first use and stored in the vault.
 /// Needs an existing, unlocked vault.
 pub fn log_key() -> Result<[u8; 32], String> {

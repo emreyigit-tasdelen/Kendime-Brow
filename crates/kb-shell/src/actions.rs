@@ -73,6 +73,11 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "vault.autofill",
+            "Fill saved login on this page",
+            Command::Autofill,
+        ),
+        (
             "scripts.open",
             "Open userscripts",
             Command::NewTab {

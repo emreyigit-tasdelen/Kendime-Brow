@@ -12,6 +12,7 @@
 //! with the OS keyring / Windows Hello is task 4A.1c.
 
 pub mod csv;
+pub mod origin;
 pub mod seclog;
 
 use std::collections::BTreeMap;
