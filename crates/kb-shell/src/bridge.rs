@@ -111,6 +111,25 @@ impl BrowserSideHandler for ShellQueryHandler {
                     }
                 });
             }
+            Command::PdfExtract { path, pages } => {
+                let json = serde_json::json!({ "pages": pages }).to_string();
+                spawn_pdf_edit(callback, move || {
+                    crate::pdf::edit_file(&path, "pdf.extract", json, "pages")
+                });
+            }
+            Command::PdfRotate {
+                path,
+                pages,
+                degrees,
+            } => {
+                let json = serde_json::json!({ "pages": pages, "degrees": degrees }).to_string();
+                spawn_pdf_edit(callback, move || {
+                    crate::pdf::edit_file(&path, "pdf.rotate", json, "rotated")
+                });
+            }
+            Command::PdfMerge { paths } => {
+                spawn_pdf_edit(callback, move || crate::pdf::merge_files(&paths));
+            }
             Command::PdfRender { page, dpi } => {
                 std::thread::spawn(move || {
                     let r = crate::pdf::render(page, dpi.unwrap_or(96.0));
@@ -157,6 +176,22 @@ impl BrowserSideHandler for ShellQueryHandler {
             subs.retain(|(id, _)| *id != query_id);
         }
     }
+}
+
+/// Runs a PDF edit on a worker thread and answers with the output path (or the error).
+fn spawn_pdf_edit(
+    callback: Arc<Mutex<dyn BrowserSideCallback>>,
+    job: impl FnOnce() -> Result<String, String> + Send + 'static,
+) {
+    std::thread::spawn(move || {
+        let r = job();
+        if let Ok(cb) = callback.lock() {
+            match r {
+                Ok(path) => cb.success_str(&serde_json::json!({ "path": path }).to_string()),
+                Err(e) => cb.failure(500, &e),
+            }
+        }
+    });
 }
 
 wrap_task! {

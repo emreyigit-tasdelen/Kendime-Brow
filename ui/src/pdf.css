@@ -14,3 +14,8 @@ html, body { background: #3a3b40; }
 .page img { display: block; }
 .muted { color: var(--fg-muted); }
 .error { color: #e5594d; padding: 16px; }
+.viewer .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 6px 16px; background: var(--bg); border-bottom: 1px solid var(--border); flex: none; }
+.viewer .tools button { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+.viewer .tools button:disabled { opacity: .4; }
+.viewer .tools input { height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--fg); width: 190px; }
+.viewer .tools input.wide { width: 340px; }

@@ -22,6 +22,46 @@ fn default_dpi() -> f32 {
     96.0
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PagesRequest {
+    /// Page selection like `1-3,5,8-` (1-based).
+    pub pages: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RotateRequest {
+    /// Page selection; empty = all pages.
+    #[serde(default)]
+    pub pages: String,
+    pub degrees: i32,
+}
+
+/// Packs several documents into one body: repeated `u32 length (LE) + bytes`.
+pub fn pack(docs: &[Vec<u8>]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for d in docs {
+        out.extend_from_slice(&(d.len() as u32).to_le_bytes());
+        out.extend_from_slice(d);
+    }
+    out
+}
+
+pub fn unpack(mut body: &[u8]) -> Result<Vec<Vec<u8>>, String> {
+    let mut docs = Vec::new();
+    while !body.is_empty() {
+        let len = u32::from_le_bytes(
+            body.get(..4)
+                .ok_or("truncated body")?
+                .try_into()
+                .map_err(|_| "bad body")?,
+        ) as usize;
+        let d = body.get(4..4 + len).ok_or("truncated body")?;
+        docs.push(d.to_vec());
+        body = &body[4 + len..];
+    }
+    Ok(docs)
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct OpenReply {
     pub pages: usize,
@@ -56,6 +96,33 @@ pub fn handle(
             let data = doc.as_ref().ok_or("no document open")?;
             crate::render_page_png(pdfium, data, None, req.page, req.dpi).map_err(|e| e.to_string())
         }
+        "pdf.merge" => {
+            let docs = unpack(body)?;
+            let refs: Vec<&[u8]> = docs.iter().map(Vec::as_slice).collect();
+            crate::edit::merge(pdfium, &refs).map_err(|e| e.to_string())
+        }
+        "pdf.extract" => {
+            let req: PagesRequest = serde_json::from_slice(body).map_err(|e| e.to_string())?;
+            let data = doc.as_ref().ok_or("no document open")?;
+            let total = crate::info(pdfium, data, None)
+                .map_err(|e| e.to_string())?
+                .pages;
+            let pages = crate::edit::parse_page_ranges(&req.pages, total)?;
+            crate::edit::extract(pdfium, data, &pages).map_err(|e| e.to_string())
+        }
+        "pdf.rotate" => {
+            let req: RotateRequest = serde_json::from_slice(body).map_err(|e| e.to_string())?;
+            let data = doc.as_ref().ok_or("no document open")?;
+            let total = crate::info(pdfium, data, None)
+                .map_err(|e| e.to_string())?
+                .pages;
+            let pages = if req.pages.trim().is_empty() {
+                Vec::new()
+            } else {
+                crate::edit::parse_page_ranges(&req.pages, total)?
+            };
+            crate::edit::rotate(pdfium, data, &pages, req.degrees).map_err(|e| e.to_string())
+        }
         "pdf.close" => {
             *doc = None;
             Ok(Vec::new())
@@ -87,5 +154,18 @@ pub async fn serve(stream: &mut dyn Stream, pdfium: &Pdfium) -> std::io::Result<
             },
         )
         .await?;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pack_round_trip() {
+        let docs = vec![b"abc".to_vec(), Vec::new(), vec![1u8; 300]];
+        assert_eq!(unpack(&pack(&docs)).unwrap(), docs);
+        assert!(unpack(&[9, 0, 0, 0, 1]).is_err());
+        assert!(unpack(&[1, 2]).is_err());
     }
 }

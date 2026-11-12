@@ -756,6 +756,9 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::Actions { .. }
         | Command::Profile { .. }
         | Command::Tasks
+        | Command::PdfExtract { .. }
+        | Command::PdfRotate { .. }
+        | Command::PdfMerge { .. }
         | Command::PdfOpen { .. }
         | Command::PdfRender { .. } => {}
     }

@@ -67,6 +67,21 @@ function Viewer() {
   const [info, setInfo] = createSignal<DocInfo | null>(null);
   const [error, setError] = createSignal('');
   const [zoom, setZoom] = createSignal(1);
+  const [pages, setPages] = createSignal('');
+  const [mergeList, setMergeList] = createSignal('');
+  const [status, setStatus] = createSignal<{ text: string; path?: string }>({ text: '' });
+
+  const run = async (label: string, command: Parameters<typeof send>[0]) => {
+    setStatus({ text: `${label}…` });
+    try {
+      const { path } = JSON.parse(await send(command)) as { path: string };
+      setStatus({ text: `${label}: saved`, path });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
+  const openResult = (path: string) =>
+    void send({ cmd: 'new-tab', url: `kb://pdf/?file=${encodeURIComponent(path)}` });
 
   onMount(async () => {
     if (!file) return setError('No file given.');
@@ -94,6 +109,45 @@ function Viewer() {
         <span class="zoom">{Math.round(zoom() * 100)}%</span>
         <button onClick={() => changeZoom(1.25)} title="Zoom in">+</button>
       </header>
+      <Show when={info()}>
+        <div class="tools">
+          <button onClick={() => void run('Rotate', { cmd: 'pdf-rotate', path: file, degrees: 90 })}>Rotate all ↻</button>
+          <button onClick={() => void run('Rotate', { cmd: 'pdf-rotate', path: file, degrees: 270 })}>Rotate all ↺</button>
+          <input
+            type="text"
+            placeholder="Pages, e.g. 1-3,5,8-"
+            value={pages()}
+            onInput={(e) => setPages(e.currentTarget.value)}
+          />
+          <button disabled={!pages().trim()} onClick={() => void run('Extract', { cmd: 'pdf-extract', path: file, pages: pages() })}>
+            Extract pages
+          </button>
+          <input
+            type="text"
+            class="wide"
+            placeholder="Merge: other PDF paths, separated by | (this file goes first)"
+            value={mergeList()}
+            onInput={(e) => setMergeList(e.currentTarget.value)}
+          />
+          <button
+            disabled={!mergeList().trim()}
+            onClick={() =>
+              void run('Merge', {
+                cmd: 'pdf-merge',
+                paths: [file, ...mergeList().split('|').map((p) => p.trim()).filter(Boolean)],
+              })
+            }
+          >
+            Merge
+          </button>
+          <Show when={status().text}>
+            <span class="muted">{status().text}</span>
+          </Show>
+          <Show when={status().path}>
+            <button onClick={() => openResult(status().path!)}>Open result</button>
+          </Show>
+        </div>
+      </Show>
       <Show when={error()}>
         <p class="error">{error()}</p>
       </Show>

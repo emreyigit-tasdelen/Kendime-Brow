@@ -19,7 +19,17 @@ type Reply = Sender<Result<Vec<u8>, String>>;
 
 enum Request {
     Open(Vec<u8>, Reply),
-    Render { page: usize, dpi: f32, reply: Reply },
+    /// Generic call on the open document (or a stateless one like merge).
+    Call {
+        method: &'static str,
+        body: Vec<u8>,
+        reply: Reply,
+    },
+    Render {
+        page: usize,
+        dpi: f32,
+        reply: Reply,
+    },
 }
 
 static SERVICE: OnceLock<Mutex<Sender<Request>>> = OnceLock::new();
@@ -76,6 +86,65 @@ fn submit(make: impl FnOnce(Reply) -> Request) -> Result<Vec<u8>, String> {
 /// Opens a document (JSON `{pages, width, height}` on success).
 pub fn open(bytes: Vec<u8>) -> Result<Vec<u8>, String> {
     submit(|r| Request::Open(bytes, r))
+}
+
+/// Calls a document-editing method of the host (`pdf.merge`, `pdf.extract`, `pdf.rotate`).
+pub fn call_host(method: &'static str, body: Vec<u8>) -> Result<Vec<u8>, String> {
+    submit(|reply| Request::Call {
+        method,
+        body,
+        reply,
+    })
+}
+
+/// `<dir>/<stem> (<suffix>).pdf`, made unique.
+pub fn output_path(input: &str, suffix: &str) -> PathBuf {
+    let p = Path::new(input);
+    let dir = p.parent().unwrap_or(Path::new("."));
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("document");
+    kb_platform::files::unique_path(dir, &format!("{stem} ({suffix}).pdf"))
+}
+
+/// Merges the given PDF files into `<first> (merged).pdf`; returns the output path.
+pub fn merge_files(paths: &[String]) -> Result<String, String> {
+    if paths.len() < 2 {
+        return Err("select at least two PDF files".into());
+    }
+    let docs = paths
+        .iter()
+        .map(|p| read_pdf(p))
+        .collect::<Result<Vec<_>, _>>()?;
+    let total: usize = docs.iter().map(Vec::len).sum();
+    if total > MAX_PDF_BYTES {
+        return Err("combined size exceeds the 16 MB limit".into());
+    }
+    let out = call_host("pdf.merge", kb_doc_pack(&docs))?;
+    let target = output_path(&paths[0], "merged");
+    std::fs::write(&target, out).map_err(|e| e.to_string())?;
+    Ok(target.to_string_lossy().to_string())
+}
+
+fn kb_doc_pack(docs: &[Vec<u8>]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for d in docs {
+        out.extend_from_slice(&(d.len() as u32).to_le_bytes());
+        out.extend_from_slice(d);
+    }
+    out
+}
+
+/// Opens `path`, runs `method` with `json` and writes `<name> (<suffix>).pdf`.
+pub fn edit_file(
+    path: &str,
+    method: &'static str,
+    json: String,
+    suffix: &str,
+) -> Result<String, String> {
+    open(read_pdf(path)?)?;
+    let out = call_host(method, json.into_bytes())?;
+    let target = output_path(path, suffix);
+    std::fs::write(&target, out).map_err(|e| e.to_string())?;
+    Ok(target.to_string_lossy().to_string())
 }
 
 /// Renders a page to PNG bytes.
@@ -145,6 +214,42 @@ fn run(rx: Receiver<Request>) {
                             }
                         }
                         r = call(host.as_mut().expect("host"), "pdf.open", bytes.clone()).await;
+                        if r.is_ok() || r.as_ref().is_err_and(|e| !is_transport(e)) {
+                            break;
+                        }
+                        host = None;
+                    }
+                    (r, reply)
+                }
+                Request::Call {
+                    method,
+                    body,
+                    reply,
+                } => {
+                    let mut r = Err("no host".to_string());
+                    for _ in 0..2 {
+                        if host.is_none() {
+                            match start_host().await {
+                                Ok(mut h) => {
+                                    if method != "pdf.merge" {
+                                        let Some(d) = doc.clone() else {
+                                            r = Err("no document open".into());
+                                            break;
+                                        };
+                                        if let Err(e) = call(&mut h, "pdf.open", d).await {
+                                            r = Err(e);
+                                            break;
+                                        }
+                                    }
+                                    host = Some(h);
+                                }
+                                Err(e) => {
+                                    r = Err(e);
+                                    break;
+                                }
+                            }
+                        }
+                        r = call(host.as_mut().expect("host"), method, body.clone()).await;
                         if r.is_ok() || r.as_ref().is_err_and(|e| !is_transport(e)) {
                             break;
                         }

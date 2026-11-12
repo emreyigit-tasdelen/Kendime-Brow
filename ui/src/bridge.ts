@@ -98,6 +98,9 @@ export type Command =
   | { cmd: 'tasks' }
   | { cmd: 'kill-process'; pid: number }
   | { cmd: 'pdf-open'; path: string }
+  | { cmd: 'pdf-extract'; path: string; pages: string }
+  | { cmd: 'pdf-rotate'; path: string; pages?: string; degrees: number }
+  | { cmd: 'pdf-merge'; paths: string[] }
   | { cmd: 'pdf-render'; page: number; dpi?: number };
 
 interface QueryOptions {

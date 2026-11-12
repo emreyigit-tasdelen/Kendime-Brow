@@ -92,6 +92,22 @@ pub enum Command {
     PdfOpen {
         path: String,
     },
+    /// Writes `<name> (pages).pdf` with the selected pages (split / extract / reorder).
+    PdfExtract {
+        path: String,
+        pages: String,
+    },
+    /// Writes `<name> (rotated).pdf`; `pages` empty = all.
+    PdfRotate {
+        path: String,
+        #[serde(default)]
+        pages: String,
+        degrees: i32,
+    },
+    /// Writes `<first> (merged).pdf`.
+    PdfMerge {
+        paths: Vec<String>,
+    },
     /// Renders a page of the open PDF; answers a base64 PNG.
     PdfRender {
         page: usize,
