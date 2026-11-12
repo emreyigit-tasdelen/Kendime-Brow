@@ -20,3 +20,6 @@ html, body { background: #3a3b40; }
 .viewer .tools input { height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--fg); width: 190px; }
 .viewer .tools input.wide { width: 340px; }
 .viewer header input.find { height: 26px; width: 200px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--fg); }
+.viewer .form { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 8px 16px; background: var(--bg); border-bottom: 1px solid var(--border); flex: none; }
+.viewer .form label { display: flex; gap: 6px; align-items: center; }
+.viewer .form input[type=text] { height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--fg); }

@@ -40,6 +40,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 Newest on top. Format: task · done · decision · next step.
 
+### 3A.3 PDF forms — PARTIAL (2026-11-12)
+- **Done:** `kb-doc::forms` (`list_fields`: page, name, kind, value, checked; `fill`: text fields and checkboxes by field name; unknown names are an error), host methods `pdf.fields` / `pdf.fill`, bridge `pdf-fields` / `pdf-fill` (writes `<name> (filled).pdf`), viewer "Fill form" panel. Tested with a hand-built AcroForm PDF and real PDFium (also live through the sandboxed host: fields listed, filled copy written, typo rejected).
+- **Pending:** radio / combo / list fields, in-page form rendering (the rendered page does not show typed values until saved and re-opened), annotations (highlight, notes, drawing), flattening.
+- **Next step:** 3A.9 / annotations, then 3A.4 qpdf operations.
+
 ### 3A.7 Text extraction + search — PARTIAL (2026-11-12)
 - **Done:** `kb-doc::extract_text` (per-page text via PDFium) and `search_pages` (case-insensitive, snippet around the first hit, char-boundary safe); host method `pdf.text`; bridge `pdf-text`; viewer: search box (Enter / Shift+Enter cycle through matching pages, "n/m pages"), "Copy all text" button. Tested with real PDFium (5 pages, hit on page 5, empty/whitespace queries) and live (2-page file returns both texts).
 - **Pending:** table extraction (CSV/XLSX), text selection / in-page highlight, OCR (3A.6).

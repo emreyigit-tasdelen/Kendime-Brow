@@ -96,6 +96,17 @@ pub fn handle(
             let data = doc.as_ref().ok_or("no document open")?;
             crate::render_page_png(pdfium, data, None, req.page, req.dpi).map_err(|e| e.to_string())
         }
+        "pdf.fields" => {
+            let data = doc.as_ref().ok_or("no document open")?;
+            let f = crate::forms::list_fields(pdfium, data).map_err(|e| e.to_string())?;
+            serde_json::to_vec(&f).map_err(|e| e.to_string())
+        }
+        "pdf.fill" => {
+            let values: std::collections::HashMap<String, String> =
+                serde_json::from_slice(body).map_err(|e| e.to_string())?;
+            let data = doc.as_ref().ok_or("no document open")?;
+            crate::forms::fill(pdfium, data, &values).map_err(|e| e.to_string())
+        }
         "pdf.text" => {
             let data = doc.as_ref().ok_or("no document open")?;
             let texts = crate::extract_text(pdfium, data).map_err(|e| e.to_string())?;

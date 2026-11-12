@@ -108,6 +108,13 @@ pub enum Command {
     PdfMerge {
         paths: Vec<String>,
     },
+    /// Form fields of the open PDF (JSON array).
+    PdfFields,
+    /// Writes `<name> (filled).pdf` with `values` (field name → value).
+    PdfFill {
+        path: String,
+        values: std::collections::HashMap<String, String>,
+    },
     /// Text of the open PDF: JSON array with one string per page.
     PdfText,
     /// Renders a page of the open PDF; answers a base64 PNG.

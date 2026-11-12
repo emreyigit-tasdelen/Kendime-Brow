@@ -100,6 +100,19 @@ function Viewer() {
     await navigator.clipboard?.writeText((texts() ?? []).join('\n\n')).catch(() => undefined);
     setStatus({ text: 'Text copied' });
   };
+  interface FormField { page: number; name: string; kind: string; value: string; checked: boolean | null }
+  const [fields, setFields] = createSignal<FormField[]>([]);
+  const [values, setValues] = createSignal<Record<string, string>>({});
+  const [formOpen, setFormOpen] = createSignal(false);
+  const loadForm = async () => {
+    try {
+      setFields(JSON.parse(await send({ cmd: 'pdf-fields' })) as FormField[]);
+    } catch (e) {
+      setError(String(e));
+    }
+    setFormOpen(true);
+  };
+  const fillable = () => fields().filter((f) => f.kind === 'text' || f.kind === 'checkbox');
   const [status, setStatus] = createSignal<{ text: string; path?: string }>({ text: '' });
 
   const run = async (label: string, command: Parameters<typeof send>[0]) => {
@@ -191,11 +204,44 @@ function Viewer() {
           >
             Merge
           </button>
+          <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>
           </Show>
           <Show when={status().path}>
             <button onClick={() => openResult(status().path!)}>Open result</button>
+          </Show>
+        </div>
+      </Show>
+      <Show when={formOpen()}>
+        <div class="form">
+          <Show when={fillable().length > 0} fallback={<span class="muted">This PDF has no fillable fields.</span>}>
+            <For each={fillable()}>
+              {(f) => (
+                <label>
+                  <span>{f.name || '(unnamed)'}</span>
+                  {f.kind === 'checkbox' ? (
+                    <input
+                      type="checkbox"
+                      checked={f.checked ?? false}
+                      onChange={(e) => setValues({ ...values(), [f.name]: String(e.currentTarget.checked) })}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={f.value}
+                      onInput={(e) => setValues({ ...values(), [f.name]: e.currentTarget.value })}
+                    />
+                  )}
+                </label>
+              )}
+            </For>
+            <button
+              disabled={Object.keys(values()).length === 0}
+              onClick={() => void run('Fill', { cmd: 'pdf-fill', path: file, values: values() })}
+            >
+              Save filled copy
+            </button>
           </Show>
         </div>
       </Show>

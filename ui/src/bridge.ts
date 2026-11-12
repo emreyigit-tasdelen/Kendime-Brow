@@ -99,6 +99,8 @@ export type Command =
   | { cmd: 'kill-process'; pid: number }
   | { cmd: 'pdf-open'; path: string }
   | { cmd: 'pdf-text' }
+  | { cmd: 'pdf-fields' }
+  | { cmd: 'pdf-fill'; path: string; values: Record<string, string> }
   | { cmd: 'pdf-extract'; path: string; pages: string }
   | { cmd: 'pdf-rotate'; path: string; pages?: string; degrees: number }
   | { cmd: 'pdf-merge'; paths: string[] }
