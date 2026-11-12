@@ -377,6 +377,9 @@ pub fn state() -> protocol::State {
                     can_go_back: t.can_go_back,
                     can_go_forward: t.can_go_forward,
                     bookmarked: with_store(|st| st.is_bookmarked(&t.url)).unwrap_or(false),
+                    blocked: t.view.browser().map_or(0, |b| {
+                        crate::content_blocking::blocked_count(b.identifier())
+                    }),
                 })
                 .collect(),
             palette: PALETTE_OPEN.with(|p| *p.borrow()),

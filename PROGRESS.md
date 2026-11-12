@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.2 adblock-rust request blocking, then 2.3+. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.) (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
+- **Next step:** 2.3 filter list management + updates, cosmetic filtering, scriptlets. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.2 kb-privacy: adblock-rust request blocking — DONE (2026-11-12)
+- **Done:** New crate `kb-privacy` (adblock 0.13, MPL-2.0, built without the `single-thread` feature so the engine is `Send + Sync`): `Blocker` (`RwLock<Option<Engine>>`, `load_lists`, `load_dir` for `*.txt`, `check(url, source, type)` → block / rewritten URL), `ResourceType`, `is_filterable`; 6 tests (domain/type/path rules, exceptions, third-party, documents, dir loading). Shell: `content_blocking.rs` — `RequestHandler::resource_request_handler` → `on_before_resource_load` asks the global blocker for every sub-resource (CEF resource type mapped), cancels blocked ones, applies `$removeparam` rewrites, counts blocked requests per browser (reset on main-frame navigation) → `TabState.blocked`. Lists load from `<profile>/filters/*.txt` at startup. Verified live with a test list: blocked image → `ERR_ABORTED`, unblocked → normal DNS path, counter = 1.
+- **Decision:** main-frame navigations are never blocked (adblock-rust would block documents of listed domains; a typed address always loads — strict mode can come with the per-site shield in 2.4). No lists are bundled: EasyList & co. are GPL/CC-BY-SA, so they are downloaded at runtime (2.3).
+- **Also:** package workflow — `.deb` builds in CI; AppImage step needed `desktop-file-utils` (added).
+- **Next step:** 2.3.
 
 ### 2.1 Google services off + zero unwanted connections — DONE (2026-11-12)
 - **Done:** `kb-shell/src/privacy_flags.rs`: switches (`disable-background-networking`, `disable-component-update`, `disable-sync`, `no-pings`, `metrics-recording-only`, …), `--disable-features` list, `--host-resolver-rules` that make Google update/telemetry hosts unresolvable, global + profile prefs (component updates, search suggestions, Safe Browsing, translate, spelling service, network prediction = never, DoH auto-upgrade off, DNT). Applied in `App::on_before_command_line_processing` (browser process) and on context init. `KB_PROFILE_DIR` overrides the profile dir. `scripts/check-connections.mjs`: fresh profile, idle on `kb://newtab/`, graceful close, NetLog analysis — FAIL on requests to non-blocked public hosts or successful public socket connects; INFO for resolver-blocked attempts and connect-only probes.

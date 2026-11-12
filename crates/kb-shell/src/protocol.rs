@@ -90,6 +90,8 @@ pub struct TabState {
     pub can_go_back: bool,
     pub can_go_forward: bool,
     pub bookmarked: bool,
+    /// Requests blocked on the current page (content blocking).
+    pub blocked: u64,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]

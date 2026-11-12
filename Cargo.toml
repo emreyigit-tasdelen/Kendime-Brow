@@ -17,6 +17,7 @@ x11-dl = "2"
 kb-platform = { path = "crates/kb-platform" }
 kb-ipc = { path = "crates/kb-ipc" }
 kb-actions = { path = "crates/kb-actions" }
+kb-privacy = { path = "crates/kb-privacy" }
 
 [profile.release]
 lto = "thin"

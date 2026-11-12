@@ -53,7 +53,7 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 
 - [x] 2.1 Flag/preference set disabling Google services + "zero unwanted connections" CI test (§4.1)
-- [ ] 2.2 `kb-privacy`: adblock-rust integration, request blocking (§4.2)
+- [x] 2.2 `kb-privacy`: adblock-rust integration, request blocking (§4.2)
 - [ ] 2.3 Filter list management + updates, cosmetic filtering, scriptlets (§4.2)
 - [ ] 2.4 Tracking parameter stripping, per-site shield button (§4.2)
 - [ ] 2.5 Containers (separate `CefRequestContext`), private window, third-party cookie blocking (§4.3)

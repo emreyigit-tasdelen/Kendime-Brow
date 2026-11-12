@@ -74,6 +74,12 @@ wrap_browser_process_handler! {
             let store = shell::profile_dir()
                 .map(|dir| crate::store::Store::open(&dir.join("kb.sqlite")))
                 .unwrap_or_else(crate::store::Store::open_in_memory);
+            if let Some(dir) = shell::profile_dir() {
+                let lists = crate::content_blocking::load_filters(&dir);
+                if std::env::var_os("KB_DEBUG").is_some() {
+                    eprintln!("[kb] filter lists loaded: {lists}");
+                }
+            }
             match store {
                 Ok(store) => shell::init_store(store),
                 Err(e) => eprintln!("[kb] profile database unavailable: {e}"),
@@ -358,10 +364,28 @@ wrap_request_handler! {
             _user_gesture: i32,
             _is_redirect: i32,
         ) -> i32 {
+            if let (Some(b), Some(f)) = (browser.as_deref(), frame.as_deref())
+                && f.is_main() != 0
+            {
+                crate::content_blocking::reset_count(b.identifier());
+            }
             if let Some(r) = bridge::browser_router() {
                 r.on_before_browse(browser.cloned(), frame.cloned());
             }
             0
+        }
+
+        fn resource_request_handler(
+            &self,
+            _browser: Option<&mut Browser>,
+            _frame: Option<&mut Frame>,
+            _request: Option<&mut Request>,
+            _is_navigation: i32,
+            _is_download: i32,
+            _request_initiator: Option<&CefString>,
+            _disable_default_handling: Option<&mut i32>,
+        ) -> Option<ResourceRequestHandler> {
+            Some(crate::content_blocking::KbResourceRequestHandler::new())
         }
 
         fn on_render_process_terminated(
