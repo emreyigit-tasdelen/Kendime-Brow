@@ -40,7 +40,7 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 - [x] 1.7 `kb://ui`: tab strip, address bar, back/forward/reload (§3.4)
 - [x] 1.8 UI ↔ shell bridge (message router, open only to the `kb://` origin) (§3.3)
 - [x] 1.9 `kb-ipc`: named pipe (Windows) + Unix socket (Linux) transport, protobuf, token-based handshake (§3.3)
-- [ ] 1.10 Module host launcher (Windows): AppContainer/restricted token + Job Object, restart on crash (§3.2)
+- [x] 1.10 Module host launcher (Windows): AppContainer/restricted token + Job Object, restart on crash (§3.2) → restricted token + low IL + Job Object done; AppContainer is a follow-up
 - [ ] 1.10b **Validation:** V14 → module host sandbox (Linux): user namespace + seccomp + Landlock (§3.8)
 - [ ] 1.11 Action registry + command palette (§3.5)
 - [ ] 1.12 Profile, settings (`kb://settings`), `kb.sqlite`: bookmarks, history, session restore (§3.7)

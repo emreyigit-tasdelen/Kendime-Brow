@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.10 module host launcher (Windows: AppContainer/restricted token + Job Object), then 1.11+.
+- **Next step:** 1.11 action registry + command palette, then 1.12+. (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.10 Module host launcher (Windows) — DONE (2026-11-12), AppContainer pending
+- **Done:** `kb-platform::sandbox`: `spawn(SpawnSpec)` with a restricted primary token (`DISABLE_MAX_PRIVILEGE`, LOW integrity) via `CreateProcessAsUserW` (suspended → assigned to a Job Object → resumed). Job: kill-on-close, active process limit, optional per-process memory limit, die on unhandled exception. Windows pipes now have an explicit SDDL `D:P(A;;GA;;;<user SID>)S:(ML;;NW;;;LW)` (closes the 1.9 follow-up; low-IL hosts can connect, other users cannot). `kb-ipc::launch`: fresh endpoint + token per host (env `KB_IPC_ENDPOINT` / `KB_IPC_TOKEN`), 10 s connect timeout, `wait_exit`, `RestartPolicy` (restart non-zero exits up to 3×). Test host `kb-echo-host`. Integration tests: sandboxed round trip; low-IL host cannot write a user file; crash detected → restart works; clean exit not restarted.
+- **Also fixed:** Ubuntu CI had been red since 1.6: `add_custom_scheme` option type is `u32` on Linux vs `i32` on Windows → `options as _`.
+- **Decision / open:** AppContainer (no network / no file access by capability) is not done yet — the low-IL token already blocks writes; network blocking for kb-doc/kb-media must be added before those hosts parse untrusted files (Phase 3). Token passed via environment: readable by same-user processes, accepted (same trust boundary). Linux/macOS spawn is unsandboxed until 1.10b.
+- **Next step:** 1.11.
 
 ### 1.9 kb-ipc transport — DONE (2026-11-12)
 - **Done:** `proto/kb/ipc/v1/ipc.proto` (`Hello`, `HelloAck`, `Envelope`) compiled by `kb-ipc/build.rs` with prost-build + protox (no protoc). `kb-platform::ipc`: endpoint names `kb-<pid>-<module>-<random>`, Windows named pipe (first instance, remote clients rejected), Unix socket in a 0700 runtime dir with 0600 socket file, removed on drop. `kb-ipc`: sync + async length-prefixed framing, `send`/`recv` for protobuf, `Token` (256-bit, hex, constant-time compare, redacted Debug), `accept_handshake` / `client_handshake`. Integration tests over a real named pipe: handshake + envelope round trip, wrong token → PermissionDenied on both sides, second listener on the same name fails. 31 tests pass.

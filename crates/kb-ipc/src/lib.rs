@@ -19,6 +19,12 @@ pub mod pb {
 
 pub const PROTOCOL_VERSION: u32 = 1;
 
+/// Environment variables through which the shell hands a module host its endpoint and token.
+pub const ENV_ENDPOINT: &str = "KB_IPC_ENDPOINT";
+pub const ENV_TOKEN: &str = "KB_IPC_TOKEN";
+
+pub mod launch;
+
 /// Upper bound for a single framed message. Large data (bitmaps, frames) goes through
 /// shared memory instead; messages only carry handles + offsets.
 pub const MAX_FRAME_LEN: usize = 16 * 1024 * 1024;

@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 
 pub mod ipc;
+pub mod sandbox;
 
 /// Application directory name used on Windows and macOS.
 pub const APP_DIR_NAME: &str = "Kendime-Brow";

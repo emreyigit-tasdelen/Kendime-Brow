@@ -16,7 +16,9 @@ pub fn register_custom_scheme(registrar: Option<&mut SchemeRegistrar>) {
         | SchemeOptions::SECURE.get_raw()
         | SchemeOptions::CORS_ENABLED.get_raw()
         | SchemeOptions::FETCH_ENABLED.get_raw();
-    registrar.add_custom_scheme(Some(&CefString::from(scheme::SCHEME)), options);
+    // `as _`: the raw option type is i32 on Windows and u32 on Linux in the cef bindings.
+    #[allow(clippy::unnecessary_cast)]
+    registrar.add_custom_scheme(Some(&CefString::from(scheme::SCHEME)), options as _);
 }
 
 /// Installs the `kb://` handler factory in the browser process (call after context init).

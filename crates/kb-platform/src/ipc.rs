@@ -1,9 +1,10 @@
 //! Platform IPC endpoints (architecture §3.3 / §3.8): Windows named pipes, Unix domain sockets
 //! elsewhere. One listener accepts one connection (one module host per endpoint).
 //!
-//! Hardening still to do (tracked in PROGRESS): an explicit DACL limited to the current user
-//! SID on Windows. Today the pipe rejects remote clients and is the first instance of its
-//! random name; the token handshake in `kb-ipc` authenticates the peer.
+//! Windows pipes get an explicit security descriptor: full access for the current user only,
+//! plus a LOW mandatory label so sandboxed (low integrity) module hosts can connect. The pipe
+//! also rejects remote clients and must be the first instance of its random name; the token
+//! handshake in `kb-ipc` authenticates the peer.
 
 use std::io;
 
@@ -38,13 +39,51 @@ mod imp {
         server: Option<NamedPipeServer>,
     }
 
+    /// `D:P(A;;GA;;;<user>)S:(ML;;NW;;;LW)` — protected DACL for the current user, low label.
+    pub fn pipe_sddl() -> io::Result<String> {
+        let sid = crate::sandbox::current_user_sid()?;
+        Ok(format!("D:P(A;;GA;;;{sid})S:(ML;;NW;;;LW)"))
+    }
+
     pub fn listen(name: &str) -> io::Result<Listener> {
-        let server = ServerOptions::new()
-            .first_pipe_instance(true)
-            .reject_remote_clients(true)
-            .create(path(name))?;
+        use windows_sys::Win32::Foundation::LocalFree;
+        use windows_sys::Win32::Security::Authorization::ConvertStringSecurityDescriptorToSecurityDescriptorW;
+        use windows_sys::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
+
+        let sddl: Vec<u16> = pipe_sddl()?
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
+        let mut sd: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
+        // SDDL_REVISION_1 = 1
+        if unsafe {
+            ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                sddl.as_ptr(),
+                1,
+                &mut sd,
+                std::ptr::null_mut(),
+            )
+        } == 0
+        {
+            return Err(io::Error::last_os_error());
+        }
+        let mut sa = SECURITY_ATTRIBUTES {
+            nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: sd,
+            bInheritHandle: 0,
+        };
+        let server = unsafe {
+            ServerOptions::new()
+                .first_pipe_instance(true)
+                .reject_remote_clients(true)
+                .create_with_security_attributes_raw(
+                    path(name),
+                    (&mut sa as *mut SECURITY_ATTRIBUTES).cast(),
+                )
+        };
+        unsafe { LocalFree(sd) };
         Ok(Listener {
-            server: Some(server),
+            server: Some(server?),
         })
     }
 
@@ -118,6 +157,8 @@ mod imp {
     }
 }
 
+#[cfg(windows)]
+pub use imp::pipe_sddl;
 pub use imp::{Listener, connect, listen};
 
 #[cfg(test)]
