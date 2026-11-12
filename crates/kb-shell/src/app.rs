@@ -225,6 +225,10 @@ wrap_client! {
             Some(KbRequestHandler::new())
         }
 
+        fn download_handler(&self) -> Option<DownloadHandler> {
+            Some(KbDownloadHandler::new())
+        }
+
         fn on_process_message_received(
             &self,
             browser: Option<&mut Browser>,
@@ -240,6 +244,49 @@ wrap_client! {
                     message.cloned(),
                 )
             }) as i32
+        }
+    }
+}
+
+wrap_download_handler! {
+    struct KbDownloadHandler;
+
+    impl DownloadHandler {
+        fn can_download(
+            &self,
+            _browser: Option<&mut Browser>,
+            _url: Option<&CefString>,
+            _request_method: Option<&CefString>,
+        ) -> i32 {
+            1
+        }
+
+        fn on_before_download(
+            &self,
+            _browser: Option<&mut Browser>,
+            download_item: Option<&mut DownloadItem>,
+            suggested_name: Option<&CefString>,
+            callback: Option<&mut BeforeDownloadCallback>,
+        ) -> i32 {
+            let (Some(item), Some(callback)) = (download_item, callback) else {
+                return 0;
+            };
+            let name = suggested_name.map(CefString::to_string).unwrap_or_default();
+            let handled = crate::downloads::on_before_download(item, &name, callback);
+            shell::refresh();
+            handled as i32
+        }
+
+        fn on_download_updated(
+            &self,
+            _browser: Option<&mut Browser>,
+            download_item: Option<&mut DownloadItem>,
+            callback: Option<&mut DownloadItemCallback>,
+        ) {
+            if let Some(item) = download_item {
+                crate::downloads::on_download_updated(item, callback);
+                shell::refresh();
+            }
         }
     }
 }

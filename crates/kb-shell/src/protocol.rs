@@ -60,6 +60,19 @@ pub enum Command {
         id: i64,
     },
     ClearHistory,
+    CancelDownload {
+        id: u32,
+    },
+    PauseDownload {
+        id: u32,
+    },
+    ResumeDownload {
+        id: u32,
+    },
+    RevealDownload {
+        id: u32,
+    },
+    ClearDownloads,
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {
@@ -82,6 +95,7 @@ pub struct TabState {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct State {
     pub tabs: Vec<TabState>,
+    pub downloads: Vec<crate::downloads::DownloadState>,
     /// Command palette open (the UI strip is expanded).
     pub palette: bool,
 }
@@ -247,6 +261,7 @@ mod tests {
                 ..Default::default()
             }],
             palette: false,
+            downloads: Vec::new(),
         };
         assert!(s.to_json().contains("\"canGoBack\":true"));
     }

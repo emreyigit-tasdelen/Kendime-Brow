@@ -44,7 +44,7 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 - [ ] 1.10b **Validation:** V14 → module host sandbox (Linux): user namespace + seccomp + Landlock (§3.8)
 - [x] 1.11 Action registry + command palette (§3.5)
 - [x] 1.12 Profile, settings (`kb://settings`), `kb.sqlite`: bookmarks, history, session restore (§3.7)
-- [ ] 1.13 Download manager (basic) (§8.3)
+- [x] 1.13 Download manager (basic) (§8.3)
 - [ ] 1.14 Packaging: Windows installer + Linux `.deb`/AppImage, single taskbar icon, `just install-dev` (§13)
 - [ ] 1.15 Phase close: verify all Phase 1 features in the Ubuntu VM
 

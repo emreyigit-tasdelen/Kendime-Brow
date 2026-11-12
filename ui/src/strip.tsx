@@ -13,11 +13,14 @@ function tabLabel(t: TabState): string {
 }
 
 function Strip() {
-  const [state, setState] = createSignal<State>({ tabs: [], palette: false });
+  const [state, setState] = createSignal<State>({ tabs: [], palette: false, downloads: [] });
   const unsubscribe = subscribe(setState);
   onCleanup(unsubscribe);
 
   const active = createMemo(() => state().tabs.find((t) => t.active));
+  const activeDownloads = createMemo(
+    () => state().downloads.filter((d) => d.status === 'in-progress' || d.status === 'paused').length,
+  );
   const [editing, setEditing] = createSignal(false);
   const [text, setText] = createSignal('');
   const shownUrl = () => {
@@ -126,6 +129,17 @@ function Strip() {
           onClick={() => void send({ cmd: 'toggle-bookmark' })}
         >
           {active()?.bookmarked ? '★' : '☆'}
+        </button>
+        <button
+          type="button"
+          class="downloads-button"
+          title="Downloads"
+          onClick={() => void send({ cmd: 'new-tab', url: 'kb://downloads/' })}
+        >
+          ↓
+          <Show when={activeDownloads() > 0}>
+            <span class="badge">{activeDownloads()}</span>
+          </Show>
         </button>
         <button
           type="button"

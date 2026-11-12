@@ -3,6 +3,7 @@
 pub mod actions;
 pub mod app;
 pub mod bridge;
+pub mod downloads;
 pub mod kb_scheme;
 pub mod protocol;
 pub mod scheme;

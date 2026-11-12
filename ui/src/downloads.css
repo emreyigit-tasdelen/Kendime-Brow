@@ -1,0 +1,7 @@
+.downloads li { align-items: center; padding: 10px 0; }
+.downloads .info { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.downloads .name { font-weight: 600; }
+.downloads progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.downloads .actions { display: flex; gap: 6px; }
+.plain { height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; }
+.plain:hover { background: var(--border); }

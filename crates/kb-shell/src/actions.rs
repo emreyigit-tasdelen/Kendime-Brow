@@ -29,6 +29,13 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             Command::ToggleBookmark,
         ),
         (
+            "downloads.open",
+            "Show downloads",
+            Command::NewTab {
+                url: Some("kb://downloads/".into()),
+            },
+        ),
+        (
             "settings.open",
             "Open settings",
             Command::NewTab {

@@ -376,6 +376,7 @@ pub fn state() -> protocol::State {
                 })
                 .collect(),
             palette: PALETTE_OPEN.with(|p| *p.borrow()),
+            downloads: crate::downloads::list(),
         }
     })
     .unwrap_or_default()
@@ -463,6 +464,14 @@ pub fn run_bridge_command(cmd: Command) {
         }
         Command::ClearHistory => {
             with_store(|s| s.clear_history());
+        }
+        Command::CancelDownload { id } => crate::downloads::cancel(id),
+        Command::PauseDownload { id } => crate::downloads::pause(id),
+        Command::ResumeDownload { id } => crate::downloads::resume(id),
+        Command::RevealDownload { id } => crate::downloads::reveal(id),
+        Command::ClearDownloads => {
+            crate::downloads::clear_finished();
+            refresh();
         }
         Command::State | Command::Subscribe | Command::Actions { .. } | Command::Profile { .. } => {
         }

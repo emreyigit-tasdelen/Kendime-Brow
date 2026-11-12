@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+pub mod files;
 pub mod ipc;
 pub mod sandbox;
 

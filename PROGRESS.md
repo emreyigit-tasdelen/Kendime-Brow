@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.13 download manager (basic), then 1.14 packaging, 1.15 Ubuntu check (blocked). (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
+- **Next step:** 1.14 packaging (Windows installer + Linux .deb/AppImage), then 1.15 Ubuntu check (blocked on VM access). (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.13 Download manager (basic) — DONE (2026-11-12)
+- **Done:** `kb-platform::files` (downloads dir incl. `XDG_DOWNLOAD_DIR`, `sanitize_file_name` against path traversal / reserved names / control chars, `unique_path` → `name (1).ext`, `reveal` in the file manager; tested). `kb-shell/src/downloads.rs` + `DownloadHandler`: saves without a dialog, tracks progress/speed/status, keeps the item callback for cancel/pause/resume. Bridge: `cancel-/pause-/resume-/reveal-download`, `clear-downloads`; `State.downloads`. UI: ↓ button with active-count badge, `kb://downloads/` page (progress bar, actions), action `downloads.open`. Verified: a `<a download>` click saved `kb-download-test.txt` (26 B) to `~/Downloads`, status `complete`, page rendered (test file removed afterwards).
+- **Note:** Chromium blocks a second automatic download from the same page without a new user gesture ("multiple downloads" protection) — expected, not a bug. Download history is per session (not persisted yet); checksums / "open with" rules come in 3C.7.
+- **Next step:** 1.14.
 
 ### 1.12 Profile, settings, kb.sqlite — DONE (2026-11-12)
 - **Done:** `kb-shell/src/store.rs` (rusqlite, bundled SQLite, WAL): `settings` (whitelisted keys `search_url`, `restore_session`, `history_enabled`), `bookmarks`, `history` (visit count, title filled in later), `session`; internal `kb://` / `about:` pages never stored; 6 tests incl. file persistence. Profile dir `<data dir>/profiles/default` (`kb.sqlite` + CEF `cef/` cache, persistent session cookies). Shell: history on URL change, session saved on every state change (not while the window is closing), startup restores the session (or opens the new tab page), address bar uses the configured search engine. Bridge: `toggle-bookmark`, `profile`, `set-setting`, `delete-bookmark`, `clear-history`; `TabState.bookmarked`. UI: ☆/★ button, `kb://settings/` (search engine, restore session, history on/off, bookmarks, searchable history, clear). Actions `bookmark.toggle`, `settings.open`. Verified end to end: bookmark + history recorded, graceful close, relaunch restores the example.org tab; settings page screenshot OK.

@@ -30,8 +30,21 @@ export interface Profile {
   history: HistoryEntry[];
 }
 
+export interface DownloadState {
+  id: number;
+  url: string;
+  fileName: string;
+  path: string;
+  received: number;
+  total: number;
+  percent: number;
+  speed: number;
+  status: 'in-progress' | 'paused' | 'complete' | 'canceled' | 'interrupted';
+}
+
 export interface State {
   tabs: TabState[];
+  downloads: DownloadState[];
   palette: boolean;
 }
 
@@ -60,7 +73,12 @@ export type Command =
   | { cmd: 'profile'; history_query?: string }
   | { cmd: 'set-setting'; key: string; value: string }
   | { cmd: 'delete-bookmark'; id: number }
-  | { cmd: 'clear-history' };
+  | { cmd: 'clear-history' }
+  | { cmd: 'cancel-download'; id: number }
+  | { cmd: 'pause-download'; id: number }
+  | { cmd: 'resume-download'; id: number }
+  | { cmd: 'reveal-download'; id: number }
+  | { cmd: 'clear-downloads' };
 
 interface QueryOptions {
   request: string;

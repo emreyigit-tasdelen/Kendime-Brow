@@ -41,3 +41,8 @@ body { overflow: hidden; user-select: none; }
 .palette-list .id { color: var(--fg-muted); font-family: ui-monospace, monospace; font-size: 12px; }
 .palette-list .empty { color: var(--fg-muted); }
 .toolbar > .star.on { color: #e3b341; }
+.toolbar > .downloads-button { position: relative; }
+.badge {
+  position: absolute; top: 0; right: 0; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px;
+  background: var(--accent); color: #fff; font-size: 10px; line-height: 14px;
+}
