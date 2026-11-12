@@ -202,6 +202,9 @@ pub struct SshRequest {
     pub password: Option<String>,
     #[serde(default)]
     pub trust_new_host: bool,
+    /// Plain Telnet instead of SSH (no credentials; the server asks for them).
+    #[serde(default)]
+    pub telnet: bool,
 }
 
 fn default_ssh_port() -> u16 {

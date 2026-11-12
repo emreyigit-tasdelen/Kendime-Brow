@@ -27,6 +27,7 @@ enum Session {
         killer: Box<dyn portable_pty::ChildKiller + Send + Sync>,
     },
     Ssh(kb_ssh::Shell),
+    Telnet(kb_ssh::telnet::Telnet),
 }
 
 static SESSIONS: OnceLock<Mutex<HashMap<u32, Session>>> = OnceLock::new();
@@ -174,6 +175,32 @@ pub fn open_ssh(cols: u16, rows: u16, target: SshTarget, emit: Emit) -> Result<u
     Ok(id)
 }
 
+/// Opens a plain Telnet session (unencrypted; the page warns the user).
+pub fn open_telnet(cols: u16, rows: u16, host: &str, port: u16, emit: Emit) -> Result<u32, String> {
+    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let t = kb_ssh::telnet::connect(
+        host.trim(),
+        port,
+        cols,
+        rows,
+        Arc::new(move |e| match e {
+            kb_ssh::Event::Data(d) => emit(Output::Data(d)),
+            kb_ssh::Event::Exited(c) => {
+                if let Ok(mut s) = sessions().lock() {
+                    s.remove(&id);
+                }
+                emit(Output::Exited(c));
+            }
+        }),
+    )
+    .map_err(ssh_err)?;
+    sessions()
+        .lock()
+        .map_err(|_| "poisoned")?
+        .insert(id, Session::Telnet(t));
+    Ok(id)
+}
+
 /// Full `kb-ssh` configuration for a page request (terminal size is irrelevant for SFTP/tunnels).
 pub fn ssh_config(req: &crate::protocol::SshRequest) -> Result<kb_ssh::Config, String> {
     let t = resolve_ssh(req)?;
@@ -255,6 +282,10 @@ pub fn write(id: u32, data: &[u8]) -> Result<(), String> {
             shell.write(data);
             Ok(())
         }
+        Session::Telnet(t) => {
+            t.write(data);
+            Ok(())
+        }
     }
 }
 
@@ -273,6 +304,10 @@ pub fn resize(id: u32, cols: u16, rows: u16) -> Result<(), String> {
             shell.resize(cols.max(2), rows.max(2));
             Ok(())
         }
+        Session::Telnet(t) => {
+            t.resize(cols, rows);
+            Ok(())
+        }
     }
 }
 
@@ -287,6 +322,7 @@ pub fn close(id: u32) {
                 let _ = killer.kill();
             }
             Session::Ssh(shell) => shell.close(),
+            Session::Telnet(t) => t.close(),
         }
     }
 }

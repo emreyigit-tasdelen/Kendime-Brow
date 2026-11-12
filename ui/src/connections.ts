@@ -5,6 +5,9 @@ import './vault.css';
 import { send } from './bridge';
 
 interface Conn { id: string; name: string; host: string; port: number; user: string; vault_id: string }
+
+// Port 23 profiles open as Telnet.
+const isTelnet = (c: Conn) => c.port === 23;
 interface VaultItem { id: string; kind: string; title: string }
 
 const root = document.getElementById('root')!;
@@ -33,6 +36,7 @@ async function vaultItems(): Promise<VaultItem[]> {
 function openTerm(c: Conn): void {
   const q = new URLSearchParams({ host: c.host, port: String(c.port), user: c.user });
   if (c.vault_id) q.set('vault', c.vault_id);
+  if (isTelnet(c)) q.set('telnet', '1');
   void send({ cmd: 'new-tab', url: `kb://term/?${q}` });
 }
 

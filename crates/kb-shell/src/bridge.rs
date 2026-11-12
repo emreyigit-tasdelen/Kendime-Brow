@@ -171,8 +171,12 @@ impl BrowserSideHandler for ShellQueryHandler {
                     // Connecting can take seconds: never on the UI thread.
                     Some(req) => {
                         std::thread::spawn(move || {
-                            let r = crate::terminal::resolve_ssh(&req)
-                                .and_then(|t| crate::terminal::open_ssh(cols, rows, t, emit));
+                            let r = if req.telnet {
+                                crate::terminal::open_telnet(cols, rows, &req.host, req.port, emit)
+                            } else {
+                                crate::terminal::resolve_ssh(&req)
+                                    .and_then(|t| crate::terminal::open_ssh(cols, rows, t, emit))
+                            };
                             started(r, callback);
                         });
                     }

@@ -312,6 +312,7 @@ pub fn open_shell(
 }
 
 pub mod sftp;
+pub mod telnet;
 pub mod tunnel;
 
 #[cfg(test)]

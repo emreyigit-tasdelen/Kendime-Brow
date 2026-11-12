@@ -49,6 +49,7 @@ interface SshParams {
   vault_id?: string;
   password?: string;
   trust_new_host?: boolean;
+  telnet?: boolean;
 }
 
 const params = new URLSearchParams(location.search);
@@ -58,6 +59,7 @@ const target: SshParams | null = params.get('host')
       port: Number(params.get('port') ?? 22) || 22,
       user: params.get('user') ?? '',
       vault_id: params.get('vault') ?? undefined,
+      telnet: params.get('telnet') === '1',
     }
   : null;
 
@@ -113,7 +115,10 @@ function connect(ssh?: SshParams): void {
   });
 }
 
-if (target && !target.vault_id) {
+if (target?.telnet) {
+  term.write(`\x1b[33mTelnet is unencrypted: everything you type, including passwords, is visible on the network.\x1b[0m${NL}`);
+  connect(target);
+} else if (target && !target.vault_id) {
   const pw = document.createElement('input');
   pw.type = 'password';
   pw.placeholder = `Password for ${target.user || '?'}@${target.host}`;
