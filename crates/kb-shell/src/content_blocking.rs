@@ -1,13 +1,33 @@
 //! Request blocking glue (architecture §4.2, task 2.2): asks `kb_privacy::Blocker` about every
 //! sub-resource request and counts blocked requests per browser for the UI.
 
-use std::collections::HashMap;
-use std::sync::Mutex;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, RwLock};
 
 use cef::*;
 use kb_privacy::{Blocker, ResourceType as Kind};
 
 pub static BLOCKER: Blocker = Blocker::new();
+
+/// Hosts with the shield switched off (mirror of the `shield_off` table for the IO thread).
+static SHIELD_OFF: RwLock<Option<HashSet<String>>> = RwLock::new(None);
+
+pub fn set_shield_off_hosts(hosts: impl IntoIterator<Item = String>) {
+    if let Ok(mut s) = SHIELD_OFF.write() {
+        *s = Some(hosts.into_iter().collect());
+    }
+}
+
+pub fn shield_enabled_for(url: &str) -> bool {
+    let Some(host) = kb_privacy::url_clean::host_of(url) else {
+        return true;
+    };
+    SHIELD_OFF
+        .read()
+        .ok()
+        .and_then(|s| s.as_ref().map(|s| !s.contains(&host)))
+        .unwrap_or(true)
+}
 
 /// Blocked request count per browser id (reset on main-frame navigation).
 static BLOCKED: Mutex<Option<HashMap<i32, u64>>> = Mutex::new(None);
@@ -90,10 +110,9 @@ fn count(browser_id: i32) {
     }
 }
 
-fn kind(t: ResourceType) -> Option<Kind> {
-    Some(match t {
-        // Main-frame navigations are never blocked (decision in 2.2).
-        ResourceType::MAIN_FRAME => return None,
+fn kind(t: ResourceType) -> Kind {
+    match t {
+        ResourceType::MAIN_FRAME => Kind::Document,
         ResourceType::SUB_FRAME => Kind::SubFrame,
         ResourceType::STYLESHEET => Kind::Stylesheet,
         ResourceType::SCRIPT | ResourceType::WORKER | ResourceType::SHARED_WORKER => Kind::Script,
@@ -103,7 +122,7 @@ fn kind(t: ResourceType) -> Option<Kind> {
         ResourceType::XHR => Kind::Xhr,
         ResourceType::PING | ResourceType::CSP_REPORT => Kind::Ping,
         _ => Kind::Other,
-    })
+    }
 }
 
 wrap_resource_request_handler! {
@@ -120,11 +139,32 @@ wrap_resource_request_handler! {
             let Some(request) = request else {
                 return ReturnValue::CONTINUE;
             };
-            let Some(k) = kind(request.resource_type()) else {
-                return ReturnValue::CONTINUE;
-            };
+            let k = kind(request.resource_type());
             let url = CefString::from(&request.url()).to_string();
             if !kb_privacy::is_filterable(&url) {
+                return ReturnValue::CONTINUE;
+            }
+            // The page the request belongs to decides the shield (main frame URL).
+            let page = match k {
+                Kind::Document => url.clone(),
+                _ => browser
+                    .as_deref()
+                    .and_then(|b| b.main_frame())
+                    .map(|f| CefString::from(&f.url()).to_string())
+                    .unwrap_or_default(),
+            };
+            if !shield_enabled_for(&page) {
+                return ReturnValue::CONTINUE;
+            }
+            // Documents: strip tracking parameters / unwrap redirect wrappers, never block
+            // (a typed address always loads — decision in 2.2).
+            if matches!(k, Kind::Document | Kind::SubFrame)
+                && let Some(clean) = kb_privacy::url_clean::clean_url(&url)
+            {
+                request.set_url(Some(&CefString::from(clean.as_str())));
+                return ReturnValue::CONTINUE;
+            }
+            if k == Kind::Document {
                 return ReturnValue::CONTINUE;
             }
             let source = frame

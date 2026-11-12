@@ -104,6 +104,7 @@ thread_local! {
 
 /// Opens the profile database (call once on the UI thread before the window is created).
 pub fn init_store(store: Store) {
+    crate::content_blocking::set_shield_off_hosts(store.shield_off_hosts().unwrap_or_default());
     STORE.with(|s| *s.borrow_mut() = Some(store));
 }
 
@@ -420,6 +421,7 @@ pub fn state() -> protocol::State {
                     blocked: t.view.browser().map_or(0, |b| {
                         crate::content_blocking::blocked_count(b.identifier())
                     }),
+                    shield: crate::content_blocking::shield_enabled_for(&t.url),
                 })
                 .collect(),
             palette: PALETTE_OPEN.with(|p| *p.borrow()),
@@ -527,6 +529,21 @@ pub fn run_bridge_command(cmd: Command) {
                         crate::content_blocking::start_update(profile, false);
                     }
                 }
+            }
+        }
+        Command::ToggleShield => {
+            let url = with_shell(|s| s.tabs.active_item().map(|t| t.url.clone())).flatten();
+            if let Some(host) = url.as_deref().and_then(kb_privacy::url_clean::host_of) {
+                let enable =
+                    !crate::content_blocking::shield_enabled_for(url.as_deref().unwrap_or(""));
+                let hosts = with_store(|s| {
+                    let _ = s.set_shield(&host, enable);
+                    s.shield_off_hosts().unwrap_or_default()
+                })
+                .unwrap_or_default();
+                crate::content_blocking::set_shield_off_hosts(hosts);
+                run_command(command::RELOAD);
+                refresh();
             }
         }
         Command::UpdateFilters => {

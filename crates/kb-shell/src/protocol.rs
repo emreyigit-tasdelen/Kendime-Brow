@@ -78,6 +78,8 @@ pub enum Command {
         enabled: bool,
     },
     UpdateFilters,
+    /// Toggles the shield (content blocking) for the active tab's site and reloads it.
+    ToggleShield,
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {
@@ -97,6 +99,8 @@ pub struct TabState {
     pub bookmarked: bool,
     /// Requests blocked on the current page (content blocking).
     pub blocked: u64,
+    /// Content blocking active for this site (shield on).
+    pub shield: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]

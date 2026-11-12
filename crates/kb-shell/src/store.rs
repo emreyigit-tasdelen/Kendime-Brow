@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS history (
     visit_count INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS history_last_visit ON history(last_visit DESC);
+CREATE TABLE IF NOT EXISTS shield_off (
+    host TEXT PRIMARY KEY
+);
 CREATE TABLE IF NOT EXISTS session (
     position INTEGER PRIMARY KEY,
     url      TEXT NOT NULL,
@@ -242,6 +245,27 @@ impl Store {
         Ok(())
     }
 
+    // ------------------------------------------------------------ shields
+
+    /// Hosts where content blocking is switched off.
+    pub fn shield_off_hosts(&self) -> rusqlite::Result<Vec<String>> {
+        let mut st = self
+            .db
+            .prepare("SELECT host FROM shield_off ORDER BY host")?;
+        st.query_map([], |r| r.get(0))?.collect()
+    }
+
+    pub fn set_shield(&self, host: &str, enabled: bool) -> rusqlite::Result<()> {
+        if enabled {
+            self.db
+                .execute("DELETE FROM shield_off WHERE host = ?1", [host])?;
+        } else {
+            self.db
+                .execute("INSERT OR IGNORE INTO shield_off(host) VALUES (?1)", [host])?;
+        }
+        Ok(())
+    }
+
     // ------------------------------------------------------------ session
 
     pub fn save_session(&mut self, tabs: &[SessionTab]) -> rusqlite::Result<()> {
@@ -354,6 +378,16 @@ mod tests {
         );
         s.save_session(&[]).unwrap();
         assert!(s.load_session().unwrap().is_empty());
+    }
+
+    #[test]
+    fn shield_exceptions() {
+        let s = Store::open_in_memory().unwrap();
+        s.set_shield("news.org", false).unwrap();
+        s.set_shield("news.org", false).unwrap();
+        assert_eq!(s.shield_off_hosts().unwrap(), vec!["news.org".to_string()]);
+        s.set_shield("news.org", true).unwrap();
+        assert!(s.shield_off_hosts().unwrap().is_empty());
     }
 
     #[test]

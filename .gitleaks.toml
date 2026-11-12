@@ -7,7 +7,7 @@ id = "personal-email"
 description = "Email address (only noreply/example addresses are allowed in this public repo)"
 regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'''
 [[rules.allowlists]]
-regexes = ['''@users\.noreply\.github\.com''', '''noreply@''', '''@example\.(com|org|net)''']
+regexes = ['''@users\.noreply\.github\.com''', '''noreply@''', '''(?i)@([a-z0-9-]+\.)*example\.(com|org|net)''']
 
 [[rules]]
 id = "private-key-file-content"

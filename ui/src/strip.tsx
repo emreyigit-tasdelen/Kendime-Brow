@@ -122,6 +122,23 @@ function Strip() {
         />
         <button
           type="button"
+          class="shield"
+          classList={{ off: !active()?.shield }}
+          title={
+            active()?.shield
+              ? `Content blocking on — ${active()?.blocked ?? 0} blocked. Click to turn off for this site.`
+              : 'Content blocking is off for this site. Click to turn it on.'
+          }
+          disabled={!active() || !/^https?:/.test(active()?.url ?? '')}
+          onClick={() => void send({ cmd: 'toggle-shield' })}
+        >
+          🛡
+          <Show when={active()?.shield && (active()?.blocked ?? 0) > 0}>
+            <span class="badge">{active()!.blocked > 99 ? '99+' : active()!.blocked}</span>
+          </Show>
+        </button>
+        <button
+          type="button"
           class="star"
           classList={{ on: !!active()?.bookmarked }}
           title={active()?.bookmarked ? 'Remove bookmark' : 'Bookmark this page'}

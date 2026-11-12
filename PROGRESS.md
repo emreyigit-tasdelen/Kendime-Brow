@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.4 tracking parameter stripping + per-site shield button (then finish 2.3 scriptlets). (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.5 containers, private window, third-party cookies (then finish 2.3 scriptlets). (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,10 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.4 Tracking parameters + per-site shield — DONE (2026-11-12)
+- **Done:** `kb-privacy::url_clean`: `strip_tracking_params` (`utm_*`, `pk_*`, `mtm_*`, `hsa_*`, `fbclid`, `gclid`, `msclkid`, `_ga`, …; fragment kept), `unwrap_redirect` (Google `/url`, Facebook `l.php`, Instagram, Reddit, YouTube `/redirect`, Slack, Steam, Disqus — only http(s) targets), `clean_url`, `host_of`; 4 tests. Main-frame and sub-frame requests are rewritten to the clean URL in `on_before_resource_load` (documents are still never blocked). Shield: `shield_off` table in `kb.sqlite` mirrored to an in-memory set for the IO thread; the main-frame URL decides; `toggle-shield` command + `shield.toggle` action (reloads the tab); `TabState.shield`; 🛡 button with blocked-count badge (greyed when off). Verified via DevTools only: `example.org/?utm_source=…&id=1&fbclid=…` → `example.org/?id=1`; theguardian.com 14 blocked → shield off 0 → on again 11.
+- **Next step:** 2.5 (then finish 2.3 scriptlets).
 
 ### 2.3 Filter lists, updates, cosmetic filtering — PARTIAL (2026-11-12), scriptlets pending
 - **Done:** `kb-privacy::lists`: catalog (EasyList, EasyPrivacy, uBlock filters, uBlock privacy, Peter Lowe — on by default; Turkish list — off), `lists.json` state (enabled, last update, rule count, error), 24 h interval, sanity check against HTML error pages, atomic file replace, `custom*.txt` support, `download` via `ureq` (20 MB cap, 60 s timeout); 5 tests. `Blocker::load_files`, `Blocker::cosmetic(url)` → page-specific hide selectors (minus exceptions) as one stylesheet (+ scriptlet script, empty for now); test. Shell: startup reload + background update thread (engine swapped live, UI refreshed via a posted task); setting `filters_auto_update`; cosmetic CSS injected in `LoadHandler::on_load_start` as a constructable stylesheet (not affected by page CSP). Bridge: `set-filter-list`, `update-filters`; `profile.filters`. Settings page: "Content blocking" section (per-list toggle, rules, last update / error, auto-update, "Update now"). `check-connections.mjs` allowlists the list hosts (read from `lists.rs`). Verified: fresh profile downloads all 5 default lists (~145 k rules); theguardian.com → 13 requests blocked.

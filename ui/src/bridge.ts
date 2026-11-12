@@ -9,6 +9,8 @@ export interface TabState {
   canGoBack: boolean;
   canGoForward: boolean;
   bookmarked: boolean;
+  blocked: number;
+  shield: boolean;
 }
 
 export interface Bookmark {
@@ -90,7 +92,8 @@ export type Command =
   | { cmd: 'reveal-download'; id: number }
   | { cmd: 'clear-downloads' }
   | { cmd: 'set-filter-list'; id: string; enabled: boolean }
-  | { cmd: 'update-filters' };
+  | { cmd: 'update-filters' }
+  | { cmd: 'toggle-shield' };
 
 interface QueryOptions {
   request: string;

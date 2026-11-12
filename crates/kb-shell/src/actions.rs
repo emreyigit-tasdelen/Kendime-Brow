@@ -29,6 +29,11 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             Command::ToggleBookmark,
         ),
         (
+            "shield.toggle",
+            "Toggle content blocking for this site",
+            Command::ToggleShield,
+        ),
+        (
             "downloads.open",
             "Show downloads",
             Command::NewTab {

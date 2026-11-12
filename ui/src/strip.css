@@ -46,3 +46,5 @@ body { overflow: hidden; user-select: none; }
   position: absolute; top: 0; right: 0; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px;
   background: var(--accent); color: #fff; font-size: 10px; line-height: 14px;
 }
+.toolbar > .shield { position: relative; }
+.toolbar > .shield.off { opacity: .45; filter: grayscale(1); }

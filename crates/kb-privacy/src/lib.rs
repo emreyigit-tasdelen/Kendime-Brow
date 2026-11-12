@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 pub mod lists;
+pub mod url_clean;
 
 use adblock::Engine;
 use adblock::lists::{FilterSet, ParseOptions};
