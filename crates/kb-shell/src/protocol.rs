@@ -108,6 +108,10 @@ pub enum Command {
     PdfMerge {
         paths: Vec<String>,
     },
+    /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
+    SheetPreview {
+        path: String,
+    },
     /// Form fields of the open PDF (JSON array).
     PdfFields,
     /// Writes `<name> (filled).pdf` with `values` (field name → value).

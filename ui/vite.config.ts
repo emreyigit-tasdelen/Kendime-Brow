@@ -20,6 +20,7 @@ export default defineConfig({
         downloads: resolve(import.meta.dirname, 'downloads/index.html'),
         tasks: resolve(import.meta.dirname, 'tasks/index.html'),
         pdf: resolve(import.meta.dirname, 'pdf/index.html'),
+        office: resolve(import.meta.dirname, 'office/index.html'),
       },
     },
   },

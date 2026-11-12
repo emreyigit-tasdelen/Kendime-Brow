@@ -96,6 +96,16 @@ pub fn handle(
             let data = doc.as_ref().ok_or("no document open")?;
             crate::render_page_png(pdfium, data, None, req.page, req.dpi).map_err(|e| e.to_string())
         }
+        "sheet.preview" => {
+            // body: extension, a newline, then the file bytes.
+            let nl = body
+                .iter()
+                .position(|b| *b == b'\n')
+                .ok_or("missing extension")?;
+            let ext = String::from_utf8_lossy(&body[..nl]).to_ascii_lowercase();
+            let p = crate::sheets::preview(&body[nl + 1..], &ext)?;
+            serde_json::to_vec(&p).map_err(|e| e.to_string())
+        }
         "pdf.fields" => {
             let data = doc.as_ref().ok_or("no document open")?;
             let f = crate::forms::list_fields(pdfium, data).map_err(|e| e.to_string())?;

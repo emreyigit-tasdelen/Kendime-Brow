@@ -34,6 +34,7 @@ impl std::error::Error for DocError {}
 pub mod edit;
 pub mod forms;
 pub mod service;
+pub mod sheets;
 
 pub fn library_file_name() -> &'static str {
     if cfg!(windows) {

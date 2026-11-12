@@ -1,0 +1,13 @@
+.sheet-viewer { display: flex; flex-direction: column; height: 100vh; }
+.sheet-viewer header { display: flex; gap: 14px; align-items: center; padding: 0 16px; height: 40px; flex: none; border-bottom: 1px solid var(--border); }
+.sheet-viewer .title { font-weight: 600; }
+.sheet-viewer main { flex: 1; overflow: auto; }
+.sheet-viewer table { border-collapse: collapse; font-size: 12px; }
+.sheet-viewer th, .sheet-viewer td { border: 1px solid var(--border); padding: 3px 8px; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+.sheet-viewer thead th { position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.sheet-viewer tbody th { position: sticky; left: 0; background: var(--bg); color: var(--fg-muted); font-weight: 400; }
+.sheet-viewer nav { display: flex; gap: 2px; padding: 4px 8px; border-top: 1px solid var(--border); flex: none; }
+.sheet-viewer nav button { padding: 4px 12px; border-radius: 4px; }
+.sheet-viewer nav button.on { background: var(--bg-tab-active); font-weight: 600; }
+.muted { color: var(--fg-muted); }
+.error { color: #e5594d; padding: 16px; }

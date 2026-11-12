@@ -47,12 +47,20 @@ pub fn percent_decode(s: &str) -> Option<String> {
     String::from_utf8(out).ok()
 }
 
-/// Viewer URL for a `file://…pdf` navigation (`None` for anything else).
+/// Viewer URL for a `file://` navigation to a PDF (`kb://pdf`) or spreadsheet (`kb://office`);
+/// `None` for anything else.
 pub fn viewer_url_for_file_url(url: &str) -> Option<String> {
     let path = file_url_to_path(url)?;
-    path.to_ascii_lowercase()
-        .ends_with(".pdf")
-        .then(|| format!("kb://pdf/?file={}", percent_encode(&path)))
+    let lower = path.to_ascii_lowercase();
+    let ext = lower.rsplit_once('.')?.1;
+    let host = if ext == "pdf" {
+        "pdf"
+    } else if crate::pdf::SHEET_EXTENSIONS.contains(&ext) {
+        "office"
+    } else {
+        return None;
+    };
+    Some(format!("kb://{host}/?file={}", percent_encode(&path)))
 }
 
 #[cfg(test)]
@@ -83,6 +91,11 @@ mod tests {
         let enc = v.strip_prefix("kb://pdf/?file=").unwrap();
         assert_eq!(percent_decode(enc).as_deref(), Some("C:/My Docs/ş.PDF"));
         assert_eq!(viewer_url_for_file_url("file:///C:/a.txt"), None);
+        assert!(
+            viewer_url_for_file_url("file:///C:/data.XLSX")
+                .unwrap()
+                .starts_with("kb://office/?file=")
+        );
         assert_eq!(percent_decode("%zz"), None);
     }
 }

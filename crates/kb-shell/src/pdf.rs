@@ -147,6 +147,31 @@ pub fn edit_file(
     Ok(target.to_string_lossy().to_string())
 }
 
+/// Spreadsheet formats the preview supports.
+pub const SHEET_EXTENSIONS: &[&str] = &["xlsx", "xlsm", "xls", "xlsb", "ods", "csv", "tsv"];
+
+/// Reads a spreadsheet file and asks the host for a preview (JSON).
+pub fn sheet_preview(path: &str) -> Result<Vec<u8>, String> {
+    let p = Path::new(path);
+    if !p.is_absolute() {
+        return Err("path must be absolute".into());
+    }
+    let ext = p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .filter(|e| SHEET_EXTENSIONS.contains(&e.as_str()))
+        .ok_or("unsupported file type")?;
+    let meta = std::fs::metadata(p).map_err(|e| e.to_string())?;
+    if !meta.is_file() || meta.len() as usize > MAX_PDF_BYTES {
+        return Err("file missing or larger than 16 MB".into());
+    }
+    let mut body = ext.into_bytes();
+    body.push(b'\n');
+    body.extend(std::fs::read(p).map_err(|e| e.to_string())?);
+    call_host("sheet.preview", body)
+}
+
 /// Renders a page to PNG bytes.
 pub fn render(page: usize, dpi: f32) -> Result<Vec<u8>, String> {
     submit(|reply| Request::Render { page, dpi, reply })
@@ -231,7 +256,7 @@ fn run(rx: Receiver<Request>) {
                         if host.is_none() {
                             match start_host().await {
                                 Ok(mut h) => {
-                                    if method != "pdf.merge" {
+                                    if !matches!(method, "pdf.merge" | "sheet.preview") {
                                         let Some(d) = doc.clone() else {
                                             r = Err("no document open".into());
                                             break;
