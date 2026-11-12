@@ -67,6 +67,11 @@ struct Tab {
     can_go_back: bool,
     can_go_forward: bool,
     container: &'static str,
+    /// Last time this tab was the active one (tab lifecycle, 2.8).
+    last_active: std::time::Instant,
+    /// `Some(url)` while the tab is discarded: its page was replaced by `about:blank` to free
+    /// the renderer; the URL is restored when the tab is activated again.
+    discarded: Option<String>,
 }
 
 impl Tab {
@@ -74,6 +79,8 @@ impl Tab {
         Self {
             view,
             container,
+            last_active: std::time::Instant::now(),
+            discarded: None,
             title: String::new(),
             url: String::new(),
             loading: true,
@@ -106,6 +113,7 @@ thread_local! {
 
 /// Opens the profile database (call once on the UI thread before the window is created).
 pub fn init_store(store: Store) {
+    schedule_lifecycle();
     crate::content_blocking::set_shield_off_hosts(store.shield_off_hosts().unwrap_or_default());
     STORE.with(|s| *s.borrow_mut() = Some(store));
 }
@@ -432,6 +440,84 @@ wrap_task! {
     }
 }
 
+/// How long an inactive tab may stay loaded before it is discarded (`KB_DISCARD_SECS` overrides).
+fn discard_after() -> std::time::Duration {
+    let secs = std::env::var("KB_DISCARD_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(30 * 60);
+    std::time::Duration::from_secs(secs)
+}
+
+/// Pure rule: may this tab be discarded now?
+pub fn should_discard(
+    active: bool,
+    loading: bool,
+    url: &str,
+    already: bool,
+    idle: std::time::Duration,
+    limit: std::time::Duration,
+) -> bool {
+    !active && !loading && !already && idle >= limit && kb_privacy::is_filterable(url)
+}
+
+/// Discards idle background tabs (called by a periodic task).
+pub fn discard_idle_tabs() {
+    let limit = discard_after();
+    let views: Vec<(BrowserView, String)> = with_shell(|s| {
+        let active = s.tabs.active();
+        s.tabs
+            .iter()
+            .filter(|(id, t)| {
+                should_discard(
+                    Some(*id) == active,
+                    t.loading,
+                    &t.url,
+                    t.discarded.is_some(),
+                    t.last_active.elapsed(),
+                    limit,
+                )
+            })
+            .map(|(_, t)| (t.view.clone(), t.url.clone()))
+            .collect::<Vec<_>>()
+    })
+    .unwrap_or_default();
+    for (view, url) in views {
+        with_shell(|s| {
+            let bid = view.browser().map(|b| b.identifier());
+            if let Some(id) = s
+                .tabs
+                .find(|t| t.view.browser().map(|b| b.identifier()) == bid)
+                && let Some(t) = s.tabs.get_mut(id)
+            {
+                t.discarded = Some(url.clone());
+            }
+        });
+        if let Some(frame) = view.browser().and_then(|b| b.main_frame()) {
+            frame.load_url(Some(&CefString::from("about:blank")));
+        }
+        debug_log(&format!("discarded tab {url}"));
+    }
+    refresh();
+}
+
+wrap_task! {
+    struct LifecycleTask;
+
+    impl Task {
+        fn execute(&self) {
+            discard_idle_tabs();
+            schedule_lifecycle();
+        }
+    }
+}
+
+/// Runs `discard_idle_tabs` every 30 s (first call starts the loop).
+pub fn schedule_lifecycle() {
+    let mut task = LifecycleTask::new();
+    post_delayed_task(ThreadId::UI, Some(&mut task), 30_000);
+}
+
 /// Shows only the active tab, focuses it and updates the window title.
 pub fn refresh() {
     let snapshot = with_shell(|s| {
@@ -446,6 +532,19 @@ pub fn refresh() {
     let Some((window, views)) = snapshot else {
         return;
     };
+    // Activating a discarded tab restores its page; the active tab is never "idle".
+    let restore = with_shell(|s| {
+        let id = s.tabs.active()?;
+        let t = s.tabs.get_mut(id)?;
+        t.last_active = std::time::Instant::now();
+        t.discarded.take().map(|u| (t.view.clone(), u))
+    })
+    .flatten();
+    if let Some((view, url)) = restore
+        && let Some(frame) = view.browser().and_then(|b| b.main_frame())
+    {
+        frame.load_url(Some(&CefString::from(url.as_str())));
+    }
     let mut title = String::from("Kendime-Brow");
     for (is_active, view) in &views {
         view.set_visible(*is_active as i32);
@@ -660,6 +759,9 @@ pub fn update_tab(browser: &mut Browser, upd: TabUpdate) {
     let changed = with_shell(|s| {
         let id = s.tabs.find(|t| t.is(browser))?;
         let tab = s.tabs.get_mut(id)?;
+        if tab.discarded.is_some() {
+            return None; // placeholder page: keep the saved title/URL
+        }
         if let Some(t) = upd.title {
             if crate::containers::get(tab.container).is_some_and(|c| c.persistent) {
                 with_store(|st| st.update_title(&tab.url, &t));
@@ -904,5 +1006,65 @@ mod tests {
         );
         assert_eq!(command_for_key(VK_T, false, false, false), None);
         assert_eq!(command_for_key(VK_T, true, true, false), None);
+    }
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn discard_rule() {
+        let lim = Duration::from_secs(60);
+        let idle = Duration::from_secs(120);
+        assert!(should_discard(
+            false,
+            false,
+            "https://a.org/",
+            false,
+            idle,
+            lim
+        ));
+        assert!(!should_discard(
+            true,
+            false,
+            "https://a.org/",
+            false,
+            idle,
+            lim
+        ));
+        assert!(!should_discard(
+            false,
+            true,
+            "https://a.org/",
+            false,
+            idle,
+            lim
+        ));
+        assert!(!should_discard(
+            false,
+            false,
+            "https://a.org/",
+            true,
+            idle,
+            lim
+        ));
+        assert!(!should_discard(
+            false,
+            false,
+            "kb://settings/",
+            false,
+            idle,
+            lim
+        ));
+        assert!(!should_discard(
+            false,
+            false,
+            "https://a.org/",
+            false,
+            Duration::from_secs(5),
+            lim
+        ));
     }
 }

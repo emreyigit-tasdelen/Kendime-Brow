@@ -59,7 +59,7 @@ Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 - [x] 2.5 Containers (separate `CefRequestContext`), private window, third-party cookie blocking (§4.3) → private window implemented as private tabs (temporary container)
 - [x] 2.6 **Validation:** V6 → fingerprinting protection injection, Standard/Strict levels (§4.4)
 - [!] 2.7 HTTPS-Only, DoH, WebRTC policy, disable preloading, per-container proxy (§4.5) → code done, BLOCKED: `set_preference` returns 0 without error for every pref (see PROGRESS)
-- [ ] 2.8 **Validation:** V7 → tab lifecycle: freezing, discarding, sleeping, exceptions (§5.2)
+- [x] 2.8 **Validation:** V7 → tab lifecycle: freezing, discarding, sleeping, exceptions (§5.2) → discard via about:blank swap; freeze step skipped
 - [ ] 2.9 Memory pressure response, battery/metered connection modes (§5.2, §5.4)
 - [ ] 2.10 Resource monitor + `kb://tasks` (§5.5)
 - [ ] 2.11 Performance measurement scripts, budgets tracked in CI (§5.1)

@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.8 tab lifecycle (V7); then 2.9+, finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.9 memory pressure + battery modes, 2.10 resource monitor; then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.8 Tab lifecycle (V7) — DONE (2026-11-12)
+- **Done:** every tab tracks `last_active`; a 30 s UI-thread task discards background tabs idle ≥ 30 min (`KB_DISCARD_SECS` overrides; skips loading tabs, non-http(s) pages, already discarded; pure rule `should_discard` tested). Discard = navigate the tab to `about:blank` (frees the page's renderer memory) while the strip keeps title/URL and the session keeps the real URL; activating the tab reloads the saved URL. Verified: with a 20 s limit the background tab went `about:blank` in DevTools while the UI still showed "Example Domain", and returned to `https://example.org/` on activation.
+- **V7:** the CDP freeze step (`Page.setWebLifecycleState`) was not tried; discarding alone is implemented. Exceptions for audio/mic/forms/pinned tabs are not implemented yet (needs audio-state callbacks) — follow-up.
+- **Next step:** 2.9.
 
 ### 2.7 Network privacy — BLOCKED (2026-11-12)
 - **Done (code):** `net_privacy.rs` (DoH providers Quad9/Mullvad/Cloudflare, proxy validation, HTTPS-Only/DoH/proxy appliers, 2 tests), settings (`https_only`, `doh`, `proxy_<container>`), settings-page controls, re-applied per container context.
