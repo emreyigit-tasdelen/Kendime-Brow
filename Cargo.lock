@@ -1236,10 +1236,12 @@ version = "0.0.1"
 dependencies = [
  "base64 0.23.1",
  "cef",
+ "getrandom 0.4.3",
  "kb-actions",
  "kb-ipc",
  "kb-platform",
  "kb-privacy",
+ "kb-vault",
  "minisign-verify",
  "portable-pty",
  "rusqlite",

@@ -73,6 +73,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "vault.open",
+            "Open the password vault",
+            Command::NewTab {
+                url: Some("kb://vault/".into()),
+                container: None,
+            },
+        ),
+        (
             "tools.open",
             "Open developer tools (JSON, regex, hash, base64, JWT)",
             Command::NewTab {

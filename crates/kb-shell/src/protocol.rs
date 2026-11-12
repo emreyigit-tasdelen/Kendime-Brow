@@ -139,6 +139,12 @@ pub enum Command {
     TermClose {
         id: u32,
     },
+    /// Credential vault operation (see `vault.rs`): status/create/unlock/lock/list/get/put/remove.
+    Vault {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
     SheetPreview {
         path: String,

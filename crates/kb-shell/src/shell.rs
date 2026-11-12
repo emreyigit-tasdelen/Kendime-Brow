@@ -759,6 +759,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::PdfText
         | Command::PdfFields
         | Command::SheetPreview { .. }
+        | Command::Vault { .. }
         | Command::TermOpen { .. }
         | Command::TermWrite { .. }
         | Command::TermResize { .. }

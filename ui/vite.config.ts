@@ -24,6 +24,7 @@ export default defineConfig({
         media: resolve(import.meta.dirname, 'media/index.html'),
         tools: resolve(import.meta.dirname, 'tools/index.html'),
         term: resolve(import.meta.dirname, 'term/index.html'),
+        vault: resolve(import.meta.dirname, 'vault/index.html'),
       },
     },
   },

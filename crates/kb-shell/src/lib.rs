@@ -19,6 +19,7 @@ pub mod tabs;
 pub mod tasks;
 pub mod terminal;
 pub mod updater;
+pub mod vault;
 
 use cef::*;
 

@@ -1,0 +1,22 @@
+// Live check for the vault bridge (task 4A.1b). Run kendime-brow with KB_PROFILE_DIR=<empty dir> --remote-debugging-port=9222, then: node scripts/vault-smoke.mjs
+const base = 'http://127.0.0.1:9222';
+const pages = async () => (await (await fetch(base + '/json')).json()).filter(t => t.type === 'page');
+const ev = (ws, expression) => new Promise(res => { const w = new WebSocket(ws); w.onopen = () => w.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, awaitPromise: true, returnByValue: true } })); w.onmessage = e => { const m = JSON.parse(e.data); if (m.id === 1) { w.close(); res(m.result?.result?.value); } }; });
+const q = (r) => `new Promise(x => window.kbQuery({request: JSON.stringify(${JSON.stringify(r)}), onSuccess: v => x('OK ' + v), onFailure: (c, m) => x('FAIL ' + m)}))`;
+const ui = (await pages()).find(p => p.url.startsWith('kb://ui'));
+const v = (op, args = {}) => ev(ui.webSocketDebuggerUrl, q({ cmd: 'vault', op, args }));
+const t0 = Date.now();
+console.log('status:', await v('status'));
+console.log('create short pw:', await v('create', { password: 'abc' }));
+console.log('create:', await v('create', { password: 'correct horse battery' }), `${Date.now() - t0} ms`);
+console.log('lock:', await v('lock'));
+console.log('list while locked:', await v('list'));
+console.log('unlock wrong:', await v('unlock', { password: 'wrong password!' }));
+console.log('unlock:', await v('unlock', { password: 'correct horse battery' }));
+const put = await v('put', { kind: 'login', title: 'Example', username: 'me', password: 'p@ss', url: 'https://example.com' });
+console.log('put:', put);
+const id = JSON.parse(put.slice(3)).id;
+console.log('list:', await v('list'));
+console.log('get:', await v('get', { id }));
+console.log('remove:', await v('remove', { id }));
+console.log('list after remove:', await v('list'));
