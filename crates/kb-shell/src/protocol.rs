@@ -148,6 +148,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Saved connection profiles (see `connections.rs`): list/put/remove/import-ssh-config.
+    Connections {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
     SheetPreview {
         path: String,

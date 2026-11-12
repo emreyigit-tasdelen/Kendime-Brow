@@ -25,6 +25,7 @@ export default defineConfig({
         tools: resolve(import.meta.dirname, 'tools/index.html'),
         term: resolve(import.meta.dirname, 'term/index.html'),
         vault: resolve(import.meta.dirname, 'vault/index.html'),
+        connections: resolve(import.meta.dirname, 'connections/index.html'),
       },
     },
   },

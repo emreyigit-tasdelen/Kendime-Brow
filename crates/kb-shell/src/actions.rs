@@ -73,6 +73,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "connections.open",
+            "Open saved connections (SSH)",
+            Command::NewTab {
+                url: Some("kb://connections/".into()),
+                container: None,
+            },
+        ),
+        (
             "vault.open",
             "Open the password vault",
             Command::NewTab {

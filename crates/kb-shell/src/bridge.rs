@@ -207,6 +207,15 @@ impl BrowserSideHandler for ShellQueryHandler {
                     cb.success_str("{\"ok\":true}");
                 }
             }
+            Command::Connections { op, args } => {
+                let r = crate::connections::call(&op, &args);
+                if let Ok(cb) = callback.lock() {
+                    match r {
+                        Ok(json) => cb.success_str(&json),
+                        Err(e) => cb.failure(500, &e),
+                    }
+                }
+            }
             Command::Vault { op, args } => {
                 // Argon2 can take a second; keep the UI thread free.
                 std::thread::spawn(move || {
