@@ -5,6 +5,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
 
+- **Scratch disk (user-granted):** `C:\Claude-Temp` is mine for temporary/large files (build output, downloads, VMs/Chromium source). Hard budget: stay under **100 GB total**. Plan: set `CARGO_TARGET_DIR=C:\Claude-Temp	arget` for builds when `D:` runs low, keep downloads in `C:\Claude-Temp\dl`, check size only occasionally with `du -sh /c/Claude-Temp` (don't poll). Never put secrets there; delete when done.
 - **Where we stopped (2026-11-13):** Phase 1 done except blocked items; Phase 2 mostly done; Phase 3A.1/3A.2 done, 3A.3 (forms) and 3A.7 (text) partial, 3B.1 (sheet preview) and 3C.4 (EXIF) done, 6.4 (`kb://tools`) done, 4A.1 (vault core) partial. **In progress: 4A.2 terminal** — `terminal.rs` (portable-pty / ConPTY, tested), bridge (`term-open` persistent query, `term-write/resize/close`), `kb://term` page with xterm.js 6.0.0 + fit addon are written and compile; the live check in the browser window (open `kb://term/`, type, resize, close tab kills the shell) and the commit are NOT done yet.
 - **Next steps, in order:**
   1. Finish 4A.2: run the app, open `kb://term/`, verify typing / output / resize / session kill on tab close; commit.
