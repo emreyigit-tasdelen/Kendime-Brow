@@ -1,0 +1,12 @@
+[package]
+name = "kb-doc"
+description = "Document host: PDF (PDFium) and later Office (architecture §6, §7)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+pdfium-render = "0.9.5"

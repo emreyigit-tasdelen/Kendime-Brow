@@ -70,7 +70,7 @@ Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 Each subgroup can be released independently. Versions `0.3`–`0.5`.
 
 **3A — PDF (§6)**
-- [ ] 3A.1 `kb-doc` host + PDFium rendering, `kb://pdf` viewer (tiling, zoom, search)
+- [~] 3A.1 `kb-doc` host + PDFium rendering, `kb://pdf` viewer (tiling, zoom, search) → PDFium wrapper + render test done (kb-doc); host service and kb://pdf viewer pending
 - [ ] 3A.2 Merge / split / reorder / rotate (lopdf)
 - [ ] 3A.3 Form filling, annotations
 - [ ] 3A.4 qpdf: encryption, password removal, linearization, repair

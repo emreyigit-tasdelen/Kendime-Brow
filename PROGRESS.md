@@ -40,6 +40,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 Newest on top. Format: task · done · decision · next step.
 
+### 3A.1 PDF engine (PDFium) — PARTIAL (2026-11-12)
+- **Done:** new crate `kb-doc` (`pdfium-render` 0.9.5 MIT/Apache; PDFium 8152 binary from bblanchon/pdfium-binaries, BSD-3, loaded at runtime from `PDFIUM_PATH` / next to the exe). `info` (page count, first page size) and `render_page_png(dpi)`; integration test builds a one-page PDF with correct xref, renders it at 144 dpi → 400×200 PNG with real text pixels, and checks errors (bad page, not a PDF) — passes with the pinned PDFium; skips when the library is absent (CI does not fetch it yet). `scripts/fetch-pdfium.{ps1,sh}` pin tag + SHA-256 (Windows hash verified against the release digest).
+- **Pending for 3A.1:** `kb-doc` host process on `kb-ipc` (methods info/render; file access by handle — the sandboxed low-IL host cannot read user files by path), `kb://pdf` viewer (tiles, zoom, search), CI step to fetch PDFium, bundling `pdfium.dll` into packages.
+- **Next step:** 3A.1 host + viewer.
+
 ### 2.12 Signed updater — PARTIAL (2026-11-12)
 - **Done:** `updater.rs`: version parsing/comparison, GitHub Releases `latest` check (pre-releases ignored), platform asset + mandatory `<asset>.minisig` selection (unsigned releases are never offered), minisign verification with `minisign-verify` (tested with a real vector: good / tampered / missing / bad key). `UPDATE_PUBLIC_KEY` is empty → updater disabled (`Check::Disabled`), nothing contacts GitHub.
 - **Needs the maintainer:** generate the release signing key (`minisign -G`), keep the secret key OUT of the repo (CI secret), put the public key into `UPDATE_PUBLIC_KEY`, and sign release assets in the package workflow. After that: download + verify + apply-on-restart step, an update setting/UI notice, and allowlisting `api.github.com` / release hosts in `check-connections.mjs`.
