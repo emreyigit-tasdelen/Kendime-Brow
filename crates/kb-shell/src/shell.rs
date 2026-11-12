@@ -239,7 +239,11 @@ pub fn open_startup_tabs(tabs: &[(String, bool)]) {
 }
 
 /// Profile directory (`<data dir>/profiles/default`), if the platform data dir is known.
+/// `KB_PROFILE_DIR` overrides it (tests, e.g. the zero-connections check with a fresh profile).
 pub fn profile_dir() -> Option<std::path::PathBuf> {
+    if let Some(dir) = std::env::var_os("KB_PROFILE_DIR").filter(|d| !d.is_empty()) {
+        return Some(std::path::PathBuf::from(dir));
+    }
     kb_platform::data_dir().map(|root| kb_platform::layout::profile(&root, "default"))
 }
 

@@ -20,6 +20,33 @@ wrap_app! {
             kb_scheme::register_custom_scheme(registrar);
         }
 
+        fn on_before_command_line_processing(
+            &self,
+            process_type: Option<&CefString>,
+            command_line: Option<&mut CommandLine>,
+        ) {
+            // Browser process only (empty process type).
+            let is_browser = process_type.is_none_or(|t| t.to_string().is_empty());
+            if std::env::var_os("KB_DEBUG").is_some() {
+                eprintln!(
+                    "[kb] command line processing: type={:?} browser={is_browser}",
+                    process_type.map(CefString::to_string)
+                );
+            }
+            let Some(cl) = command_line.filter(|_| is_browser) else {
+                return;
+            };
+            for s in crate::privacy_flags::SWITCHES {
+                cl.append_switch(Some(&CefString::from(*s)));
+            }
+            for (s, v) in crate::privacy_flags::valued_switches() {
+                cl.append_switch_with_value(
+                    Some(&CefString::from(s)),
+                    Some(&CefString::from(v.as_str())),
+                );
+            }
+        }
+
         fn browser_process_handler(&self) -> Option<BrowserProcessHandler> {
             Some(KbBrowserProcessHandler::new())
         }
@@ -40,6 +67,10 @@ wrap_browser_process_handler! {
                 "failed to register the kb:// scheme handler"
             );
             bridge::init_browser_side();
+            let failed = crate::privacy_flags::apply_prefs();
+            if !failed.is_empty() && std::env::var_os("KB_DEBUG").is_some() {
+                eprintln!("[kb] privacy prefs not applied: {failed:?}");
+            }
             let store = shell::profile_dir()
                 .map(|dir| crate::store::Store::open(&dir.join("kb.sqlite")))
                 .unwrap_or_else(crate::store::Store::open_in_memory);

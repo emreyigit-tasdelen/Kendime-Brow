@@ -8,7 +8,7 @@ All work is tracked here. Design details: [docs/ARCHITECTURE.md](docs/ARCHITECTU
 
 **Statuses:** `[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked / awaiting decision · `[-]` cancelled
 
-**Current phase:** Phase 1 in progress.
+**Current phase:** Phase 1 done except the blocked Ubuntu/codec items (1.1b, 1.2, 1.10b, 1.15). Phase 2 in progress.
 
 **Platform rule (architecture §3.8):** Cross-platform, no primary platform. Every task is verified first
 on Windows, then in an Ubuntu VM; no phase counts as "done" until it also works on Ubuntu. macOS comes last (Phase 7).
@@ -45,14 +45,14 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 - [x] 1.11 Action registry + command palette (§3.5)
 - [x] 1.12 Profile, settings (`kb://settings`), `kb.sqlite`: bookmarks, history, session restore (§3.7)
 - [x] 1.13 Download manager (basic) (§8.3)
-- [ ] 1.14 Packaging: Windows installer + Linux `.deb`/AppImage, single taskbar icon, `just install-dev` (§13)
+- [x] 1.14 Packaging: Windows installer + Linux `.deb`/AppImage, single taskbar icon, `just install-dev` (§13) → zip + per-user installer (MSI later), .deb + AppImage via CI
 - [ ] 1.15 Phase close: verify all Phase 1 features in the Ubuntu VM
 
 ## Phase 2 — Privacy and performance core
 
 Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 
-- [ ] 2.1 Flag/preference set disabling Google services + "zero unwanted connections" CI test (§4.1)
+- [x] 2.1 Flag/preference set disabling Google services + "zero unwanted connections" CI test (§4.1)
 - [ ] 2.2 `kb-privacy`: adblock-rust integration, request blocking (§4.2)
 - [ ] 2.3 Filter list management + updates, cosmetic filtering, scriptlets (§4.2)
 - [ ] 2.4 Tracking parameter stripping, per-site shield button (§4.2)

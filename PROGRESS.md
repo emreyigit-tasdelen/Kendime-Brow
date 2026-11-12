@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.14 packaging (Windows installer + Linux .deb/AppImage), then 1.15 Ubuntu check (blocked on VM access). (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
+- **Next step:** 2.2 adblock-rust request blocking, then 2.3+. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.) (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,17 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.1 Google services off + zero unwanted connections — DONE (2026-11-12)
+- **Done:** `kb-shell/src/privacy_flags.rs`: switches (`disable-background-networking`, `disable-component-update`, `disable-sync`, `no-pings`, `metrics-recording-only`, …), `--disable-features` list, `--host-resolver-rules` that make Google update/telemetry hosts unresolvable, global + profile prefs (component updates, search suggestions, Safe Browsing, translate, spelling service, network prediction = never, DoH auto-upgrade off, DNT). Applied in `App::on_before_command_line_processing` (browser process) and on context init. `KB_PROFILE_DIR` overrides the profile dir. `scripts/check-connections.mjs`: fresh profile, idle on `kb://newtab/`, graceful close, NetLog analysis — FAIL on requests to non-blocked public hosts or successful public socket connects; INFO for resolver-blocked attempts and connect-only probes.
+- **Findings (CEF 156, fresh profile, 30 s idle, before → after):** `update.googleapis.com` + `edgedl.me.gvt1.com` (component updater — ignores `--disable-component-update`, runs in the system network context, invisible to CEF request handlers) → blocked by resolver rule, no packet leaves; `www.google.com/async/folae` (AI Mode eligibility) → gone after disabling `AimEnabled`, `AimServerEligibilityEnabled`, `AimServerRequestOnStartupEnabled` (names from Chromium source); `[2001:4860:4860::8888]:443` → Chromium IPv6 reachability probe (UDP connect, no data, fails with -109), reported as info. Result: `OK: no unwanted connections`.
+- **Open:** run the check in CI (needs a desktop session: Windows runner works, Linux needs Xvfb) and the 5-minute window from §4.1 — tracked for 2.11 (performance/CI scripts).
+- **Next step:** 2.2.
+
+### 1.14 Packaging — DONE (2026-11-12)
+- **Done:** `scripts/package-windows.ps1` (release build → `Kendime-Brow-<ver>-windows-x64.zip` + `.sha256`; app folder with CEF runtime, LICENSE, CEF credits, `install.ps1` / `uninstall.ps1` per-user to `%LOCALAPPDATA%\Programs\Kendime-Brow` + Start Menu shortcut), `scripts/package-linux.sh` (`.deb` installing to `/opt/kendime-brow` + `/usr/bin` symlink + desktop entry; AppImage via appimagetool), `scripts/install-dev.ps1` (`just install-dev`: Start Menu shortcut to the debug build), `just package`. `.github/workflows/package.yml` (manual / `v*` tags) builds both and uploads artifacts. Shared AppUserModelID `EmreYigitTasdelen.KendimeBrow` set in the browser and helper processes (one taskbar icon). Subprocesses now use `kb-shell-helper` (`browser_subprocess_path`). Verified: Windows zip built locally (188 MB zip, 414 MB unpacked) and in CI; the unpacked app starts and the bridge works.
+- **Open:** signed MSI with the updater (2.12); real app icon; Linux package job fixed (missing exec bit) — result in the next CI run.
+- **Next step:** 2.1.
 
 ### 1.13 Download manager (basic) — DONE (2026-11-12)
 - **Done:** `kb-platform::files` (downloads dir incl. `XDG_DOWNLOAD_DIR`, `sanitize_file_name` against path traversal / reserved names / control chars, `unique_path` → `name (1).ext`, `reveal` in the file manager; tested). `kb-shell/src/downloads.rs` + `DownloadHandler`: saves without a dialog, tracks progress/speed/status, keeps the item callback for cancel/pause/resume. Bridge: `cancel-/pause-/resume-/reveal-download`, `clear-downloads`; `State.downloads`. UI: ↓ button with active-count badge, `kb://downloads/` page (progress bar, actions), action `downloads.open`. Verified: a `<a download>` click saved `kb-download-test.txt` (26 B) to `~/Downloads`, status `complete`, page rendered (test file removed afterwards).
