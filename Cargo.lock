@@ -1654,6 +1654,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kb-net"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "kb-platform"
 version = "0.0.1"
 dependencies = [
