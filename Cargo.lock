@@ -967,7 +967,12 @@ name = "kb-doc"
 version = "0.0.1"
 dependencies = [
  "image",
+ "kb-ipc",
+ "kb-platform",
  "pdfium-render",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
