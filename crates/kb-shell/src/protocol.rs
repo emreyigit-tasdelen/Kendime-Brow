@@ -120,6 +120,25 @@ pub enum Command {
     ImageData {
         path: String,
     },
+    /// Opens a local shell; persistent query: first message `{"id":N}`, then `d:<base64>` output
+    /// chunks and finally `x:<exit code>`.
+    TermOpen {
+        cols: u16,
+        rows: u16,
+    },
+    /// Sends input (base64) to a terminal session.
+    TermWrite {
+        id: u32,
+        data: String,
+    },
+    TermResize {
+        id: u32,
+        cols: u16,
+        rows: u16,
+    },
+    TermClose {
+        id: u32,
+    },
     /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
     SheetPreview {
         path: String,

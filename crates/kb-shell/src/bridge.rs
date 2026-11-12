@@ -24,6 +24,10 @@ pub fn config() -> MessageRouterConfig {
 
 static BROWSER_ROUTER: OnceLock<Arc<BrowserSideRouter>> = OnceLock::new();
 
+/// query id → terminal session id.
+static TERM_QUERIES: std::sync::LazyLock<Mutex<std::collections::HashMap<i64, u32>>> =
+    std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+
 type Subscriber = (i64, Arc<Mutex<dyn BrowserSideCallback>>);
 static SUBSCRIBERS: Mutex<Vec<Subscriber>> = Mutex::new(Vec::new());
 
@@ -129,6 +133,65 @@ impl BrowserSideHandler for ShellQueryHandler {
             }
             Command::PdfMerge { paths } => {
                 spawn_pdf_edit(callback, move || crate::pdf::merge_files(&paths));
+            }
+            Command::TermOpen { cols, rows } => {
+                if !persistent {
+                    return fail(400, "term-open must be a persistent query");
+                }
+                let cb = callback.clone();
+                let emit: Arc<dyn Fn(crate::terminal::Output) + Send + Sync> = Arc::new(move |o| {
+                    use base64::Engine;
+                    let msg = match o {
+                        crate::terminal::Output::Data(d) => {
+                            format!("d:{}", base64::engine::general_purpose::STANDARD.encode(d))
+                        }
+                        crate::terminal::Output::Exited(c) => {
+                            format!("x:{}", c.map_or(-1, i64::from))
+                        }
+                    };
+                    if let Ok(cb) = cb.lock() {
+                        cb.success_str(&msg);
+                    }
+                });
+                match crate::terminal::open(cols, rows, emit) {
+                    Ok(id) => {
+                        if let Ok(mut m) = TERM_QUERIES.lock() {
+                            m.insert(query_id, id);
+                        }
+                        if let Ok(cb) = callback.lock() {
+                            cb.success_str(&format!("{{\"id\":{id}}}"));
+                        }
+                    }
+                    Err(e) => return fail(500, &e),
+                }
+            }
+            Command::TermWrite { id, data } => {
+                use base64::Engine;
+                let r = base64::engine::general_purpose::STANDARD
+                    .decode(data)
+                    .map_err(|e| e.to_string())
+                    .and_then(|bytes| crate::terminal::write(id, &bytes));
+                if let Ok(cb) = callback.lock() {
+                    match r {
+                        Ok(()) => cb.success_str("{\"ok\":true}"),
+                        Err(e) => cb.failure(500, &e),
+                    }
+                }
+            }
+            Command::TermResize { id, cols, rows } => {
+                let r = crate::terminal::resize(id, cols, rows);
+                if let Ok(cb) = callback.lock() {
+                    match r {
+                        Ok(()) => cb.success_str("{\"ok\":true}"),
+                        Err(e) => cb.failure(500, &e),
+                    }
+                }
+            }
+            Command::TermClose { id } => {
+                crate::terminal::close(id);
+                if let Ok(cb) = callback.lock() {
+                    cb.success_str("{\"ok\":true}");
+                }
             }
             Command::ImageMeta { path } => {
                 std::thread::spawn(move || {
@@ -236,6 +299,14 @@ impl BrowserSideHandler for ShellQueryHandler {
     }
 
     fn on_query_canceled(&self, _browser: Option<Browser>, _frame: Option<Frame>, query_id: i64) {
+        // A terminal session lives and dies with the page query that opened it.
+        if let Some(id) = TERM_QUERIES
+            .lock()
+            .ok()
+            .and_then(|mut m| m.remove(&query_id))
+        {
+            crate::terminal::close(id);
+        }
         if let Ok(mut subs) = SUBSCRIBERS.lock() {
             subs.retain(|(id, _)| *id != query_id);
         }

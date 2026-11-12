@@ -33,5 +33,6 @@ ureq = "3.5"
 kb-ipc.workspace = true
 tokio = { version = "1.54.1", features = ["rt", "time", "macros"] }
 base64 = "0.23.1"
+portable-pty = "0.9.0"
 
 

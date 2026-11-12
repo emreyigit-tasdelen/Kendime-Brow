@@ -23,6 +23,7 @@ export default defineConfig({
         office: resolve(import.meta.dirname, 'office/index.html'),
         media: resolve(import.meta.dirname, 'media/index.html'),
         tools: resolve(import.meta.dirname, 'tools/index.html'),
+        term: resolve(import.meta.dirname, 'term/index.html'),
       },
     },
   },

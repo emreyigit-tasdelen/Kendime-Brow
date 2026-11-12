@@ -759,6 +759,10 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::PdfText
         | Command::PdfFields
         | Command::SheetPreview { .. }
+        | Command::TermOpen { .. }
+        | Command::TermWrite { .. }
+        | Command::TermResize { .. }
+        | Command::TermClose { .. }
         | Command::ImageMeta { .. }
         | Command::ImageStrip { .. }
         | Command::ImageData { .. }

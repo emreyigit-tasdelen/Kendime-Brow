@@ -5,13 +5,17 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
 
-- **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 3A.2 PDF merge/split (lopdf); open Phase 2 items: RAM (2.11), scriptlets (2.3), prefs (2.7), updater key+apply (2.12); then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
-- **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
-- **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
-- **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
-- **Platform:** Cross-platform, no primary platform. Verification order Windows → Ubuntu (local VM; Kali also available) → macOS (if hardware becomes available).
-- **Reading order (new session):** this file → `ROADMAP.md` → only the relevant section of `docs/ARCHITECTURE.md`.
+- **Where we stopped (2026-11-13):** Phase 1 done except blocked items; Phase 2 mostly done; Phase 3A.1/3A.2 done, 3A.3 (forms) and 3A.7 (text) partial, 3B.1 (sheet preview) and 3C.4 (EXIF) done, 6.4 (`kb://tools`) done, 4A.1 (vault core) partial. **In progress: 4A.2 terminal** — `terminal.rs` (portable-pty / ConPTY, tested), bridge (`term-open` persistent query, `term-write/resize/close`), `kb://term` page with xterm.js 6.0.0 + fit addon are written and compile; the live check in the browser window (open `kb://term/`, type, resize, close tab kills the shell) and the commit are NOT done yet.
+- **Next steps, in order:**
+  1. Finish 4A.2: run the app, open `kb://term/`, verify typing / output / resize / session kill on tab close; commit.
+  2. 4A.1b/c: run `kb-vault` as a sandboxed host, `kb://vault` UI (also 6.1 password manager), OS keyring/Windows Hello unlock, auto-lock.
+  3. 4A.3 SSH (russh), 4A.4 profiles, 4A.5 SFTP, 4A.6 tunnels.
+  4. Phase 3 leftovers: 3A.3 annotations/radio/combo, 3A.4 qpdf ops, 3A.5 compression, 3A.6 OCR, 3A.8 signing, 3A.9 batch + registry actions, 3B.2+ LibreOffice, 3C.1–3C.3/3C.5–3C.7 (FFmpeg, photo editing, files).
+  5. Phase 2 leftovers: 2.3 scriptlets (needs uBO resources), 2.7 preferences bug (`set_preference` returns 0), 2.11 RAM (454 MB vs 250 MB budget), 2.12 needs the maintainer's minisign public key.
+  6. Phase 4B network analysis, Phase 5 (Headscale/mesh/companion), rest of Phase 6, Phase 7 (macOS).
+- **Blocked / needs the user:** Ubuntu VM SSH access (1.1b, 1.10b, 1.15); ~100 GB disk for 1.2; minisign key (2.12); manual check of keyboard shortcuts from 1.6 / 1.11; CI runs for the latest commits were still in progress (check `gh run list`).
+- **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH`), Node 24, PDFium via `scripts/fetch-pdfium.ps1` (`PDFIUM_PATH` for kb-doc tests).
+- **Test habit:** no foreground/mouse/keyboard tests while the user is at the computer — DevTools-only checks (`scripts/*.mjs`, `q.mjs`-style bridge calls).
 
 ## Standing rules
 

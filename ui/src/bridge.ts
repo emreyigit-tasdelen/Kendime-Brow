@@ -98,6 +98,9 @@ export type Command =
   | { cmd: 'tasks' }
   | { cmd: 'kill-process'; pid: number }
   | { cmd: 'pdf-open'; path: string }
+  | { cmd: 'term-write'; id: number; data: string }
+  | { cmd: 'term-resize'; id: number; cols: number; rows: number }
+  | { cmd: 'term-close'; id: number }
   | { cmd: 'sheet-preview'; path: string }
   | { cmd: 'image-meta'; path: string }
   | { cmd: 'image-strip'; path: string }

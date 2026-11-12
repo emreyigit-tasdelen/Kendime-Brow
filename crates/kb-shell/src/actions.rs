@@ -65,6 +65,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             Command::ToggleShield,
         ),
         (
+            "terminal.open",
+            "Open a terminal",
+            Command::NewTab {
+                url: Some("kb://term/".into()),
+                container: None,
+            },
+        ),
+        (
             "tools.open",
             "Open developer tools (JSON, regex, hash, base64, JWT)",
             Command::NewTab {
