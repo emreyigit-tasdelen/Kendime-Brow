@@ -33,6 +33,7 @@ impl std::error::Error for DocError {}
 
 pub mod edit;
 pub mod forms;
+pub mod meta;
 pub mod service;
 pub mod sheets;
 

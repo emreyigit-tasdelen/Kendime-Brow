@@ -92,7 +92,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [ ] 3C.1 `kb-media` host + FFmpeg component, info panel via `ffprobe`
 - [ ] 3C.2 Video: trimming, conversion, presets, raw argument editor, queue
 - [ ] 3C.3 Photo: viewer, non-destructive editing, format conversion
-- [ ] 3C.4 **Validation:** V11 → metadata/EXIF viewing and selective removal
+- [x] 3C.4 **Validation:** V11 → metadata/EXIF viewing and selective removal → EXIF read + lossless JPEG strip
 - [ ] 3C.5 RAW, AVIF, JXL, HEIC support; color management
 - [ ] 3C.6 `kb://files`: dual-pane explorer, drag and drop, archives (libarchive)
 - [ ] 3C.7 Downloads: automatic checksum, "open with" actions, rules

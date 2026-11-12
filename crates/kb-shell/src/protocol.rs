@@ -108,6 +108,18 @@ pub enum Command {
     PdfMerge {
         paths: Vec<String>,
     },
+    /// EXIF/metadata of an image (JSON `{entries:[{tag,value,group}], has_gps}`).
+    ImageMeta {
+        path: String,
+    },
+    /// Writes `<name> (clean).jpg` without EXIF/XMP.
+    ImageStrip {
+        path: String,
+    },
+    /// The image as a `data:` URL for display.
+    ImageData {
+        path: String,
+    },
     /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
     SheetPreview {
         path: String,

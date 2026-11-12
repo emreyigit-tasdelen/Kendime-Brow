@@ -130,6 +130,31 @@ impl BrowserSideHandler for ShellQueryHandler {
             Command::PdfMerge { paths } => {
                 spawn_pdf_edit(callback, move || crate::pdf::merge_files(&paths));
             }
+            Command::ImageMeta { path } => {
+                std::thread::spawn(move || {
+                    let r = crate::pdf::image_meta(&path);
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(json) => cb.success_str(&String::from_utf8_lossy(&json)),
+                            Err(e) => cb.failure(500, &e),
+                        }
+                    }
+                });
+            }
+            Command::ImageData { path } => {
+                std::thread::spawn(move || {
+                    let r = crate::pdf::image_data_url(&path);
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(url) => cb.success_str(&url),
+                            Err(e) => cb.failure(500, &e),
+                        }
+                    }
+                });
+            }
+            Command::ImageStrip { path } => {
+                spawn_pdf_edit(callback, move || crate::pdf::image_strip(&path));
+            }
             Command::SheetPreview { path } => {
                 std::thread::spawn(move || {
                     let r = crate::pdf::sheet_preview(&path);

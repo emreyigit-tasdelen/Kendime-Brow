@@ -96,6 +96,11 @@ pub fn handle(
             let data = doc.as_ref().ok_or("no document open")?;
             crate::render_page_png(pdfium, data, None, req.page, req.dpi).map_err(|e| e.to_string())
         }
+        "image.exif" => {
+            let m = crate::meta::read(body)?;
+            serde_json::to_vec(&m).map_err(|e| e.to_string())
+        }
+        "image.strip" => crate::meta::strip_jpeg_metadata(body).map(|(bytes, _)| bytes),
         "sheet.preview" => {
             // body: extension, a newline, then the file bytes.
             let nl = body

@@ -172,6 +172,72 @@ pub fn sheet_preview(path: &str) -> Result<Vec<u8>, String> {
     call_host("sheet.preview", body)
 }
 
+/// Image formats the metadata viewer opens.
+pub const IMAGE_EXTENSIONS: &[&str] = &[
+    "jpg", "jpeg", "png", "webp", "tif", "tiff", "heic", "heif", "gif",
+];
+
+fn read_image(path: &str) -> Result<Vec<u8>, String> {
+    let p = Path::new(path);
+    if !p.is_absolute() {
+        return Err("path must be absolute".into());
+    }
+    let ok = p
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| IMAGE_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()));
+    if !ok {
+        return Err("unsupported image type".into());
+    }
+    let meta = std::fs::metadata(p).map_err(|e| e.to_string())?;
+    if !meta.is_file() || meta.len() as usize > MAX_PDF_BYTES {
+        return Err("file missing or larger than 16 MB".into());
+    }
+    std::fs::read(p).map_err(|e| e.to_string())
+}
+
+/// EXIF of an image file (JSON from the host).
+pub fn image_meta(path: &str) -> Result<Vec<u8>, String> {
+    call_host("image.exif", read_image(path)?)
+}
+
+/// Writes `<name> (clean).jpg` without EXIF/XMP (JPEG only, lossless); returns the path.
+pub fn image_strip(path: &str) -> Result<String, String> {
+    let lower = path.to_ascii_lowercase();
+    if !(lower.ends_with(".jpg") || lower.ends_with(".jpeg")) {
+        return Err("metadata removal currently supports JPEG files".into());
+    }
+    let out = call_host("image.strip", read_image(path)?)?;
+    let p = Path::new(path);
+    let dir = p.parent().unwrap_or(Path::new("."));
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
+    let target = kb_platform::files::unique_path(dir, &format!("{stem} (clean).jpg"));
+    std::fs::write(&target, out).map_err(|e| e.to_string())?;
+    Ok(target.to_string_lossy().to_string())
+}
+
+/// The image as a base64 `data:` URL for the viewer (no parsing).
+pub fn image_data_url(path: &str) -> Result<String, String> {
+    use base64::Engine;
+    let bytes = read_image(path)?;
+    let ext = Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .unwrap_or_default();
+    let mime = match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        _ => return Err("this format cannot be displayed in the viewer".into()),
+    };
+    Ok(format!(
+        "data:{mime};base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
+}
+
 /// Renders a page to PNG bytes.
 pub fn render(page: usize, dpi: f32) -> Result<Vec<u8>, String> {
     submit(|reply| Request::Render { page, dpi, reply })
@@ -256,7 +322,13 @@ fn run(rx: Receiver<Request>) {
                         if host.is_none() {
                             match start_host().await {
                                 Ok(mut h) => {
-                                    if !matches!(method, "pdf.merge" | "sheet.preview") {
+                                    if !matches!(
+                                        method,
+                                        "pdf.merge"
+                                            | "sheet.preview"
+                                            | "image.exif"
+                                            | "image.strip"
+                                    ) {
                                         let Some(d) = doc.clone() else {
                                             r = Err("no document open".into());
                                             break;

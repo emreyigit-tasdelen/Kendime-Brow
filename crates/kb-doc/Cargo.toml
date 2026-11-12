@@ -10,6 +10,7 @@ publish.workspace = true
 calamine = "0.38.0"
 
 image = { version = "0.25.10", default-features = false, features = ["png"] }
+kamadak-exif = "0.6.2"
 kb-ipc.workspace = true
 kb-platform.workspace = true
 pdfium-render = "0.9.5"

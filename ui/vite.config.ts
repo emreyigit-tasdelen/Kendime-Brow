@@ -21,6 +21,7 @@ export default defineConfig({
         tasks: resolve(import.meta.dirname, 'tasks/index.html'),
         pdf: resolve(import.meta.dirname, 'pdf/index.html'),
         office: resolve(import.meta.dirname, 'office/index.html'),
+        media: resolve(import.meta.dirname, 'media/index.html'),
       },
     },
   },

@@ -759,6 +759,9 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::PdfText
         | Command::PdfFields
         | Command::SheetPreview { .. }
+        | Command::ImageMeta { .. }
+        | Command::ImageStrip { .. }
+        | Command::ImageData { .. }
         | Command::PdfFill { .. }
         | Command::PdfExtract { .. }
         | Command::PdfRotate { .. }

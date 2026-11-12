@@ -1,0 +1,106 @@
+// kb://media/?file=<path> — image viewer with metadata (task 3C.4): shows EXIF grouped by
+// privacy relevance (GPS / device / time) and removes it from JPEGs losslessly.
+import { render } from 'solid-js/web';
+import { createSignal, For, onMount, Show } from 'solid-js';
+import { send } from './bridge';
+import './base.css';
+import './media.css';
+
+interface Entry {
+  tag: string;
+  value: string;
+  group: 'gps' | 'device' | 'time' | 'other';
+}
+interface Meta {
+  entries: Entry[];
+  has_gps: boolean;
+}
+
+const file = new URLSearchParams(location.search).get('file') ?? '';
+const GROUPS: [Entry['group'], string][] = [
+  ['gps', 'Location'],
+  ['device', 'Device and author'],
+  ['time', 'Date and time'],
+  ['other', 'Other'],
+];
+
+function Viewer() {
+  const [src, setSrc] = createSignal('');
+  const [meta, setMeta] = createSignal<Meta | null>(null);
+  const [message, setMessage] = createSignal<{ text: string; path?: string }>({ text: '' });
+
+  onMount(async () => {
+    try {
+      setMeta(JSON.parse(await send({ cmd: 'image-meta', path: file })) as Meta);
+    } catch (e) {
+      setMessage({ text: String(e) });
+    }
+    try {
+      setSrc(await send({ cmd: 'image-data', path: file }));
+    } catch {
+      /* formats the viewer cannot display still show their metadata */
+    }
+  });
+
+  const strip = async () => {
+    try {
+      const { path } = JSON.parse(await send({ cmd: 'image-strip', path: file })) as { path: string };
+      setMessage({ text: 'Saved a copy without metadata:', path });
+    } catch (e) {
+      setMessage({ text: String(e) });
+    }
+  };
+
+  const isJpeg = /\.jpe?g$/i.test(file);
+  return (
+    <div class="media">
+      <header>
+        <span class="title" title={file}>{file.split(/[\\/]/).pop()}</span>
+        <span class="spacer" />
+        <Show when={meta() && meta()!.entries.length > 0 && isJpeg}>
+          <button onClick={() => void strip()}>Remove metadata (save copy)</button>
+        </Show>
+      </header>
+      <Show when={message().text}>
+        <p class="message">
+          {message().text} <Show when={message().path}><code>{message().path}</code></Show>
+        </p>
+      </Show>
+      <div class="body">
+        <div class="picture">
+          <Show when={src()} fallback={<span class="muted">No preview</span>}>
+            <img src={src()} alt="" />
+          </Show>
+        </div>
+        <aside>
+          <Show when={meta()?.has_gps}>
+            <p class="warn">This image contains GPS location data.</p>
+          </Show>
+          <Show when={meta()} fallback={<span class="muted">Reading metadata…</span>}>
+            <Show when={meta()!.entries.length > 0} fallback={<span class="muted">No EXIF metadata.</span>}>
+              <For each={GROUPS}>
+                {([group, title]) => (
+                  <Show when={meta()!.entries.some((e) => e.group === group)}>
+                    <h3>{title}</h3>
+                    <dl>
+                      <For each={meta()!.entries.filter((e) => e.group === group)}>
+                        {(e) => (
+                          <>
+                            <dt>{e.tag}</dt>
+                            <dd>{e.value}</dd>
+                          </>
+                        )}
+                      </For>
+                    </dl>
+                  </Show>
+                )}
+              </For>
+            </Show>
+          </Show>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+render(() => <Viewer />, document.getElementById('root')!);
