@@ -61,10 +61,16 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
     let mut l = log().lock().map_err(|_| "poisoned")?;
     match op {
         "list" => {
+            let filter = kb_net::filter::Filter::parse(
+                args.get("filter")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default(),
+            )?;
             let rows: Vec<Value> = l
                 .requests()
                 .iter()
                 .filter(|r| !r.url.starts_with("kb://") && !r.url.starts_with("devtools://"))
+                .filter(|r| filter.matches(r))
                 .map(|r| {
                     json!({
                         "id": r.id, "url": r.url, "method": r.method, "status": r.status,

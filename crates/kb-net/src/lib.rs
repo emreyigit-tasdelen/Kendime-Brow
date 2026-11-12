@@ -4,6 +4,8 @@
 //! [`Log::to_har`] and [`Request::to_curl`]. The CEF wiring that delivers the events lives in
 //! kb-shell; this crate is pure so it can be tested without a browser.
 
+pub mod filter;
+
 use serde::Serialize;
 use serde_json::{Value, json};
 

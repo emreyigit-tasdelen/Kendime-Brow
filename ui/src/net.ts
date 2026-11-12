@@ -37,13 +37,13 @@ async function copy(text: string, what: string): Promise<void> {
 async function refresh(): Promise<void> {
   let rows: Row[];
   try {
-    rows = JSON.parse(await net('list')) as Row[];
+    rows = JSON.parse(await net('list', { filter })) as Row[];
+    status.textContent = '';
   } catch (e) {
     status.textContent = msg(e);
     return;
   }
-  const f = filter.toLowerCase();
-  const shown = rows.filter((r) => !f || `${r.method} ${r.url} ${r.status ?? ''} ${r.mime} ${r.type}`.toLowerCase().includes(f)).slice(-500).reverse();
+  const shown = rows.slice(-500).reverse();
   list.replaceChildren();
   if (!shown.length) list.append('No requests recorded yet. Browse in another tab, then refresh.');
   for (const r of shown) {
@@ -61,7 +61,7 @@ async function refresh(): Promise<void> {
   }
 }
 
-const search = el('input', { placeholder: 'Filter (method, url, status, type)…', type: 'search' });
+const search = el('input', { title: 'Examples: status>=400   host:example.com   method:post   size>10k   time>500   -error   "exact text"', placeholder: 'Filter: status>=400 host:example.com -type:image', type: 'search' });
 search.oninput = () => {
   filter = search.value;
   void refresh();
