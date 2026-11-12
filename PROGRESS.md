@@ -40,6 +40,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 Newest on top. Format: task · done · decision · next step.
 
+### 3A.2 Merge / split / reorder / rotate — PARTIAL (2026-11-12)
+- **Done:** `kb-doc::edit`: `merge`, `extract` (split / extract / reorder / duplicate in one primitive), `rotate` (relative, multiples of 90°, all or selected pages), `parse_page_ranges` (`1-3,5,8-`, 1-based, validated). Built on PDFium page import (not lopdf) so annotations, forms and fonts are kept. Tests: unit test for ranges + integration test with real PDFium (merge 3+2 pages, text order checked, split/reorder `[4,1,1]`, rotation size swap and round trip, error cases).
+- **Pending:** host methods (`pdf.merge`, `pdf.extract`, `pdf.rotate`) over IPC with save-to-file, UI in `kb://pdf` (page thumbnails, drag reorder, rotate buttons, file picker), actions `pdf.merge` etc. in the registry.
+- **Next step:** 3A.2 host + UI, then 3A.3 forms/annotations.
+
 ### 3A.1 PDF host + viewer — DONE (2026-11-12)
 - **Done (second part):** `kb-doc` host (`kb-doc-host`) with `service.rs` (`pdf.open` bytes → `{pages,width,height}`, `pdf.render` `{page,dpi}` → PNG, `pdf.close`), tested through the real sandbox (restricted token, low IL, Job Object): it loads PDFium and renders. Shell: `pdf.rs` (service thread with its own tokio runtime, lazy host start, restart + re-open after a crash, path validation: absolute `.pdf`, ≤ 16 MB), bridge `pdf-open` / `pdf-render` (base64 PNG, answered from worker threads), `pdf_url.rs` (file:// ↔ viewer URL; 2 tests), `on_before_browse` redirects `file://….pdf` main-frame navigations to `kb://pdf/?file=…`, viewer page `ui/pdf` (lazy rendering with IntersectionObserver, zoom 25–400 %). Packaging includes `kb-doc-host.exe` and `pdfium.dll` (from `scripts/fetch-pdfium.ps1`). Verified live: 2-page PDF rendered with crisp text; one `kb-doc-host` process.
 - **Limits / next:** files > 16 MB (IPC frame cap) need handle passing or chunked transfer; http(s) PDFs download instead of opening (open-after-download button pending); no text search/selection yet; CI does not fetch PDFium (kb-doc tests skip there); Linux packaging of `libpdfium.so` pending; `kb-doc-host` currently loads PDFium via `PDFIUM_PATH` or next to the exe.

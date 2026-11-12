@@ -71,7 +71,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 
 **3A — PDF (§6)**
 - [x] 3A.1 `kb-doc` host + PDFium rendering, `kb://pdf` viewer (lazy pages, zoom) → text search and tile rendering of huge pages still pending
-- [ ] 3A.2 Merge / split / reorder / rotate (lopdf)
+- [~] 3A.2 Merge / split / reorder / rotate (lopdf) → engine done (kb-doc::edit, tested); host methods + UI pending
 - [ ] 3A.3 Form filling, annotations
 - [ ] 3A.4 qpdf: encryption, password removal, linearization, repair
 - [ ] 3A.5 Compression: image resampling (DPI), color profile (lcms2)

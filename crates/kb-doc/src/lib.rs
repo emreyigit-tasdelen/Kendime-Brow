@@ -31,6 +31,7 @@ impl std::fmt::Display for DocError {
 
 impl std::error::Error for DocError {}
 
+pub mod edit;
 pub mod service;
 
 pub fn library_file_name() -> &'static str {
