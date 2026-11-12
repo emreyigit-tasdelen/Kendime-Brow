@@ -18,7 +18,7 @@ on Windows, then in an Ubuntu VM; no phase counts as "done" until it also works 
 ## Phase 0 — Setup and architecture design (no code)
 
 - [x] 0.1 Working folder, git, public GitHub repo
-- [x] 0.2 LICENSE (Apache 2.0), .gitignore, README
+- [x] 0.2 LICENSE (AGPL-3.0, relicensed from Apache 2.0), .gitignore, README
 - [x] 0.3 Roadmap and progress notes skeleton
 - [x] 0.4 Technology foundation decision → CEF + Rust
 - [x] 0.5 `docs/ARCHITECTURE.md` — full architecture design document

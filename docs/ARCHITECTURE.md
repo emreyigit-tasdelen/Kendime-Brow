@@ -49,7 +49,7 @@ related task starts. All of them are collected in [Section 14](#14-assumptions-t
 | K15 | Target platform | Cross-platform, no primary platform: Windows, Linux, macOS. Verification order: Windows → Ubuntu → macOS (see 3.8) |
 | K16 | Telemetry | None. The browser never connects to any server on its own (except the update check, which can be disabled) |
 
-**License principle:** The project is Apache 2.0. Everything linked statically or dynamically must be
+**License principle:** The project is AGPL-3.0. Everything linked statically or dynamically must be
 Apache/MIT/BSD/MPL/LGPL. GPL/AGPL components (Ghostscript, MuPDF, x264, exiv2, OnlyOffice) are
 **not linked** into the code; if needed, they are only invoked as external executables that the user
 installs separately.

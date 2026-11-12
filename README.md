@@ -46,4 +46,4 @@ If you find this project useful, you can support its development:
 
 ## License
 
-[Apache License 2.0](LICENSE) — © 2026 Emre Yiğit Taşdelen
+[GNU AGPL v3.0](LICENSE) — © 2026 Emre Yiğit Taşdelen

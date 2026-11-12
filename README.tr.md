@@ -48,4 +48,4 @@ Projeyi faydalı bulduysan geliştirilmesine destek olabilirsin:
 
 ## Lisans
 
-[Apache License 2.0](LICENSE) — © 2026 Emre Yiğit Taşdelen
+[GNU AGPL v3.0](LICENSE) — © 2026 Emre Yiğit Taşdelen

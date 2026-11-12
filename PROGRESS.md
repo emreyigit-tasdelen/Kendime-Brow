@@ -24,7 +24,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 - The repo is public. Keys, tokens, personal data and Headscale credentials never enter the repo. Enforced by the layers in [SECURITY.md](SECURITY.md); after cloning run `git config core.hooksPath .githooks`.
 - The commit identity is the GitHub noreply address (no personal email in the public repo).
 - Claude never appears as a contributor: no `Co-Authored-By` or "Generated with" attribution lines in commits or PRs.
-- License is Apache 2.0. The license compatibility of every added library is noted in the architecture document (GPL/AGPL components are isolated in separate processes).
+- License is AGPL-3.0. The license compatibility of every added library is noted in the architecture document (GPL/AGPL components are isolated in separate processes).
 - **All documentation, the GitHub description and repo metadata are in English.** The only exception is `README.tr.md`, a Turkish translation of `README.md` (the English README is the default). Documents are written clearly enough for a later (cheaper) model to continue.
 - Sponsorship: GitHub Sponsors + Buy Me a Coffee (`.github/FUNDING.yml`, README badges and Support section).
 
