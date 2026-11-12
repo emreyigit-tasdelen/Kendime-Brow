@@ -146,7 +146,7 @@ local terminal → 4A.2, archives → 3C.6, checksum → 3C.7.
 - [ ] 6.1 Password manager: login entries on top of `kb-vault`, password generator, `kb://vault` UI
 - [ ] 6.2 Password manager: secure autofill (origin matching, only on user action)
 - [ ] 6.3 Password manager: KeePass (KDBX) and CSV import/export
-- [ ] 6.4 `kb://tools`: regex tester, JSON format/query, hash, base64/URL/JWT encoding; all in the action registry
+- [x] 6.4 `kb://tools`: regex tester, JSON format/query, hash, base64/URL/JWT encoding; all in the action registry
 - [ ] 6.5 User scripts: manager, `@match`, `GM_*` subset, editor (CodeMirror)
 - [ ] 6.6 **Validation:** V5 → Chrome extension (MV3) loading, best effort
 

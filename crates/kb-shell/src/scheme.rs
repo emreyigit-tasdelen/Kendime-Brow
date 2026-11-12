@@ -25,6 +25,7 @@ const HOSTS: &[(&str, &str)] = &[
     ("pdf", "pdf"),
     ("office", "office"),
     ("media", "media"),
+    ("tools", "tools"),
 ];
 
 /// Maps an asset key (`host/path`) to a path inside `ui/dist`. Shared bundles live in

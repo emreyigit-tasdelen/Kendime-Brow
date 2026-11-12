@@ -1,0 +1,14 @@
+.tools { max-width: 900px; margin: 0 auto; padding: 24px; }
+.tools h1 { margin: 0 0 12px; font-size: 22px; }
+.tools nav { display: flex; gap: 4px; margin-bottom: 12px; }
+.tools button { padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; }
+.tools button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tools textarea { width: 100%; min-height: 130px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--fg); font: 12px ui-monospace, monospace; resize: vertical; }
+.tools .row { display: flex; gap: 6px; margin: 8px 0; align-items: center; }
+.tools .row input { height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--fg); font: 12px ui-monospace, monospace; }
+.tools .grow { flex: 1; }
+.tools .flags { width: 70px; }
+.tools .out { margin: 8px 0 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font: 12px ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; min-height: 60px; }
+.tools .out.bad { color: #e5594d; }
+.tools .hashes { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font: 12px ui-monospace, monospace; }
+.tools .hashes dd { margin: 0; word-break: break-all; }

@@ -65,6 +65,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             Command::ToggleShield,
         ),
         (
+            "tools.open",
+            "Open developer tools (JSON, regex, hash, base64, JWT)",
+            Command::NewTab {
+                url: Some("kb://tools/".into()),
+                container: None,
+            },
+        ),
+        (
             "tasks.open",
             "Show task manager",
             Command::NewTab {
