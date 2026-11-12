@@ -82,7 +82,16 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
                 .collect();
             Ok(Value::Array(rows).to_string())
         }
-        "har" => Ok(l.to_har().to_string()),
+        "har" => {
+            // Internal pages are not part of what the user browsed.
+            let mut visible = kb_net::Log::default();
+            for r in l.requests() {
+                if !r.url.starts_with("kb://") && !r.url.starts_with("devtools://") {
+                    visible.push(r.clone());
+                }
+            }
+            Ok(visible.to_har().to_string())
+        }
         "curl" => {
             let id = args.get("id").and_then(Value::as_str).unwrap_or_default();
             l.requests()

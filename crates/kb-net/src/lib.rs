@@ -5,6 +5,7 @@
 //! kb-shell; this crate is pure so it can be tested without a browser.
 
 pub mod filter;
+pub mod pcapng;
 
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -24,6 +25,8 @@ pub struct Request {
     pub protocol: Option<String>,
     /// Seconds (CDP monotonic clock) at which the request started.
     pub started: f64,
+    /// Wall-clock start, seconds since the Unix epoch (CDP `wallTime`).
+    pub wall_time: f64,
     pub finished: Option<f64>,
     pub encoded_bytes: Option<u64>,
     pub error: Option<String>,
@@ -62,6 +65,28 @@ pub struct Log {
     rows: Vec<Request>,
 }
 
+/// UTC ISO 8601 with milliseconds, from Unix seconds (civil-from-days, no date crate needed).
+fn iso8601(secs: f64) -> String {
+    let ms = (secs * 1000.0).round() as i64;
+    let (days, rem) = (ms.div_euclid(86_400_000), ms.rem_euclid(86_400_000));
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{:03}Z",
+        rem / 3_600_000,
+        rem / 60_000 % 60,
+        rem / 1000 % 60,
+        rem % 1000
+    )
+}
+
 fn headers(v: &Value) -> Vec<(String, String)> {
     v.as_object()
         .map(|o| {
@@ -90,6 +115,10 @@ impl Log {
             let drop = self.rows.len() - max;
             self.rows.drain(..drop);
         }
+    }
+
+    pub fn push(&mut self, r: Request) {
+        self.rows.push(r);
     }
 
     pub fn clear(&mut self) {
@@ -123,6 +152,7 @@ impl Log {
                         .and_then(Value::as_str)
                         .map(String::from),
                     started: p["timestamp"].as_f64().unwrap_or(0.0),
+                    wall_time: p["wallTime"].as_f64().unwrap_or(0.0),
                     resource_type: text(p, "type"),
                     ..Request::default()
                 });
@@ -173,7 +203,7 @@ impl Log {
             .map(|r| {
                 let time = r.duration_ms().unwrap_or(0.0);
                 json!({
-                    "startedDateTime": "1970-01-01T00:00:00.000Z",
+                    "startedDateTime": iso8601(r.wall_time),
                     "time": time,
                     "request": {
                         "method": r.method, "url": r.url, "httpVersion": r.protocol.clone().unwrap_or_default(),
@@ -267,6 +297,13 @@ mod tests {
         assert!(c.contains("-H 'Content-Type: application/json'"));
         assert!(!c.contains("Content-Length"));
         assert!(c.contains("--data-raw 'it'\\''s'"));
+    }
+
+    #[test]
+    fn iso_dates_are_correct() {
+        assert_eq!(iso8601(0.0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(iso8601(1_700_000_000.123), "2023-11-14T22:13:20.123Z");
+        assert_eq!(iso8601(951_782_400.0), "2000-02-29T00:00:00.000Z");
     }
 
     #[test]
