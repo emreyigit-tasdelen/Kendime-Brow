@@ -29,6 +29,7 @@ export default defineConfig({
         connections: resolve(import.meta.dirname, 'connections/index.html'),
         net: resolve(import.meta.dirname, 'net/index.html'),
         logs: resolve(import.meta.dirname, 'logs/index.html'),
+        scripts: resolve(import.meta.dirname, 'scripts/index.html'),
       },
     },
   },

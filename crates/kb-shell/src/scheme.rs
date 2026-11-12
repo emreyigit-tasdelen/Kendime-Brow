@@ -32,6 +32,7 @@ const HOSTS: &[(&str, &str)] = &[
     ("connections", "connections"),
     ("net", "net"),
     ("logs", "logs"),
+    ("scripts", "scripts"),
 ];
 
 /// Maps an asset key (`host/path`) to a path inside `ui/dist`. Shared bundles live in

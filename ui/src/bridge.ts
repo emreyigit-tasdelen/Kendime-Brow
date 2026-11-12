@@ -111,6 +111,7 @@ export type Command =
   | { cmd: 'image-data'; path: string }
   | { cmd: 'net'; op: string; args: Record<string, unknown> }
   | { cmd: 'session-log'; op: string; args: Record<string, unknown> }
+  | { cmd: 'userscripts'; op: string; args: Record<string, unknown> }
   | { cmd: 'pdf-text' }
   | { cmd: 'pdf-tables' }
   | { cmd: 'pdf-fields' }

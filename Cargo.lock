@@ -1693,6 +1693,7 @@ dependencies = [
  "kb-platform",
  "kb-privacy",
  "kb-ssh",
+ "kb-userscript",
  "kb-vault",
  "minisign-verify",
  "portable-pty",

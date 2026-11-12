@@ -24,6 +24,7 @@ pub mod tasks;
 pub mod terminal;
 pub mod tunnels;
 pub mod updater;
+pub mod userscripts;
 pub mod vault;
 
 use cef::*;

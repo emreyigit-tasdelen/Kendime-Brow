@@ -373,11 +373,38 @@ wrap_load_handler! {
         ) {
             let Some(frame) = frame else { return };
             let url = CefString::from(&frame.url()).to_string();
-            let js = crate::content_blocking::cosmetic_script(&url);
+            let mut js = crate::content_blocking::cosmetic_script(&url);
+            if frame.is_main() != 0 {
+                js.push_str(&crate::userscripts::script_for(&url, true));
+            }
             if !js.is_empty() {
                 frame.execute_java_script(
                     Some(&CefString::from(js.as_str())),
                     Some(&CefString::from("kb://cosmetic")),
+                    0,
+                );
+            }
+        }
+
+        fn on_load_end(
+            &self,
+            _browser: Option<&mut Browser>,
+            frame: Option<&mut Frame>,
+            _http_status_code: i32,
+        ) {
+            let Some(frame) = frame else { return };
+            if frame.is_main() == 0 {
+                return;
+            }
+            let url = CefString::from(&frame.url()).to_string();
+            let js = crate::userscripts::script_for(&url, false);
+            if std::env::var_os("KB_DEBUG").is_some() {
+                eprintln!("[kb] load end {url}: userscript bytes={}", js.len());
+            }
+            if !js.is_empty() {
+                frame.execute_java_script(
+                    Some(&CefString::from(js.as_str())),
+                    Some(&CefString::from("kb://userscript")),
                     0,
                 );
             }

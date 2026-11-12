@@ -217,6 +217,15 @@ impl BrowserSideHandler for ShellQueryHandler {
                     cb.success_str("{\"ok\":true}");
                 }
             }
+            Command::Userscripts { op, args } => {
+                let r = crate::userscripts::call(&op, &args);
+                if let Ok(cb) = callback.lock() {
+                    match r {
+                        Ok(json) => cb.success_str(&json),
+                        Err(e) => cb.failure(500, &e),
+                    }
+                }
+            }
             Command::SessionLog { op, args } => {
                 std::thread::spawn(move || {
                     let r = crate::sesslog::call(&op, &args);

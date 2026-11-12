@@ -121,6 +121,8 @@ pub fn match_pattern(pattern: &str, url: &str) -> bool {
     };
     let end = rest.find('/').unwrap_or(rest.len());
     let (host, path) = rest.split_at(end);
+    // Ports are not part of a match pattern host; userscripts often include one anyway.
+    let host = host.split(':').next().unwrap_or(host);
     let scheme_ok = scheme == u.scheme || (scheme == "*" && matches!(u.scheme, "http" | "https"));
     if !scheme_ok {
         return false;
@@ -228,6 +230,18 @@ mod tests {
         assert!(should_run(&m, "https://SITE.test/home"));
         assert!(!should_run(&m, "https://site.test/logout"));
         assert!(!should_run(&Meta::default(), "https://site.test/"));
+    }
+
+    #[test]
+    fn a_port_in_the_pattern_is_ignored() {
+        assert!(match_pattern(
+            "http://127.0.0.1:8766/*",
+            "http://127.0.0.1:8766/a"
+        ));
+        assert!(match_pattern(
+            "http://127.0.0.1:8766/*",
+            "http://127.0.0.1:1/a"
+        ));
     }
 
     #[test]

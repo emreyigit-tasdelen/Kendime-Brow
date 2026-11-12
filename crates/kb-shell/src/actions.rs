@@ -73,6 +73,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "scripts.open",
+            "Open userscripts",
+            Command::NewTab {
+                url: Some("kb://scripts/".into()),
+                container: None,
+            },
+        ),
+        (
             "logs.open",
             "Open encrypted terminal session logs",
             Command::NewTab {

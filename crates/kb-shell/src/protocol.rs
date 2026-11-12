@@ -157,6 +157,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// User scripts (see `userscripts.rs`): list/get/save/remove/toggle.
+    Userscripts {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Network inspector (see `net.rs`): list/har/curl/clear.
     Net {
         op: String,
