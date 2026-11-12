@@ -11,8 +11,39 @@ use crate::protocol::Command;
 /// (id, title, command)
 fn table() -> Vec<(&'static str, &'static str, Command)> {
     vec![
-        ("tab.new", "New tab", Command::NewTab { url: None }),
+        (
+            "tab.new",
+            "New tab",
+            Command::NewTab {
+                url: None,
+                container: None,
+            },
+        ),
         ("tab.close", "Close tab", Command::CloseActiveTab),
+        (
+            "tab.new-private",
+            "New private tab",
+            Command::NewTab {
+                url: None,
+                container: Some("temporary".into()),
+            },
+        ),
+        (
+            "tab.new-work",
+            "New tab in the Work container",
+            Command::NewTab {
+                url: None,
+                container: Some("work".into()),
+            },
+        ),
+        (
+            "tab.new-personal",
+            "New tab in the Personal container",
+            Command::NewTab {
+                url: None,
+                container: Some("personal".into()),
+            },
+        ),
         ("tab.next", "Next tab", Command::CycleTab { forward: true }),
         (
             "tab.prev",
@@ -38,6 +69,7 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             "Show downloads",
             Command::NewTab {
                 url: Some("kb://downloads/".into()),
+                container: None,
             },
         ),
         (
@@ -45,6 +77,7 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             "Open settings",
             Command::NewTab {
                 url: Some("kb://settings/".into()),
+                container: None,
             },
         ),
     ]

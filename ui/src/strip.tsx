@@ -52,13 +52,21 @@ function Strip() {
           {(t) => (
             <div
               class="tab"
-              classList={{ active: t.active, loading: t.loading }}
+              classList={{
+                active: t.active,
+                loading: t.loading,
+                work: t.container === 'work',
+                private: t.container === 'temporary',
+              }}
               role="tab"
               aria-selected={t.active}
               title={t.url}
               onMouseDown={(e) => onTabMouseDown(e, t)}
             >
               <span class="spinner" aria-hidden="true" />
+              <Show when={t.container === 'temporary'}>
+                <span class="tag">Private</span>
+              </Show>
               <span class="label">{tabLabel(t)}</span>
               <button
                 class="close"

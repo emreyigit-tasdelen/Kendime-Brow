@@ -11,6 +11,7 @@ export interface TabState {
   bookmarked: boolean;
   blocked: number;
   shield: boolean;
+  container: string;
 }
 
 export interface Bookmark {
@@ -68,7 +69,7 @@ export interface ActionInfo {
 
 export type Command =
   | { cmd: 'state' }
-  | { cmd: 'new-tab'; url?: string }
+  | { cmd: 'new-tab'; url?: string; container?: string }
   | { cmd: 'close-tab'; id: number }
   | { cmd: 'activate-tab'; id: number }
   | { cmd: 'navigate'; text: string }

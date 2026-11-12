@@ -96,7 +96,11 @@ wrap_browser_process_handler! {
             let start_tabs = if url.is_empty() {
                 shell::startup_tabs()
             } else {
-                vec![(url, true)]
+                vec![crate::store::SessionTab {
+                    url,
+                    active: true,
+                    container: crate::containers::DEFAULT.into(),
+                }]
             };
 
             let mut client = KbClient::new();
@@ -124,7 +128,7 @@ wrap_window_delegate! {
     struct KbWindowDelegate {
         ui_view: Rc<RefCell<Option<BrowserView>>>,
         client: Client,
-        start_tabs: Vec<(String, bool)>,
+        start_tabs: Vec<crate::store::SessionTab>,
     }
 
     impl ViewDelegate {
@@ -221,7 +225,7 @@ wrap_browser_view_delegate! {
     impl BrowserViewDelegate {
         fn on_popup_browser_view_created(
             &self,
-            _browser_view: Option<&mut BrowserView>,
+            browser_view: Option<&mut BrowserView>,
             popup_browser_view: Option<&mut BrowserView>,
             is_devtools: i32,
         ) -> i32 {
@@ -230,7 +234,9 @@ wrap_browser_view_delegate! {
             }
             match popup_browser_view {
                 Some(view) => {
-                    shell::add_tab_view(view.clone());
+                    let container = browser_view
+                        .map_or(crate::containers::DEFAULT, |o| shell::container_of_view(o));
+                    shell::add_tab_view(view.clone(), container);
                     1
                 }
                 None => 0,
@@ -509,7 +515,16 @@ wrap_life_span_handler! {
     struct KbLifeSpanHandler;
 
     impl LifeSpanHandler {
-        fn on_after_created(&self, _browser: Option<&mut Browser>) {
+        fn on_after_created(&self, browser: Option<&mut Browser>) {
+            if std::env::var_os("KB_DEBUG").is_some()
+                && let Some(ctx) = browser.and_then(|b| b.host()).and_then(|h| h.request_context())
+            {
+                eprintln!(
+                    "[kb] browser created: global context = {}, cache = {:?}",
+                    ctx.is_global(),
+                    CefString::from(&ctx.cache_path()).to_string()
+                );
+            }
             shell::on_after_created();
         }
 

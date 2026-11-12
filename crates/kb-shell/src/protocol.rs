@@ -14,6 +14,9 @@ pub enum Command {
     NewTab {
         #[serde(default)]
         url: Option<String>,
+        /// Container id (`personal`, `work`, `temporary`); default: the active tab's.
+        #[serde(default)]
+        container: Option<String>,
     },
     CloseTab {
         id: u64,
@@ -101,6 +104,7 @@ pub struct TabState {
     pub blocked: u64,
     /// Content blocking active for this site (shield on).
     pub shield: bool,
+    pub container: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -201,7 +205,10 @@ mod tests {
         assert_eq!(parse(r#"{"cmd":"state"}"#), Ok(Command::State));
         assert_eq!(
             parse(r#"{"cmd":"new-tab"}"#),
-            Ok(Command::NewTab { url: None })
+            Ok(Command::NewTab {
+                url: None,
+                container: None
+            })
         );
         assert_eq!(
             parse(r#"{"cmd":"close-tab","id":3}"#),

@@ -66,12 +66,14 @@ struct Tab {
     loading: bool,
     can_go_back: bool,
     can_go_forward: bool,
+    container: &'static str,
 }
 
 impl Tab {
-    fn new(view: BrowserView) -> Self {
+    fn new(view: BrowserView, container: &'static str) -> Self {
         Self {
             view,
+            container,
             title: String::new(),
             url: String::new(),
             loading: true,
@@ -160,7 +162,7 @@ fn to_url(text: &str) -> String {
 }
 
 /// Tabs to open at startup: the saved session (if enabled and not empty), else the new tab page.
-pub fn startup_tabs() -> Vec<(String, bool)> {
+pub fn startup_tabs() -> Vec<SessionTab> {
     let saved = with_store(|s| {
         if s.setting_bool("restore_session") {
             s.load_session().unwrap_or_default()
@@ -170,9 +172,13 @@ pub fn startup_tabs() -> Vec<(String, bool)> {
     })
     .unwrap_or_default();
     if saved.is_empty() {
-        vec![(NEW_TAB_URL.to_string(), true)]
+        vec![SessionTab {
+            url: NEW_TAB_URL.to_string(),
+            active: true,
+            container: crate::containers::DEFAULT.to_string(),
+        }]
     } else {
-        saved.into_iter().map(|t| (t.url, t.active)).collect()
+        saved
     }
 }
 
@@ -200,9 +206,12 @@ fn save_session() {
         let active = s.tabs.active();
         s.tabs
             .iter()
+            // Private (non-persistent) tabs never reach the disk.
+            .filter(|(_, t)| crate::containers::get(t.container).is_some_and(|c| c.persistent))
             .map(|(id, t)| SessionTab {
                 url: t.url.clone(),
                 active: Some(id) == active,
+                container: t.container.to_string(),
             })
             .collect()
     })
@@ -243,34 +252,67 @@ pub fn init_window(window: &mut Window, ui_view: BrowserView, client: Client) {
 
 /// Creates a new Chrome-style tab browser and shows it.
 pub fn new_tab(url: &str) {
+    let container = active_container();
+    new_tab_in(url, container);
+}
+
+/// Container of the active tab (new tabs inherit it).
+pub fn active_container() -> &'static str {
+    with_shell(|s| s.tabs.active_item().map(|t| t.container))
+        .flatten()
+        .unwrap_or(crate::containers::DEFAULT)
+}
+
+/// Container of the tab that shows `view` (for popups).
+pub fn container_of_view(view: &BrowserView) -> &'static str {
+    let Some(mut b) = view.browser() else {
+        return crate::containers::DEFAULT;
+    };
+    with_shell(|s| {
+        s.tabs
+            .find(|t| t.is(&mut b))
+            .and_then(|id| s.tabs.get(id).map(|t| t.container))
+    })
+    .flatten()
+    .unwrap_or(crate::containers::DEFAULT)
+}
+
+/// Opens a tab in the given container.
+pub fn new_tab_in(url: &str, container: &str) {
     let Some(mut client) = with_shell(|s| s.client.clone()) else {
         return;
     };
+    let container = crate::containers::normalize(container);
+    let mut ctx = crate::containers::context(container);
+    debug_log(&format!(
+        "new tab in container {container}: own context = {}",
+        ctx.is_some()
+    ));
     let mut delegate = crate::app::TabViewDelegate::new();
     let view = browser_view_create(
         Some(&mut client),
         Some(&CefString::from(url)),
         Some(&BrowserSettings::default()),
         None,
-        None,
+        ctx.as_mut(),
         Some(&mut delegate),
     );
     if std::env::var_os("KB_DEBUG").is_some() {
         eprintln!("[kb] new_tab {url} -> view created: {}", view.is_some());
     }
     if let Some(view) = view {
-        add_tab_view(view);
+        add_tab_view(view, container);
     }
 }
 
 /// Opens the startup tabs and activates the one marked active.
-pub fn open_startup_tabs(tabs: &[(String, bool)]) {
-    for (url, _) in tabs {
-        new_tab(url);
+pub fn open_startup_tabs(tabs: &[SessionTab]) {
+    for t in tabs {
+        new_tab_in(&t.url, &t.container);
     }
     let active = tabs
         .iter()
-        .position(|(_, a)| *a)
+        .position(|t| t.active)
         .unwrap_or(tabs.len().saturating_sub(1));
     let id = with_shell(|s| s.tabs.iter().nth(active).map(|(id, _)| id)).flatten();
     if let Some(id) = id {
@@ -289,9 +331,9 @@ pub fn profile_dir() -> Option<std::path::PathBuf> {
 }
 
 /// Adds an existing BrowserView (new tab or popup) as the active tab.
-pub fn add_tab_view(view: BrowserView) {
+pub fn add_tab_view(view: BrowserView, container: &'static str) {
     let window = with_shell(|s| {
-        s.tabs.open(Tab::new(view.clone()), true);
+        s.tabs.open(Tab::new(view.clone(), container), true);
         s.window.clone()
     });
     if let Some(window) = window {
@@ -422,6 +464,7 @@ pub fn state() -> protocol::State {
                         crate::content_blocking::blocked_count(b.identifier())
                     }),
                     shield: crate::content_blocking::shield_enabled_for(&t.url),
+                    container: t.container.to_string(),
                 })
                 .collect(),
             palette: PALETTE_OPEN.with(|p| *p.borrow()),
@@ -446,9 +489,12 @@ pub fn set_palette(open: bool) {
 /// Runs a command received from a `kb://` page.
 pub fn run_bridge_command(cmd: Command) {
     match cmd {
-        Command::NewTab { url } => {
+        Command::NewTab { url, container } => {
             let url = url.map_or_else(|| NEW_TAB_URL.to_string(), |u| to_url(&u));
-            new_tab(&url);
+            match container {
+                Some(c) => new_tab_in(&url, &c),
+                None => new_tab(&url),
+            }
         }
         Command::CloseTab { id } => close_tab(TabId(id)),
         Command::ActivateTab { id } => {
@@ -574,11 +620,14 @@ pub fn update_tab(browser: &mut Browser, upd: TabUpdate) {
         let id = s.tabs.find(|t| t.is(browser))?;
         let tab = s.tabs.get_mut(id)?;
         if let Some(t) = upd.title {
-            with_store(|st| st.update_title(&tab.url, &t));
+            if crate::containers::get(tab.container).is_some_and(|c| c.persistent) {
+                with_store(|st| st.update_title(&tab.url, &t));
+            }
             tab.title = t;
         }
+        let private = crate::containers::get(tab.container).is_some_and(|c| !c.persistent);
         if let Some(u) = upd.url {
-            if u != tab.url {
+            if u != tab.url && !private {
                 with_store(|st| st.record_visit(&u, ""));
             }
             tab.url = u;
@@ -738,7 +787,13 @@ pub fn do_close(browser: &mut Browser) -> bool {
         if s.tabs.len() <= 1 {
             return None; // last tab: let the window close
         }
-        s.tabs.close(id).map(|t| (t.view, s.window.clone()))
+        s.tabs.close(id).map(|t| {
+            let gone = t.container;
+            if !s.tabs.iter().any(|(_, o)| o.container == gone) {
+                crate::containers::discard(gone);
+            }
+            (t.view, s.window.clone())
+        })
     })
     .flatten();
     let Some((view, window)) = removed else {

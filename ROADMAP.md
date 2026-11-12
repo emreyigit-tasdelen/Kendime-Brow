@@ -56,7 +56,7 @@ Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 - [x] 2.2 `kb-privacy`: adblock-rust integration, request blocking (§4.2)
 - [~] 2.3 Filter list management + updates, cosmetic filtering, scriptlets (§4.2) → lists + updates + cosmetic CSS done; scriptlets pending (needs uBO resources)
 - [x] 2.4 Tracking parameter stripping, per-site shield button (§4.2)
-- [ ] 2.5 Containers (separate `CefRequestContext`), private window, third-party cookie blocking (§4.3)
+- [x] 2.5 Containers (separate `CefRequestContext`), private window, third-party cookie blocking (§4.3) → private window implemented as private tabs (temporary container)
 - [ ] 2.6 **Validation:** V6 → fingerprinting protection injection, Standard/Strict levels (§4.4)
 - [ ] 2.7 HTTPS-Only, DoH, WebRTC policy, disable preloading, per-container proxy (§4.5)
 - [ ] 2.8 **Validation:** V7 → tab lifecycle: freezing, discarding, sleeping, exceptions (§5.2)

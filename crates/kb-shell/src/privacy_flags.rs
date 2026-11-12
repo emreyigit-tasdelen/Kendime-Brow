@@ -80,7 +80,34 @@ pub const PROFILE_PREFS: &[(&str, Pref)] = &[
     ("enable_do_not_track", Pref::Bool(true)),
     // 2 = never predict / preconnect (architecture §4.5).
     ("net.network_prediction_options", Pref::Int(2)),
+    // Block third-party cookies (architecture §4.3). 1 = block third-party.
+    ("profile.cookie_controls_mode", Pref::Int(1)),
+    ("profile.block_third_party_cookies", Pref::Bool(true)),
 ];
+
+/// Applies `PROFILE_PREFS` to one request context (used for every container). Returns the
+/// names that could not be set.
+pub fn apply_context_prefs(ctx: &cef::RequestContext) -> Vec<String> {
+    use cef::*;
+    let mut failed = Vec::new();
+    for (name, pref) in PROFILE_PREFS {
+        let Some(mut v) = value_create() else {
+            continue;
+        };
+        match pref {
+            Pref::Bool(b) => v.set_bool(*b as i32),
+            Pref::Int(i) => v.set_int(*i),
+            Pref::Str(t) => v.set_string(Some(&CefString::from(*t))),
+        };
+        let n = CefString::from(*name);
+        if ctx.can_set_preference(Some(&n)) == 0
+            || ctx.set_preference(Some(&n), Some(&mut v), None) == 0
+        {
+            failed.push(name.to_string());
+        }
+    }
+    failed
+}
 
 /// Applies `GLOBAL_PREFS` and `PROFILE_PREFS`. Unknown prefs are skipped. Returns the names
 /// that could not be set (for logging).

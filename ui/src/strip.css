@@ -48,3 +48,6 @@ body { overflow: hidden; user-select: none; }
 }
 .toolbar > .shield { position: relative; }
 .toolbar > .shield.off { opacity: .45; filter: grayscale(1); }
+.tab.work { box-shadow: inset 0 2px 0 #e0913b; }
+.tab.private { box-shadow: inset 0 2px 0 #8a63d2; }
+.tab .tag { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #8a63d2; color: #fff; }

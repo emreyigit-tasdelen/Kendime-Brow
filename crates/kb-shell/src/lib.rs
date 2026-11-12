@@ -3,6 +3,7 @@
 pub mod actions;
 pub mod app;
 pub mod bridge;
+pub mod containers;
 pub mod content_blocking;
 pub mod downloads;
 pub mod kb_scheme;

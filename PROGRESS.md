@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.5 containers, private window, third-party cookies (then finish 2.3 scriptlets). (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.6 V6 fingerprinting protection (Standard/Strict), then 2.7+, finish 2.3 scriptlets. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.5 Containers, private tabs, third-party cookies — DONE (2026-11-12)
+- **Done:** `containers.rs`: Personal (global context), Work (own persistent `CefRequestContext` under `<profile>/cef/containers/work`), Private (`temporary`, in-memory context dropped when its last tab closes). Tabs carry their container; new tabs inherit the active tab's; popups inherit the opener's; `new-tab {container}`; actions `tab.new-private`, `tab.new-work`, `tab.new-personal`. Private tabs are never written to history or the session. Session table got a `container` column (schema v2, in-place migration). Third-party cookies blocked via profile prefs (`profile.cookie_controls_mode = 1`, `profile.block_third_party_cookies`), and all privacy prefs are applied to every container context. UI: orange (Work) / purple + "Private" tag (Private) tab marking. Verified via DevTools `Target.getTargets` (distinct `browserContextId`s): a cookie set in Personal is invisible in Private and Work; a Private cookie is gone after closing all private tabs and opening a new one; restart restores Personal + Work tabs, not Private.
+- **Decision:** the "private window" of §4.3 is a private *tab* (same window, purple marking) — avoids a second window/shell instance for now; a separate window can come later.
+- **Gotcha:** my first isolation test mapped DevTools pages by `/json` order and wrongly reported shared cookies; identify targets by `browserContextId` instead.
+- **Next step:** 2.6.
 
 ### 2.4 Tracking parameters + per-site shield — DONE (2026-11-12)
 - **Done:** `kb-privacy::url_clean`: `strip_tracking_params` (`utm_*`, `pk_*`, `mtm_*`, `hsa_*`, `fbclid`, `gclid`, `msclkid`, `_ga`, …; fragment kept), `unwrap_redirect` (Google `/url`, Facebook `l.php`, Instagram, Reddit, YouTube `/redirect`, Slack, Steam, Disqus — only http(s) targets), `clean_url`, `host_of`; 4 tests. Main-frame and sub-frame requests are rewritten to the clean URL in `on_before_resource_load` (documents are still never blocked). Shield: `shield_off` table in `kb.sqlite` mirrored to an in-memory set for the IO thread; the main-frame URL decides; `toggle-shield` command + `shield.toggle` action (reloads the tab); `TabState.shield`; 🛡 button with blocked-count badge (greyed when off). Verified via DevTools only: `example.org/?utm_source=…&id=1&fbclid=…` → `example.org/?id=1`; theguardian.com 14 blocked → shield off 0 → on again 11.

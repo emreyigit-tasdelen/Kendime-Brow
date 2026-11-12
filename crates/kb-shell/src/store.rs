@@ -6,7 +6,7 @@ use std::path::Path;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::Serialize;
 
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS settings (
@@ -64,6 +64,7 @@ pub struct HistoryEntry {
 pub struct SessionTab {
     pub url: String,
     pub active: bool,
+    pub container: String,
 }
 
 pub struct Store {
@@ -97,6 +98,16 @@ impl Store {
         db.pragma_update(None, "journal_mode", "WAL")?;
         db.pragma_update(None, "foreign_keys", "ON")?;
         db.execute_batch(SCHEMA)?;
+        // v1 → v2: session tabs remember their container.
+        let has_container: bool = db
+            .prepare("SELECT 1 FROM pragma_table_info('session') WHERE name = 'container'")?
+            .exists([])?;
+        if !has_container {
+            db.execute(
+                "ALTER TABLE session ADD COLUMN container TEXT NOT NULL DEFAULT 'personal'",
+                [],
+            )?;
+        }
         db.pragma_update(None, "user_version", SCHEMA_VERSION)?;
         Ok(Self { db })
     }
@@ -273,8 +284,8 @@ impl Store {
         tx.execute("DELETE FROM session", [])?;
         for (i, t) in tabs.iter().filter(|t| !is_internal(&t.url)).enumerate() {
             tx.execute(
-                "INSERT INTO session(position, url, active) VALUES (?1, ?2, ?3)",
-                params![i as i64, t.url, t.active],
+                "INSERT INTO session(position, url, active, container) VALUES (?1, ?2, ?3, ?4)",
+                params![i as i64, t.url, t.active, t.container],
             )?;
         }
         tx.commit()
@@ -283,11 +294,12 @@ impl Store {
     pub fn load_session(&self) -> rusqlite::Result<Vec<SessionTab>> {
         let mut st = self
             .db
-            .prepare("SELECT url, active FROM session ORDER BY position")?;
+            .prepare("SELECT url, active, container FROM session ORDER BY position")?;
         st.query_map([], |r| {
             Ok(SessionTab {
                 url: r.get(0)?,
                 active: r.get(1)?,
+                container: r.get(2)?,
             })
         })?
         .collect()
@@ -356,14 +368,17 @@ mod tests {
             SessionTab {
                 url: "https://a.org/".into(),
                 active: false,
+                container: "personal".into(),
             },
             SessionTab {
                 url: "kb://newtab/".into(),
                 active: false,
+                container: "personal".into(),
             },
             SessionTab {
                 url: "https://b.org/".into(),
                 active: true,
+                container: "personal".into(),
             },
         ];
         s.save_session(&tabs).unwrap();
@@ -373,7 +388,8 @@ mod tests {
             back[1],
             SessionTab {
                 url: "https://b.org/".into(),
-                active: true
+                active: true,
+                container: "personal".into()
             }
         );
         s.save_session(&[]).unwrap();
