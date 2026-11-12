@@ -1,0 +1,9 @@
+[package]
+name = "kb-userscript"
+description = "Userscript metadata parser and @match / @include URL matching (roadmap 6.5)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

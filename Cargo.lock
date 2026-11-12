@@ -1719,6 +1719,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "kb-userscript"
+version = "0.0.1"
+
+[[package]]
 name = "kb-vault"
 version = "0.0.1"
 dependencies = [
