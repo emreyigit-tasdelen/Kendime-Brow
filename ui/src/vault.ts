@@ -103,11 +103,12 @@ async function list(): Promise<void> {
       note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
     }
   };
+  const kdbxPw = el('input', { type: 'password', placeholder: 'KeePass master password' });
   const pickKdbx = el('input', { type: 'file', accept: '.kdbx', hidden: true });
   pickKdbx.onchange = async () => {
     const f = pickKdbx.files?.[0];
     if (!f) return;
-    const password = window.prompt('KeePass master password') ?? '';
+    const password = kdbxPw.value;
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
       let bin = '';
@@ -139,7 +140,7 @@ async function list(): Promise<void> {
       note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
     }
   };
-  root.append(el('div', { class: 'bar' }, el('span', {}, `${items.length} entries`), el('div', { class: 'actions' }, add, imp, impK, exp, lock, pick, pickKdbx)), note);
+  root.append(el('div', { class: 'bar' }, el('span', {}, `${items.length} entries`), el('div', { class: 'actions' }, add, imp, kdbxPw, impK, exp, lock, pick, pickKdbx)), note);
   const card = el('div', { class: 'card' });
   if (!items.length) card.append('No entries yet.');
   for (const it of items) {
