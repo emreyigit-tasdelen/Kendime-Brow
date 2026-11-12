@@ -103,6 +103,25 @@ async function list(): Promise<void> {
       note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
     }
   };
+  const pickKdbx = el('input', { type: 'file', accept: '.kdbx', hidden: true });
+  pickKdbx.onchange = async () => {
+    const f = pickKdbx.files?.[0];
+    if (!f) return;
+    const password = window.prompt('KeePass master password') ?? '';
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const r = JSON.parse(await call('import-kdbx', { data: btoa(bin), password })) as { imported: number };
+      note.textContent = `Imported ${r.imported} login(s) from KeePass.`;
+      await render();
+      root.prepend(note);
+    } catch (e) {
+      note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
+    }
+  };
+  const impK = el('button', {}, 'Import KeePass');
+  impK.onclick = () => pickKdbx.click();
   const imp = el('button', {}, 'Import CSV');
   imp.onclick = () => pick.click();
   const exp = el('button', {}, 'Export CSV');
@@ -120,7 +139,7 @@ async function list(): Promise<void> {
       note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
     }
   };
-  root.append(el('div', { class: 'bar' }, el('span', {}, `${items.length} entries`), el('div', { class: 'actions' }, add, imp, exp, lock, pick)), note);
+  root.append(el('div', { class: 'bar' }, el('span', {}, `${items.length} entries`), el('div', { class: 'actions' }, add, imp, impK, exp, lock, pick, pickKdbx)), note);
   const card = el('div', { class: 'card' });
   if (!items.length) card.append('No entries yet.');
   for (const it of items) {

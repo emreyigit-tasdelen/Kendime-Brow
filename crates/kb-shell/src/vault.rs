@@ -241,6 +241,20 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             v.save(&path()?).map_err(err)?;
             return Ok(json!({ "imported": n }).to_string());
         }
+        "import-kdbx" => {
+            use base64::Engine;
+            let data = base64::engine::general_purpose::STANDARD
+                .decode(text(args, "data"))
+                .map_err(|e| e.to_string())?;
+            let logins = kb_vault::kdbx::import_logins(&data, text(args, "password"))?;
+            let v = s.vault.as_mut().ok_or("no vault yet")?;
+            let n = logins.len();
+            for sec in &logins {
+                v.put(&new_id(), Kind::Login, sec).map_err(err)?;
+            }
+            v.save(&path()?).map_err(err)?;
+            return Ok(json!({ "imported": n }).to_string());
+        }
         "export-csv" => {
             let v = s.vault.as_ref().ok_or("no vault yet")?;
             let mut logins = Vec::new();
