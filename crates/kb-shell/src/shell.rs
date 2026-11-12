@@ -463,7 +463,14 @@ pub fn should_discard(
 
 /// Discards idle background tabs (called by a periodic task).
 pub fn discard_idle_tabs() {
-    let limit = discard_after();
+    let power = kb_platform::power::current();
+    let mut limit = discard_after();
+    if power.on_battery {
+        limit = limit.min(std::time::Duration::from_secs(5 * 60)); // battery mode (§5.4)
+    }
+    if power.low_memory() {
+        limit = limit.min(std::time::Duration::from_secs(60)); // memory pressure (§5.2)
+    }
     let views: Vec<(BrowserView, String)> = with_shell(|s| {
         let active = s.tabs.active();
         s.tabs

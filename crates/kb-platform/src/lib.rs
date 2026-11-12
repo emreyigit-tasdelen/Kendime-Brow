@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 pub mod files;
 pub mod ipc;
+pub mod power;
 pub mod sandbox;
 
 /// Application directory name used on Windows and macOS.
