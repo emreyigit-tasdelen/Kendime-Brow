@@ -76,7 +76,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [ ] 3A.4 qpdf: encryption, password removal, linearization, repair
 - [ ] 3A.5 Compression: image resampling (DPI), color profile (lcms2)
 - [ ] 3A.6 OCR pipeline (Tesseract) + language pack download
-- [ ] 3A.7 Text and table extraction
+- [~] 3A.7 Text and table extraction → text extraction + in-document search done; table extraction pending
 - [ ] 3A.8 Signing (PAdES-B-B) + signature verification
 - [ ] 3A.9 Batch processing + all PDF actions in the action registry
 

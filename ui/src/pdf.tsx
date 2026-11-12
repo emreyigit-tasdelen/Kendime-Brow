@@ -69,6 +69,37 @@ function Viewer() {
   const [zoom, setZoom] = createSignal(1);
   const [pages, setPages] = createSignal('');
   const [mergeList, setMergeList] = createSignal('');
+  const [texts, setTexts] = createSignal<string[] | null>(null);
+  const [query, setQuery] = createSignal('');
+  const hits = () => {
+    const q = query().trim().toLowerCase();
+    const t = texts();
+    if (!q || !t) return [] as number[];
+    return t.flatMap((s, i) => (s.toLowerCase().includes(q) ? [i] : []));
+  };
+  const [hitIndex, setHitIndex] = createSignal(0);
+  const ensureText = async () => {
+    if (texts()) return;
+    try {
+      setTexts(JSON.parse(await send({ cmd: 'pdf-text' })) as string[]);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+  const goTo = (page: number) =>
+    document.querySelector(`[data-page="${page + 1}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  const step = (dir: number) => {
+    const h = hits();
+    if (!h.length) return;
+    const i = (hitIndex() + dir + h.length) % h.length;
+    setHitIndex(i);
+    goTo(h[i]);
+  };
+  const copyAll = async () => {
+    await ensureText();
+    await navigator.clipboard?.writeText((texts() ?? []).join('\n\n')).catch(() => undefined);
+    setStatus({ text: 'Text copied' });
+  };
   const [status, setStatus] = createSignal<{ text: string; path?: string }>({ text: '' });
 
   const run = async (label: string, command: Parameters<typeof send>[0]) => {
@@ -105,6 +136,26 @@ function Viewer() {
           <span class="muted">{info()!.pages} pages</span>
         </Show>
         <span class="spacer" />
+        <input
+          class="find"
+          type="search"
+          placeholder="Find in document"
+          value={query()}
+          onFocus={() => void ensureText()}
+          onInput={(e) => {
+            setQuery(e.currentTarget.value);
+            setHitIndex(0);
+            const h = hits();
+            if (h.length) goTo(h[0]);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') step(e.shiftKey ? -1 : 1);
+          }}
+        />
+        <Show when={query().trim()}>
+          <span class="muted">{hits().length ? `${hitIndex() + 1}/${hits().length} pages` : 'no match'}</span>
+        </Show>
+        <button onClick={() => void copyAll()} title="Copy all text">⧉</button>
         <button onClick={() => changeZoom(1 / 1.25)} title="Zoom out">−</button>
         <span class="zoom">{Math.round(zoom() * 100)}%</span>
         <button onClick={() => changeZoom(1.25)} title="Zoom in">+</button>

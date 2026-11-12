@@ -96,6 +96,11 @@ pub fn handle(
             let data = doc.as_ref().ok_or("no document open")?;
             crate::render_page_png(pdfium, data, None, req.page, req.dpi).map_err(|e| e.to_string())
         }
+        "pdf.text" => {
+            let data = doc.as_ref().ok_or("no document open")?;
+            let texts = crate::extract_text(pdfium, data).map_err(|e| e.to_string())?;
+            serde_json::to_vec(&texts).map_err(|e| e.to_string())
+        }
         "pdf.merge" => {
             let docs = unpack(body)?;
             let refs: Vec<&[u8]> = docs.iter().map(Vec::as_slice).collect();

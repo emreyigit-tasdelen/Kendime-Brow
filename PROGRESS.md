@@ -40,6 +40,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 Newest on top. Format: task · done · decision · next step.
 
+### 3A.7 Text extraction + search — PARTIAL (2026-11-12)
+- **Done:** `kb-doc::extract_text` (per-page text via PDFium) and `search_pages` (case-insensitive, snippet around the first hit, char-boundary safe); host method `pdf.text`; bridge `pdf-text`; viewer: search box (Enter / Shift+Enter cycle through matching pages, "n/m pages"), "Copy all text" button. Tested with real PDFium (5 pages, hit on page 5, empty/whitespace queries) and live (2-page file returns both texts).
+- **Pending:** table extraction (CSV/XLSX), text selection / in-page highlight, OCR (3A.6).
+- **Next step:** 3A.3 forms + annotations (or 3A.9 batch / registry actions).
+
 ### 3A.2 Merge / split / reorder / rotate — DONE (2026-11-12)
 - **Done:** `kb-doc::edit`: `merge`, `extract` (split / extract / reorder / duplicate in one primitive), `rotate` (relative, multiples of 90°, all or selected pages), `parse_page_ranges` (`1-3,5,8-`, 1-based, validated). Built on PDFium page import (not lopdf) so annotations, forms and fonts are kept. Tests: unit test for ranges + integration test with real PDFium (merge 3+2 pages, text order checked, split/reorder `[4,1,1]`, rotation size swap and round trip, error cases).
 - **Done (second part):** host methods `pdf.merge` (packed documents), `pdf.extract`, `pdf.rotate` (page ranges validated in the host); shell `pdf.rs` (`edit_file`, `merge_files`, unique `<name> (merged|pages|rotated).pdf` next to the input), bridge `pdf-extract` / `pdf-rotate` / `pdf-merge` answered from worker threads, viewer tool bar (rotate all ↻/↺, extract pages, merge by typed paths, "Open result"). Verified live: rotate, extract page 2, merge of two files each wrote a file; page 9 of 2 → clear error.

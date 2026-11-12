@@ -89,4 +89,13 @@ fn merge_extract_rotate() {
         200
     );
     assert!(rotate(&pdfium, &a, &[], 45).is_err());
+
+    // Text extraction + search.
+    let texts = kb_doc::extract_text(&pdfium, &merged).unwrap();
+    assert_eq!(texts.len(), 5);
+    assert!(texts[3].contains("B0"));
+    let found = kb_doc::search_pages(&texts, "b1");
+    assert_eq!(found.iter().map(|(i, _)| *i).collect::<Vec<_>>(), vec![4]);
+    assert!(kb_doc::search_pages(&texts, "zzz").is_empty());
+    assert!(kb_doc::search_pages(&texts, "  ").is_empty());
 }

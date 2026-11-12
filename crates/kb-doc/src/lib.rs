@@ -102,6 +102,48 @@ pub fn info(pdfium: &Pdfium, data: &[u8], password: Option<&str>) -> Result<DocI
     })
 }
 
+/// Plain text of every page (index = page).
+pub fn extract_text(pdfium: &Pdfium, data: &[u8]) -> Result<Vec<String>, DocError> {
+    let doc = pdfium
+        .load_pdf_from_byte_slice(data, None)
+        .map_err(|e| DocError::Open(e.to_string()))?;
+    let mut out = Vec::new();
+    for page in doc.pages().iter() {
+        out.push(
+            page.text()
+                .map(|t| t.all())
+                .map_err(|e| DocError::Render(e.to_string()))?,
+        );
+    }
+    Ok(out)
+}
+
+/// Pages containing `query` (case-insensitive), with up to `max_hits` snippets per page.
+pub fn search_pages(texts: &[String], query: &str) -> Vec<(usize, String)> {
+    let q = query.trim().to_lowercase();
+    if q.is_empty() {
+        return Vec::new();
+    }
+    texts
+        .iter()
+        .enumerate()
+        .filter_map(|(i, t)| {
+            let lower = t.to_lowercase();
+            let at = lower.find(&q)?;
+            // Snippet around the first hit (char-boundary safe on the original text).
+            let start = t.floor_char_boundary(at.saturating_sub(30));
+            let end = t.ceil_char_boundary((at + q.len() + 50).min(t.len()));
+            Some((
+                i,
+                t[start..end]
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            ))
+        })
+        .collect()
+}
+
 /// Renders one page at `dpi` to PNG bytes.
 pub fn render_page_png(
     pdfium: &Pdfium,

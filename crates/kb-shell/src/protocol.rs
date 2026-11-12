@@ -108,6 +108,8 @@ pub enum Command {
     PdfMerge {
         paths: Vec<String>,
     },
+    /// Text of the open PDF: JSON array with one string per page.
+    PdfText,
     /// Renders a page of the open PDF; answers a base64 PNG.
     PdfRender {
         page: usize,

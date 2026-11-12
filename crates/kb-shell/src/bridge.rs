@@ -130,6 +130,17 @@ impl BrowserSideHandler for ShellQueryHandler {
             Command::PdfMerge { paths } => {
                 spawn_pdf_edit(callback, move || crate::pdf::merge_files(&paths));
             }
+            Command::PdfText => {
+                std::thread::spawn(move || {
+                    let r = crate::pdf::call_host("pdf.text", Vec::new());
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(json) => cb.success_str(&String::from_utf8_lossy(&json)),
+                            Err(e) => cb.failure(500, &e),
+                        }
+                    }
+                });
+            }
             Command::PdfRender { page, dpi } => {
                 std::thread::spawn(move || {
                     let r = crate::pdf::render(page, dpi.unwrap_or(96.0));
