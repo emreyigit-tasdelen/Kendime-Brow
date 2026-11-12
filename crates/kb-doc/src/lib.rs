@@ -36,6 +36,7 @@ pub mod forms;
 pub mod meta;
 pub mod service;
 pub mod sheets;
+pub mod tables;
 
 pub fn library_file_name() -> &'static str {
     if cfg!(windows) {
