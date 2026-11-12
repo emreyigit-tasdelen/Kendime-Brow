@@ -13,3 +13,10 @@ regexes = ['''@users\.noreply\.github\.com''', '''noreply@''', '''(?i)@([a-z0-9-
 id = "private-key-file-content"
 description = "WireGuard / Headscale private key line"
 regex = '''(?i)(PrivateKey|private_key)\s*[=:]\s*[A-Za-z0-9+/=]{40,}'''
+
+# Public test vector from the minisign-verify documentation (public key + signature), used by
+# the updater's unit test. Not a secret.
+[[allowlists]]
+description = "minisign documentation test vector"
+paths = ['''crates/kb-shell/src/updater\.rs''']
+regexes = ['''RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3''']

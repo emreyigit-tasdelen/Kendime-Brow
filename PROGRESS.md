@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.12 auto-updater; then reduce RAM (2.11), finish 2.3 scriptlets, fix 2.7 prefs, then Phase 3; then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** Phase 3 (3A PDF first); open Phase 2 items: RAM (2.11), scriptlets (2.3), prefs (2.7), updater key+apply (2.12); then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.12 Signed updater — PARTIAL (2026-11-12)
+- **Done:** `updater.rs`: version parsing/comparison, GitHub Releases `latest` check (pre-releases ignored), platform asset + mandatory `<asset>.minisig` selection (unsigned releases are never offered), minisign verification with `minisign-verify` (tested with a real vector: good / tampered / missing / bad key). `UPDATE_PUBLIC_KEY` is empty → updater disabled (`Check::Disabled`), nothing contacts GitHub.
+- **Needs the maintainer:** generate the release signing key (`minisign -G`), keep the secret key OUT of the repo (CI secret), put the public key into `UPDATE_PUBLIC_KEY`, and sign release assets in the package workflow. After that: download + verify + apply-on-restart step, an update setting/UI notice, and allowlisting `api.github.com` / release hosts in `check-connections.mjs`.
+- **Gotcha:** enabling ureq's `json` feature in kb-shell changed ureq's behavior for the CEF download build script (10 MB body limit → CEF build failed); keep `json` off and parse manually.
+- **Next step:** Phase 3.
 
 ### 2.11 Performance scripts — PARTIAL (2026-11-12)
 - **Done:** `scripts/perf.mjs` (cold start until `kb://ui` is loaded; memory sum of the process tree after 10 s; exit 1 when over budget). Release build on this machine: **cold start 681 ms (budget 800 ✔)**; **memory 702 MB over 13 processes with one empty tab (budget 250 ✘)**.
