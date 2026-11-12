@@ -313,9 +313,14 @@ impl BrowserSideHandler for ShellQueryHandler {
                     crate::pdf::edit_file(&path, "pdf.fill", json, "filled")
                 });
             }
-            Command::PdfText => {
+            Command::PdfText | Command::PdfTables => {
+                let method = if matches!(cmd, Command::PdfTables) {
+                    "pdf.tables"
+                } else {
+                    "pdf.text"
+                };
                 std::thread::spawn(move || {
-                    let r = crate::pdf::call_host("pdf.text", Vec::new());
+                    let r = crate::pdf::call_host(method, Vec::new());
                     if let Ok(cb) = callback.lock() {
                         match r {
                             Ok(json) => cb.success_str(&String::from_utf8_lossy(&json)),

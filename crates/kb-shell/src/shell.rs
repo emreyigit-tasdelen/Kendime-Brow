@@ -757,6 +757,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::Profile { .. }
         | Command::Tasks
         | Command::PdfText
+        | Command::PdfTables
         | Command::PdfFields
         | Command::SheetPreview { .. }
         | Command::Vault { .. }

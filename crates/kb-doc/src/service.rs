@@ -127,6 +127,20 @@ pub fn handle(
             let texts = crate::extract_text(pdfium, data).map_err(|e| e.to_string())?;
             serde_json::to_vec(&texts).map_err(|e| e.to_string())
         }
+        "pdf.tables" => {
+            let data = doc.as_ref().ok_or("no document open")?;
+            let texts = crate::extract_text(pdfium, data).map_err(|e| e.to_string())?;
+            let found: Vec<serde_json::Value> = texts
+                .iter()
+                .enumerate()
+                .flat_map(|(i, t)| {
+                    crate::tables::find_tables(t)
+                        .into_iter()
+                        .map(move |tb| serde_json::json!({ "page": i + 1, "csv": crate::tables::to_csv(&tb) }))
+                })
+                .collect();
+            serde_json::to_vec(&found).map_err(|e| e.to_string())
+        }
         "pdf.merge" => {
             let docs = unpack(body)?;
             let refs: Vec<&[u8]> = docs.iter().map(Vec::as_slice).collect();

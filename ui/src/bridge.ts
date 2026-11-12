@@ -110,6 +110,7 @@ export type Command =
   | { cmd: 'image-strip'; path: string }
   | { cmd: 'image-data'; path: string }
   | { cmd: 'pdf-text' }
+  | { cmd: 'pdf-tables' }
   | { cmd: 'pdf-fields' }
   | { cmd: 'pdf-fill'; path: string; values: Record<string, string> }
   | { cmd: 'pdf-extract'; path: string; pages: string }

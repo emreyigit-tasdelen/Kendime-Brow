@@ -19,6 +19,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 - **4A.8 SKIPPED (2026-11-13):** RDP (IronRDP + native child window + clipboard) needs a Windows RDP host to validate and a native window embedding layer; cannot be verified here. Revisit with a test host.
 - **4A.9 PARTIAL (2026-11-13):** broadcast input done (`term-write` with `all:true`, Ctrl+Shift+B in a terminal tab toggles it, visible banner; not exercised live). Still open: split panes, session groups, encrypted session log. Next: Phase 3 leftovers (3A.3 annotations etc.).
 - **3A.7b CORE DONE (2026-11-13):** `kb_doc::tables` (`find_tables` text heuristic + `to_csv`, 4 tests). NOT wired to the PDF viewer/service yet (needs a `pdf-tables` command + a Copy-as-CSV button). Remaining Phase 3 items (qpdf, lcms2, Tesseract, PAdES, LibreOffice, FFmpeg) need external binaries/libs: next step is checking which are obtainable offline, otherwise skip to Phase 4B (`kb-net`).
+- **3A.7c DONE (2026-11-13):** `pdf-tables` command (service `pdf.tables`) + ▦ toolbar button in the PDF viewer copies detected tables as CSV; not exercised on a real PDF. Next: Phase 4B `kb-net` (CDP Network observer).
 - **Next steps, in order:**
   1. Finish 4A.2: run the app, open `kb://term/`, verify typing / output / resize / session kill on tab close; commit.
   2. 4A.1b/c: run `kb-vault` as a sandboxed host, `kb://vault` UI (also 6.1 password manager), OS keyring/Windows Hello unlock, auto-lock.

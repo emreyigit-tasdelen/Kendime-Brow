@@ -95,6 +95,18 @@ function Viewer() {
     setHitIndex(i);
     goTo(h[i]);
   };
+  const copyTables = async () => {
+    try {
+      const t = JSON.parse(await send({ cmd: 'pdf-tables' })) as { page: number; csv: string }[];
+      if (!t.length) {
+        setError('No tables found in this document.');
+        return;
+      }
+      await navigator.clipboard?.writeText(t.map((x) => `# page ${x.page}\r\n${x.csv}`).join('\r\n'));
+    } catch (e) {
+      setError(String(e));
+    }
+  };
   const copyAll = async () => {
     await ensureText();
     await navigator.clipboard?.writeText((texts() ?? []).join('\n\n')).catch(() => undefined);
@@ -169,6 +181,7 @@ function Viewer() {
           <span class="muted">{hits().length ? `${hitIndex() + 1}/${hits().length} pages` : 'no match'}</span>
         </Show>
         <button onClick={() => void copyAll()} title="Copy all text">⧉</button>
+        <button onClick={() => void copyTables()} title="Copy detected tables as CSV">▦</button>
         <button onClick={() => changeZoom(1 / 1.25)} title="Zoom out">−</button>
         <span class="zoom">{Math.round(zoom() * 100)}%</span>
         <button onClick={() => changeZoom(1.25)} title="Zoom in">+</button>

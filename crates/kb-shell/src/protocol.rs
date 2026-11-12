@@ -182,6 +182,8 @@ pub enum Command {
     },
     /// Text of the open PDF: JSON array with one string per page.
     PdfText,
+    /// Tables detected in the open PDF, as `[{page, csv}]`.
+    PdfTables,
     /// Renders a page of the open PDF; answers a base64 PNG.
     PdfRender {
         page: usize,
