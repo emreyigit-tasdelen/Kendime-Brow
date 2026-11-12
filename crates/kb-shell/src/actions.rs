@@ -65,6 +65,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             Command::ToggleShield,
         ),
         (
+            "tasks.open",
+            "Show task manager",
+            Command::NewTab {
+                url: Some("kb://tasks/".into()),
+                container: None,
+            },
+        ),
+        (
             "downloads.open",
             "Show downloads",
             Command::NewTab {

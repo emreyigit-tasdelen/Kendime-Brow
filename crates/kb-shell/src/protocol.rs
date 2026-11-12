@@ -83,6 +83,11 @@ pub enum Command {
     UpdateFilters,
     /// Toggles the shield (content blocking) for the active tab's site and reloads it.
     ToggleShield,
+    /// One-shot: process list of the browser (resource monitor).
+    Tasks,
+    KillProcess {
+        pid: u32,
+    },
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {

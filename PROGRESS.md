@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.10 resource monitor (kb://tasks); then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.11 performance scripts + CI budgets, 2.12 updater; then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.10 Resource monitor — DONE (2026-11-12)
+- **Done:** `tasks.rs` (sysinfo 0.40): browser process + descendants with kind (browser / renderer / gpu / utility from `--type=`), memory, CPU; `kill` only for descendants. Bridge `tasks`, `kill-process`; `kb://tasks/` page refreshing every 2 s with "End process"; action `tasks.open`; 2 tests. Verified live (browser, utility, 3 renderers, gpu listed).
+- **Not done:** mapping renderers to tabs, per-tab indicator in the strip, freeze/discard buttons.
+- **Next step:** 2.11.
 
 ### 2.9 Battery / memory pressure — DONE (2026-11-12)
 - **Done:** `kb-platform::power` (Windows `GetSystemPowerStatus` + `GlobalMemoryStatusEx`; Linux sysfs + /proc/meminfo; others neutral). The 2.8 discard task now uses a 5 min idle limit on battery and 1 min when < 10 % memory is available. Polling every 30 s replaces `QueryMemoryResourceNotification` events.

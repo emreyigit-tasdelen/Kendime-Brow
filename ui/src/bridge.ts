@@ -94,7 +94,9 @@ export type Command =
   | { cmd: 'clear-downloads' }
   | { cmd: 'set-filter-list'; id: string; enabled: boolean }
   | { cmd: 'update-filters' }
-  | { cmd: 'toggle-shield' };
+  | { cmd: 'toggle-shield' }
+  | { cmd: 'tasks' }
+  | { cmd: 'kill-process'; pid: number };
 
 interface QueryOptions {
   request: string;

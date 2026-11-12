@@ -100,6 +100,12 @@ impl BrowserSideHandler for ShellQueryHandler {
                     cb.success_str(&json);
                 }
             }
+            Command::Tasks => {
+                let json = serde_json::to_string(&crate::tasks::list()).unwrap_or_default();
+                if let Ok(cb) = callback.lock() {
+                    cb.success_str(&json);
+                }
+            }
             Command::State => {
                 if let Ok(cb) = callback.lock() {
                     cb.success_str(&shell::state().to_json());

@@ -14,6 +14,7 @@ pub mod scheme;
 pub mod shell;
 pub mod store;
 pub mod tabs;
+pub mod tasks;
 
 use cef::*;
 

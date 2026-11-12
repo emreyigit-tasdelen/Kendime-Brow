@@ -748,8 +748,14 @@ pub fn run_bridge_command(cmd: Command) {
             crate::downloads::clear_finished();
             refresh();
         }
-        Command::State | Command::Subscribe | Command::Actions { .. } | Command::Profile { .. } => {
+        Command::KillProcess { pid } => {
+            crate::tasks::kill(pid);
         }
+        Command::State
+        | Command::Subscribe
+        | Command::Actions { .. }
+        | Command::Profile { .. }
+        | Command::Tasks => {}
     }
 }
 
