@@ -133,6 +133,9 @@ pub enum Command {
     TermWrite {
         id: u32,
         data: String,
+        /// Broadcast: send to every open terminal session instead of just `id`.
+        #[serde(default)]
+        all: bool,
     },
     TermResize {
         id: u32,

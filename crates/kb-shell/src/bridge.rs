@@ -183,12 +183,18 @@ impl BrowserSideHandler for ShellQueryHandler {
                     None => started(crate::terminal::open(cols, rows, emit), callback),
                 }
             }
-            Command::TermWrite { id, data } => {
+            Command::TermWrite { id, data, all } => {
                 use base64::Engine;
                 let r = base64::engine::general_purpose::STANDARD
                     .decode(data)
                     .map_err(|e| e.to_string())
-                    .and_then(|bytes| crate::terminal::write(id, &bytes));
+                    .and_then(|bytes| {
+                        if all {
+                            crate::terminal::write_all(&bytes)
+                        } else {
+                            crate::terminal::write(id, &bytes)
+                        }
+                    });
                 if let Ok(cb) = callback.lock() {
                     match r {
                         Ok(()) => cb.success_str("{\"ok\":true}"),

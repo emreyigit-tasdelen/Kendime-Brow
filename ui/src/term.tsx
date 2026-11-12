@@ -135,8 +135,23 @@ if (target?.telnet) {
   connect(target ?? undefined);
 }
 
+// Ctrl+Shift+B toggles broadcast: keystrokes go to every open terminal tab.
+let broadcast = false;
+const badge = document.createElement('div');
+badge.className = 'term-overlay';
+badge.textContent = 'BROADCAST: input goes to ALL terminals (Ctrl+Shift+B to stop)';
+badge.hidden = true;
+root.append(badge);
+window.addEventListener('keydown', (ev) => {
+  if (ev.ctrlKey && ev.shiftKey && ev.code === 'KeyB') {
+    ev.preventDefault();
+    broadcast = !broadcast;
+    badge.hidden = !broadcast;
+  }
+});
+
 term.onData((data) => {
-  if (sessionId) void send({ cmd: 'term-write', id: sessionId, data: b64.enc(data) });
+  if (sessionId) void send({ cmd: 'term-write', id: sessionId, data: b64.enc(data), all: broadcast });
 });
 
 const onResize = () => {

@@ -98,7 +98,7 @@ export type Command =
   | { cmd: 'tasks' }
   | { cmd: 'kill-process'; pid: number }
   | { cmd: 'pdf-open'; path: string }
-  | { cmd: 'term-write'; id: number; data: string }
+  | { cmd: 'term-write'; id: number; data: string; all?: boolean }
   | { cmd: 'term-resize'; id: number; cols: number; rows: number }
   | { cmd: 'term-close'; id: number }
   | { cmd: 'vault'; op: string; args?: Record<string, string> }

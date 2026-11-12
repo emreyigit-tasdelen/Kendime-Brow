@@ -289,6 +289,20 @@ pub fn write(id: u32, data: &[u8]) -> Result<(), String> {
     }
 }
 
+/// Sends the same input to every open session (broadcast). Sessions that fail are skipped.
+pub fn write_all(data: &[u8]) -> Result<(), String> {
+    let ids: Vec<u32> = sessions()
+        .lock()
+        .map_err(|_| "poisoned")?
+        .keys()
+        .copied()
+        .collect();
+    for id in ids {
+        let _ = write(id, data);
+    }
+    Ok(())
+}
+
 pub fn resize(id: u32, cols: u16, rows: u16) -> Result<(), String> {
     let s = sessions().lock().map_err(|_| "poisoned")?;
     match s.get(&id).ok_or("no such session")? {
