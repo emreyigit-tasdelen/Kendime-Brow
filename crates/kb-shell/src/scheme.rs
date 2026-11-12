@@ -16,7 +16,11 @@ connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; 
 struct UiDist;
 
 /// `kb://` host → folder inside `ui/dist`.
-const HOSTS: &[(&str, &str)] = &[("ui", "strip"), ("newtab", "newtab")];
+const HOSTS: &[(&str, &str)] = &[
+    ("ui", "strip"),
+    ("newtab", "newtab"),
+    ("settings", "settings"),
+];
 
 /// Maps an asset key (`host/path`) to a path inside `ui/dist`. Shared bundles live in
 /// `dist/assets/` and are reachable from every host (`kb://ui/assets/x.js`).
@@ -148,7 +152,7 @@ mod tests {
             dist_path("newtab/assets/x.css").as_deref(),
             Some("assets/x.css")
         );
-        assert_eq!(dist_path("settings/index.html"), None);
+        assert_eq!(dist_path("nope/index.html"), None);
     }
 
     /// Needs `npm run build` in `ui/` (CI does this before cargo).

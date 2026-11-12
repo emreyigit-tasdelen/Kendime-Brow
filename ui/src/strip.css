@@ -40,3 +40,4 @@ body { overflow: hidden; user-select: none; }
 .palette-list li.selected { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .palette-list .id { color: var(--fg-muted); font-family: ui-monospace, monospace; font-size: 12px; }
 .palette-list .empty { color: var(--fg-muted); }
+.toolbar > .star.on { color: #e3b341; }

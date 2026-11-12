@@ -23,6 +23,18 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
         ("nav.forward", "Go forward", Command::Forward),
         ("nav.reload", "Reload page", Command::Reload),
         ("nav.stop", "Stop loading", Command::Stop),
+        (
+            "bookmark.toggle",
+            "Bookmark this page",
+            Command::ToggleBookmark,
+        ),
+        (
+            "settings.open",
+            "Open settings",
+            Command::NewTab {
+                url: Some("kb://settings/".into()),
+            },
+        ),
     ]
 }
 

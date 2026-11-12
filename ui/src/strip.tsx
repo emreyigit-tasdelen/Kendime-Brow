@@ -119,6 +119,16 @@ function Strip() {
         />
         <button
           type="button"
+          class="star"
+          classList={{ on: !!active()?.bookmarked }}
+          title={active()?.bookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+          disabled={!active() || shownUrl() === '' || shownUrl().startsWith('kb://')}
+          onClick={() => void send({ cmd: 'toggle-bookmark' })}
+        >
+          {active()?.bookmarked ? '★' : '☆'}
+        </button>
+        <button
+          type="button"
           class="palette-button"
           title="Command palette (Ctrl+Shift+P)"
           onClick={() => void send({ cmd: 'set-palette', open: !state().palette })}

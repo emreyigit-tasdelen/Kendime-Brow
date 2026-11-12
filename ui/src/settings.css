@@ -1,0 +1,21 @@
+.settings { max-width: 860px; margin: 0 auto; padding: 32px 24px 64px; }
+.settings h1 { margin: 0 0 24px; font-size: 24px; font-weight: 600; }
+.settings h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+.settings section { padding: 18px 0; border-top: 1px solid var(--border); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 0; }
+select, .search {
+  height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-input); color: var(--fg); font: inherit;
+}
+.search { flex: 1; }
+.list { list-style: none; margin: 8px 0 0; padding: 0; }
+.list li { display: flex; align-items: baseline; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.link { padding: 0; color: var(--accent); text-align: left; max-width: 45%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.link:hover { text-decoration: underline; }
+.url { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.when { font-size: 12px; white-space: nowrap; }
+.muted { color: var(--fg-muted); }
+.remove { width: 24px; height: 24px; border-radius: 4px; }
+.remove:hover { background: var(--border); }
+.danger { height: 30px; padding: 0 12px; border: 1px solid #c4473a; border-radius: 6px; color: #c4473a; }
+.danger:hover { background: color-mix(in srgb, #c4473a 12%, transparent); }

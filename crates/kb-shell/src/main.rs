@@ -34,8 +34,15 @@ fn main() -> Result<(), &'static str> {
         };
     }
 
+    // Persistent profile: CEF data under <data dir>/profiles/default/cef (architecture §3.7).
+    let cache = kb_shell::shell::profile_dir()
+        .map(|d| d.join("cef").to_string_lossy().to_string())
+        .unwrap_or_default();
     let settings = Settings {
         no_sandbox: 1,
+        root_cache_path: CefString::from(cache.as_str()),
+        cache_path: CefString::from(cache.as_str()),
+        persist_session_cookies: 1,
         ..Default::default()
     };
     if initialize(

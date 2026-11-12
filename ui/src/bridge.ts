@@ -8,6 +8,26 @@ export interface TabState {
   active: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  bookmarked: boolean;
+}
+
+export interface Bookmark {
+  id: number;
+  url: string;
+  title: string;
+}
+
+export interface HistoryEntry {
+  url: string;
+  title: string;
+  lastVisit: number;
+  visitCount: number;
+}
+
+export interface Profile {
+  settings: Record<string, string>;
+  bookmarks: Bookmark[];
+  history: HistoryEntry[];
 }
 
 export interface State {
@@ -35,7 +55,12 @@ export type Command =
   | { cmd: 'cycle-tab'; forward: boolean }
   | { cmd: 'actions'; query?: string }
   | { cmd: 'run-action'; id: string }
-  | { cmd: 'set-palette'; open: boolean };
+  | { cmd: 'set-palette'; open: boolean }
+  | { cmd: 'toggle-bookmark' }
+  | { cmd: 'profile'; history_query?: string }
+  | { cmd: 'set-setting'; key: string; value: string }
+  | { cmd: 'delete-bookmark'; id: number }
+  | { cmd: 'clear-history' };
 
 interface QueryOptions {
   request: string;
@@ -78,4 +103,8 @@ export function subscribe(onState: (state: State) => void): () => void {
 
 export async function actions(query: string): Promise<ActionInfo[]> {
   return JSON.parse(await send({ cmd: 'actions', query })) as ActionInfo[];
+}
+
+export async function profile(historyQuery = ''): Promise<Profile> {
+  return JSON.parse(await send({ cmd: 'profile', history_query: historyQuery })) as Profile;
 }

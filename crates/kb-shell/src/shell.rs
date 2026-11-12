@@ -14,6 +14,7 @@ use std::cell::RefCell;
 use cef::*;
 
 use crate::protocol::{self, Command};
+use crate::store::{SessionTab, Store};
 use crate::tabs::{TabId, Tabs};
 
 pub const UI_URL: &str = "kb://ui/";
@@ -98,6 +99,78 @@ thread_local! {
     static BROWSER_COUNT: RefCell<usize> = const { RefCell::new(0) };
     static WINDOW_CLOSING: RefCell<bool> = const { RefCell::new(false) };
     static PALETTE_OPEN: RefCell<bool> = const { RefCell::new(false) };
+    static STORE: RefCell<Option<Store>> = const { RefCell::new(None) };
+}
+
+/// Opens the profile database (call once on the UI thread before the window is created).
+pub fn init_store(store: Store) {
+    STORE.with(|s| *s.borrow_mut() = Some(store));
+}
+
+fn with_store<R>(f: impl FnOnce(&mut Store) -> R) -> Option<R> {
+    STORE.with(|s| s.borrow_mut().as_mut().map(f))
+}
+
+/// Address bar text → URL using the configured search engine.
+fn to_url(text: &str) -> String {
+    let search = with_store(|s| s.setting("search_url"))
+        .flatten()
+        .unwrap_or_else(|| protocol::SEARCH_URL.to_string());
+    protocol::input_to_url_with(text, &search)
+}
+
+/// Tabs to open at startup: the saved session (if enabled and not empty), else the new tab page.
+pub fn startup_tabs() -> Vec<(String, bool)> {
+    let saved = with_store(|s| {
+        if s.setting_bool("restore_session") {
+            s.load_session().unwrap_or_default()
+        } else {
+            Vec::new()
+        }
+    })
+    .unwrap_or_default();
+    if saved.is_empty() {
+        vec![(NEW_TAB_URL.to_string(), true)]
+    } else {
+        saved.into_iter().map(|t| (t.url, t.active)).collect()
+    }
+}
+
+/// JSON for kb://settings: settings, bookmarks and recent history.
+pub fn profile_json(history_query: &str) -> String {
+    with_store(|s| {
+        let settings: serde_json::Map<String, serde_json::Value> = s
+            .settings()
+            .into_iter()
+            .map(|(k, v)| (k, serde_json::Value::String(v)))
+            .collect();
+        serde_json::json!({
+            "settings": settings,
+            "bookmarks": s.bookmarks().unwrap_or_default(),
+            "history": s.history(history_query, 200).unwrap_or_default(),
+        })
+        .to_string()
+    })
+    .unwrap_or_else(|| "{}".into())
+}
+
+fn save_session() {
+    let tabs: Vec<SessionTab> = with_shell(|s| {
+        let active = s.tabs.active();
+        s.tabs
+            .iter()
+            .map(|(id, t)| SessionTab {
+                url: t.url.clone(),
+                active: Some(id) == active,
+            })
+            .collect()
+    })
+    .unwrap_or_default();
+    // Never wipe the saved session while the window is closing (tabs disappear one by one).
+    if WINDOW_CLOSING.with(|c| *c.borrow()) {
+        return;
+    }
+    with_store(|s| s.save_session(&tabs));
 }
 
 fn with_shell<R>(f: impl FnOnce(&mut Shell) -> R) -> Option<R> {
@@ -147,6 +220,27 @@ pub fn new_tab(url: &str) {
     if let Some(view) = view {
         add_tab_view(view);
     }
+}
+
+/// Opens the startup tabs and activates the one marked active.
+pub fn open_startup_tabs(tabs: &[(String, bool)]) {
+    for (url, _) in tabs {
+        new_tab(url);
+    }
+    let active = tabs
+        .iter()
+        .position(|(_, a)| *a)
+        .unwrap_or(tabs.len().saturating_sub(1));
+    let id = with_shell(|s| s.tabs.iter().nth(active).map(|(id, _)| id)).flatten();
+    if let Some(id) = id {
+        with_shell(|s| s.tabs.activate(id));
+        refresh();
+    }
+}
+
+/// Profile directory (`<data dir>/profiles/default`), if the platform data dir is known.
+pub fn profile_dir() -> Option<std::path::PathBuf> {
+    kb_platform::data_dir().map(|root| kb_platform::layout::profile(&root, "default"))
 }
 
 /// Adds an existing BrowserView (new tab or popup) as the active tab.
@@ -258,6 +352,7 @@ pub fn refresh() {
     relayout();
     window.set_title(Some(&CefString::from(title.as_str())));
     crate::bridge::broadcast(&state());
+    save_session();
     debug_bounds();
 }
 
@@ -277,6 +372,7 @@ pub fn state() -> protocol::State {
                     active: Some(id) == active,
                     can_go_back: t.can_go_back,
                     can_go_forward: t.can_go_forward,
+                    bookmarked: with_store(|st| st.is_bookmarked(&t.url)).unwrap_or(false),
                 })
                 .collect(),
             palette: PALETTE_OPEN.with(|p| *p.borrow()),
@@ -301,7 +397,7 @@ pub fn set_palette(open: bool) {
 pub fn run_bridge_command(cmd: Command) {
     match cmd {
         Command::NewTab { url } => {
-            let url = url.map_or_else(|| NEW_TAB_URL.to_string(), |u| protocol::input_to_url(&u));
+            let url = url.map_or_else(|| NEW_TAB_URL.to_string(), |u| to_url(&u));
             new_tab(&url);
         }
         Command::CloseTab { id } => close_tab(TabId(id)),
@@ -310,7 +406,7 @@ pub fn run_bridge_command(cmd: Command) {
             refresh();
         }
         Command::Navigate { text } => {
-            let url = protocol::input_to_url(&text);
+            let url = to_url(&text);
             if let Some(frame) = active_view()
                 .and_then(|v| v.browser())
                 .and_then(|b| b.main_frame())
@@ -344,7 +440,32 @@ pub fn run_bridge_command(cmd: Command) {
             }
         }
         Command::SetPalette { open } => set_palette(open),
-        Command::State | Command::Subscribe | Command::Actions { .. } => {}
+        Command::ToggleBookmark => {
+            let tab = with_shell(|s| {
+                s.tabs
+                    .active_item()
+                    .map(|t| (t.url.clone(), t.title.clone()))
+            })
+            .flatten();
+            if let Some((url, title)) = tab
+                && !crate::store::is_internal(&url)
+            {
+                with_store(|s| s.toggle_bookmark(&url, &title));
+                refresh();
+            }
+        }
+        Command::SetSetting { key, value } => {
+            with_store(|s| s.set_setting(&key, &value));
+        }
+        Command::DeleteBookmark { id } => {
+            with_store(|s| s.delete_bookmark(id));
+            refresh();
+        }
+        Command::ClearHistory => {
+            with_store(|s| s.clear_history());
+        }
+        Command::State | Command::Subscribe | Command::Actions { .. } | Command::Profile { .. } => {
+        }
     }
 }
 
@@ -362,9 +483,13 @@ pub fn update_tab(browser: &mut Browser, upd: TabUpdate) {
         let id = s.tabs.find(|t| t.is(browser))?;
         let tab = s.tabs.get_mut(id)?;
         if let Some(t) = upd.title {
+            with_store(|st| st.update_title(&tab.url, &t));
             tab.title = t;
         }
         if let Some(u) = upd.url {
+            if u != tab.url {
+                with_store(|st| st.record_visit(&u, ""));
+            }
             tab.url = u;
         }
         if let Some((l, b, fw)) = upd.loading {

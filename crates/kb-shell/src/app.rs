@@ -40,11 +40,22 @@ wrap_browser_process_handler! {
                 "failed to register the kb:// scheme handler"
             );
             bridge::init_browser_side();
+            let store = shell::profile_dir()
+                .map(|dir| crate::store::Store::open(&dir.join("kb.sqlite")))
+                .unwrap_or_else(crate::store::Store::open_in_memory);
+            match store {
+                Ok(store) => shell::init_store(store),
+                Err(e) => eprintln!("[kb] profile database unavailable: {e}"),
+            }
 
             let command_line = command_line_get_global().expect("no global command line");
             let url = CefString::from(&command_line.switch_value(Some(&CefString::from("url"))))
                 .to_string();
-            let start_url = if url.is_empty() { shell::NEW_TAB_URL.to_string() } else { url };
+            let start_tabs = if url.is_empty() {
+                shell::startup_tabs()
+            } else {
+                vec![(url, true)]
+            };
 
             let mut client = KbClient::new();
             let mut ui_delegate = UiViewDelegate::new();
@@ -60,7 +71,7 @@ wrap_browser_process_handler! {
             let mut window_delegate = KbWindowDelegate::new(
                 Rc::new(RefCell::new(ui_view)),
                 client,
-                start_url,
+                start_tabs,
             );
             window_create_top_level(Some(&mut window_delegate));
         }
@@ -71,7 +82,7 @@ wrap_window_delegate! {
     struct KbWindowDelegate {
         ui_view: Rc<RefCell<Option<BrowserView>>>,
         client: Client,
-        start_url: String,
+        start_tabs: Vec<(String, bool)>,
     }
 
     impl ViewDelegate {
@@ -97,7 +108,7 @@ wrap_window_delegate! {
                 return;
             };
             shell::init_window(window, ui_view, self.client.clone());
-            shell::new_tab(&self.start_url);
+            shell::open_startup_tabs(&self.start_tabs);
             window.show();
             shell::debug_bounds();
         }

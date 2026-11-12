@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.12 profile, settings (kb://settings), kb.sqlite (bookmarks, history, session restore), then 1.13+. (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
+- **Next step:** 1.13 download manager (basic), then 1.14 packaging, 1.15 Ubuntu check (blocked). (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.12 Profile, settings, kb.sqlite — DONE (2026-11-12)
+- **Done:** `kb-shell/src/store.rs` (rusqlite, bundled SQLite, WAL): `settings` (whitelisted keys `search_url`, `restore_session`, `history_enabled`), `bookmarks`, `history` (visit count, title filled in later), `session`; internal `kb://` / `about:` pages never stored; 6 tests incl. file persistence. Profile dir `<data dir>/profiles/default` (`kb.sqlite` + CEF `cef/` cache, persistent session cookies). Shell: history on URL change, session saved on every state change (not while the window is closing), startup restores the session (or opens the new tab page), address bar uses the configured search engine. Bridge: `toggle-bookmark`, `profile`, `set-setting`, `delete-bookmark`, `clear-history`; `TabState.bookmarked`. UI: ☆/★ button, `kb://settings/` (search engine, restore session, history on/off, bookmarks, searchable history, clear). Actions `bookmark.toggle`, `settings.open`. Verified end to end: bookmark + history recorded, graceful close, relaunch restores the example.org tab; settings page screenshot OK.
+- **Decision:** session restore loads all tabs for now; lazy "sleeping" tabs come with 2.8. Search engine choices: DuckDuckGo (default), Startpage, Brave Search, Mojeek.
+- **Next step:** 1.13.
 
 ### 1.11 Action registry + command palette — DONE (2026-11-12)
 - **Done:** `kb-shell/src/actions.rs` registers the shell actions in `kb-actions` (`tab.new/close/next/prev`, `nav.back/forward/reload/stop`) and maps each id to a bridge command. New bridge commands `actions` (search), `run-action`, `set-palette`, `close-active-tab`, `cycle-tab`; `State.palette`. UI: ⌘ button + `Palette.tsx` (search, ↑/↓, Enter, Esc, click). While open the strip grows to 420 px. Shortcut Ctrl+Shift+P added to the accelerator table (same manual-check caveat as 1.6). Verified with real input: open palette, filter, run "New tab" and "Close tab".

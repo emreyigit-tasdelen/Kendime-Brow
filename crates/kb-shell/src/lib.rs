@@ -7,6 +7,7 @@ pub mod kb_scheme;
 pub mod protocol;
 pub mod scheme;
 pub mod shell;
+pub mod store;
 pub mod tabs;
 
 use cef::*;

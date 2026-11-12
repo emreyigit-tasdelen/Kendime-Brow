@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         ui: resolve(import.meta.dirname, 'strip/index.html'),
         newtab: resolve(import.meta.dirname, 'newtab/index.html'),
+        settings: resolve(import.meta.dirname, 'settings/index.html'),
       },
     },
   },

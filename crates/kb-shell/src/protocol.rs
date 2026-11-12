@@ -45,6 +45,21 @@ pub enum Command {
     SetPalette {
         open: bool,
     },
+    /// Bookmark / un-bookmark the active tab.
+    ToggleBookmark,
+    /// One-shot: settings, bookmarks and recent history for kb://settings.
+    Profile {
+        #[serde(default)]
+        history_query: String,
+    },
+    SetSetting {
+        key: String,
+        value: String,
+    },
+    DeleteBookmark {
+        id: i64,
+    },
+    ClearHistory,
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {
@@ -61,6 +76,7 @@ pub struct TabState {
     pub active: bool,
     pub can_go_back: bool,
     pub can_go_forward: bool,
+    pub bookmarked: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -85,6 +101,11 @@ pub const SEARCH_URL: &str = "https://duckduckgo.com/?q=";
 /// - `localhost[:port]`, IPs and `host.tld[/…]` without spaces get `https://`,
 /// - anything else becomes a search.
 pub fn input_to_url(text: &str) -> String {
+    input_to_url_with(text, SEARCH_URL)
+}
+
+/// Like [`input_to_url`] with a configurable search URL prefix (setting `search_url`).
+pub fn input_to_url_with(text: &str, search_url: &str) -> String {
     let t = text.trim();
     if t.is_empty() {
         return "kb://newtab/".into();
@@ -122,7 +143,7 @@ pub fn input_to_url(text: &str) -> String {
     if looks_like_host {
         format!("https://{t}")
     } else {
-        format!("{SEARCH_URL}{}", encode_query(t))
+        format!("{search_url}{}", encode_query(t))
     }
 }
 
