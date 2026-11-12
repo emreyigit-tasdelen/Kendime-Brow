@@ -68,6 +68,7 @@ Newest on top. Format: task · done · decision · next step.
 ### 2.7 Network privacy — BLOCKED (2026-11-12)
 - **Done (code):** `net_privacy.rs` (DoH providers Quad9/Mullvad/Cloudflare, proxy validation, HTTPS-Only/DoH/proxy appliers, 2 tests), settings (`https_only`, `doh`, `proxy_<container>`), settings-page controls, re-applied per container context.
 - **Blocked:** `RequestContext::set_preference` / `PreferenceManager::set_preference` return 0 with an empty error for EVERY pref (even `has=1 can=1`, value type correct, reading back shows the old value). This also means the prefs from 2.1/2.5/2.6 (search suggest, safebrowsing, third-party cookies, WebRTC policy…) are NOT applied — only the command-line switches and per-container isolation work. Suspects: cef-rs binding of the `error` out-param, or prefs only applying at a different moment. HTTPS upgrade seen in tests was HSTS, not our setting.
+- **Also tried (no change):** setting through the browser's own `request_context()` after creation, with an `error` out-param: still `r=0`, empty error, value unchanged. `json_parse` is not exposed by the bindings. Next ideas: a C++ shim calling `CefRequestContext::SetPreference`, or a newer cef-rs release.
 - **Next:** investigate (try a `CefDictionaryValue`/`SetPreference` call via a tiny C++ shim, or `--enable-features` / policy-style alternatives); until then rely on switches. Tracked as a 2.7 follow-up.
 
 ### 2.6 Fingerprinting protection (V6) — DONE (2026-11-12)

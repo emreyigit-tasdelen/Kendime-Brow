@@ -527,7 +527,7 @@ wrap_life_span_handler! {
     impl LifeSpanHandler {
         fn on_after_created(&self, browser: Option<&mut Browser>) {
             if std::env::var_os("KB_DEBUG").is_some()
-                && let Some(ctx) = browser.and_then(|b| b.host()).and_then(|h| h.request_context())
+                && let Some(ctx) = browser.as_deref().and_then(|b| b.host()).and_then(|h| h.request_context())
             {
                 eprintln!(
                     "[kb] browser created: global context = {}, cache = {:?}",
