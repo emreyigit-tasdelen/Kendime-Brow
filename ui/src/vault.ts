@@ -89,7 +89,38 @@ async function list(): Promise<void> {
   };
   const add = el('button', { class: 'primary' }, 'Add entry');
   add.onclick = () => editor();
-  root.append(el('div', { class: 'bar' }, el('span', {}, `${items.length} entries`), el('div', { class: 'actions' }, add, lock)));
+  const note = el('div', { class: 'error' });
+  const pick = el('input', { type: 'file', accept: '.csv,text/csv', hidden: true });
+  pick.onchange = async () => {
+    const f = pick.files?.[0];
+    if (!f) return;
+    try {
+      const r = JSON.parse(await call('import-csv', { text: await f.text() })) as { imported: number };
+      note.textContent = `Imported ${r.imported} login(s). Delete the CSV file: it holds your passwords in plain text.`;
+      await render();
+      root.prepend(note);
+    } catch (e) {
+      note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
+    }
+  };
+  const imp = el('button', {}, 'Import CSV');
+  imp.onclick = () => pick.click();
+  const exp = el('button', {}, 'Export CSV');
+  exp.onclick = async () => {
+    if (exp.textContent !== 'Copy passwords as plain text?') {
+      exp.textContent = 'Copy passwords as plain text?';
+      return;
+    }
+    exp.textContent = 'Export CSV';
+    try {
+      const r = JSON.parse(await call('export-csv')) as { csv: string; count: number };
+      await navigator.clipboard.writeText(r.csv);
+      note.textContent = `${r.count} login(s) copied to the clipboard as plain text. Paste, then clear your clipboard.`;
+    } catch (e) {
+      note.textContent = String((e as Error).message ?? e).replace(/^\d+: /, '');
+    }
+  };
+  root.append(el('div', { class: 'bar' }, el('span', {}, `${items.length} entries`), el('div', { class: 'actions' }, add, imp, exp, lock, pick)), note);
   const card = el('div', { class: 'card' });
   if (!items.length) card.append('No entries yet.');
   for (const it of items) {

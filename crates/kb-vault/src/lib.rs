@@ -11,6 +11,7 @@
 //! it runs inside the `kb-vault` host process (separate-process wiring is task 4A.1b). Unlocking
 //! with the OS keyring / Windows Hello is task 4A.1c.
 
+pub mod csv;
 pub mod seclog;
 
 use std::collections::BTreeMap;

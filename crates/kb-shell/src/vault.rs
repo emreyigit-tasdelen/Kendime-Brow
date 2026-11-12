@@ -208,6 +208,29 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
                 .collect();
             return Ok(Value::Array(items).to_string());
         }
+        "import-csv" => {
+            let logins = kb_vault::csv::import_logins(text(args, "text"))?;
+            let v = s.vault.as_mut().ok_or("no vault yet")?;
+            let n = logins.len();
+            for sec in &logins {
+                v.put(&new_id(), Kind::Login, sec).map_err(err)?;
+            }
+            v.save(&path()?).map_err(err)?;
+            return Ok(json!({ "imported": n }).to_string());
+        }
+        "export-csv" => {
+            let v = s.vault.as_ref().ok_or("no vault yet")?;
+            let mut logins = Vec::new();
+            for (id, kind, _) in v.list().map_err(err)? {
+                if kind == Kind::Login && id != "kb-session-log-key" {
+                    logins.push(v.get(&id).map_err(err)?.1);
+                }
+            }
+            return Ok(
+                json!({ "csv": kb_vault::csv::export_logins(&logins), "count": logins.len() })
+                    .to_string(),
+            );
+        }
         "get" => {
             let v = s.vault.as_ref().ok_or("no vault yet")?;
             let (k, sec) = v.get(text(args, "id")).map_err(err)?;
