@@ -20,10 +20,13 @@ pub enum Output {
     Exited(Option<u32>),
 }
 
-struct Session {
-    master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
-    killer: Box<dyn portable_pty::ChildKiller + Send + Sync>,
+enum Session {
+    Local {
+        master: Box<dyn MasterPty + Send>,
+        writer: Box<dyn Write + Send>,
+        killer: Box<dyn portable_pty::ChildKiller + Send + Sync>,
+    },
+    Ssh(kb_ssh::Shell),
 }
 
 static SESSIONS: OnceLock<Mutex<HashMap<u32, Session>>> = OnceLock::new();
@@ -84,7 +87,7 @@ pub fn open(cols: u16, rows: u16, emit: Emit) -> Result<u32, String> {
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
     sessions().lock().map_err(|_| "poisoned")?.insert(
         id,
-        Session {
+        Session::Local {
             master: pty.master,
             writer,
             killer,
@@ -121,33 +124,144 @@ pub fn open(cols: u16, rows: u16, emit: Emit) -> Result<u32, String> {
     Ok(id)
 }
 
+/// Connection target for an SSH session (credentials already resolved by the caller).
+pub struct SshTarget {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    pub auth: kb_ssh::Auth,
+    pub known_hosts: std::path::PathBuf,
+    pub trust_new_host: bool,
+}
+
+/// Opens an interactive SSH shell. Errors for unknown hosts start with `unknown-host:<fingerprint>`
+/// and for changed keys with `host-key-changed:`, so the page can ask the user what to do.
+pub fn open_ssh(cols: u16, rows: u16, target: SshTarget, emit: Emit) -> Result<u32, String> {
+    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let cfg = kb_ssh::Config {
+        host: target.host,
+        port: target.port,
+        user: target.user,
+        auth: target.auth,
+        known_hosts: target.known_hosts,
+        trust_new_host: target.trust_new_host,
+        cols: cols.max(2),
+        rows: rows.max(2),
+    };
+    let shell = kb_ssh::open_shell(
+        cfg,
+        Arc::new(move |e| match e {
+            kb_ssh::Event::Data(d) => emit(Output::Data(d)),
+            kb_ssh::Event::Exited(c) => {
+                if let Ok(mut s) = sessions().lock() {
+                    s.remove(&id);
+                }
+                emit(Output::Exited(c));
+            }
+        }),
+    )
+    .map_err(|e| match e {
+        kb_ssh::SshError::UnknownHost { fingerprint } => format!("unknown-host:{fingerprint}"),
+        kb_ssh::SshError::HostKeyChanged { expected, got } => {
+            format!("host-key-changed:{expected} -> {got}")
+        }
+        other => other.to_string(),
+    })?;
+    sessions()
+        .lock()
+        .map_err(|_| "poisoned")?
+        .insert(id, Session::Ssh(shell));
+    Ok(id)
+}
+
+/// Turns a page request into a connection target: credentials from the unlocked vault or the
+/// one-off password. Key entries keep the PEM in `password` and the passphrase in `notes`.
+pub fn resolve_ssh(req: &crate::protocol::SshRequest) -> Result<SshTarget, String> {
+    let known_hosts = crate::shell::profile_dir()
+        .ok_or("no profile directory")?
+        .join("known_hosts");
+    let (user, auth) = if let Some(id) = &req.vault_id {
+        let (kind, secret) = crate::vault::secret(id)?;
+        let user = if req.user.is_empty() {
+            secret.username.clone()
+        } else {
+            req.user.clone()
+        };
+        let auth = match kind {
+            kb_vault::Kind::SshKey => kb_ssh::Auth::Key {
+                pem: secret.password.clone(),
+                passphrase: Some(secret.notes.clone()).filter(|p| !p.is_empty()),
+            },
+            _ => kb_ssh::Auth::Password(secret.password.clone()),
+        };
+        (user, auth)
+    } else {
+        (
+            req.user.clone(),
+            kb_ssh::Auth::Password(
+                req.password
+                    .clone()
+                    .ok_or("password or vault entry required")?,
+            ),
+        )
+    };
+    if user.is_empty() {
+        return Err("user name required".into());
+    }
+    Ok(SshTarget {
+        host: req.host.trim().to_string(),
+        port: req.port,
+        user,
+        auth,
+        known_hosts,
+        trust_new_host: req.trust_new_host,
+    })
+}
+
 pub fn write(id: u32, data: &[u8]) -> Result<(), String> {
     let mut s = sessions().lock().map_err(|_| "poisoned")?;
-    let session = s.get_mut(&id).ok_or("no such session")?;
-    session.writer.write_all(data).map_err(|e| e.to_string())?;
-    session.writer.flush().map_err(|e| e.to_string())
+    match s.get_mut(&id).ok_or("no such session")? {
+        Session::Local { writer, .. } => {
+            writer.write_all(data).map_err(|e| e.to_string())?;
+            writer.flush().map_err(|e| e.to_string())
+        }
+        Session::Ssh(shell) => {
+            shell.write(data);
+            Ok(())
+        }
+    }
 }
 
 pub fn resize(id: u32, cols: u16, rows: u16) -> Result<(), String> {
     let s = sessions().lock().map_err(|_| "poisoned")?;
-    let session = s.get(&id).ok_or("no such session")?;
-    session
-        .master
-        .resize(PtySize {
-            rows: rows.max(2),
-            cols: cols.max(2),
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .map_err(|e| e.to_string())
+    match s.get(&id).ok_or("no such session")? {
+        Session::Local { master, .. } => master
+            .resize(PtySize {
+                rows: rows.max(2),
+                cols: cols.max(2),
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| e.to_string()),
+        Session::Ssh(shell) => {
+            shell.resize(cols.max(2), rows.max(2));
+            Ok(())
+        }
+    }
 }
 
-/// Kills the shell; the reader thread then reports `Exited`.
+/// Ends the session; local shells are killed (the waiter then reports `Exited`), SSH channels
+/// are closed.
 pub fn close(id: u32) {
     if let Ok(mut s) = sessions().lock()
-        && let Some(mut session) = s.remove(&id)
+        && let Some(session) = s.remove(&id)
     {
-        let _ = session.killer.kill();
+        match session {
+            Session::Local { mut killer, .. } => {
+                let _ = killer.kill();
+            }
+            Session::Ssh(shell) => shell.close(),
+        }
     }
 }
 

@@ -35,6 +35,7 @@ tokio = { version = "1.54.1", features = ["rt", "time", "macros"] }
 base64 = "0.23.1"
 portable-pty = "0.9.0"
 kb-vault = { path = "../kb-vault" }
+kb-ssh = { path = "../kb-ssh" }
 getrandom = "0.4"
 
 

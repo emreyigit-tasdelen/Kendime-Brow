@@ -1,2 +1,5 @@
 .term-root { height: 100vh; padding: 6px 8px; background: var(--bg); }
 .term-holder { height: 100%; }
+.term-root { position: relative; }
+.term-overlay { position: absolute; top: 12px; right: 16px; display: flex; gap: 8px; padding: 10px; border-radius: 8px; background: #2a2b31; box-shadow: 0 4px 16px #0006; z-index: 5; }
+.term-overlay input, .term-overlay button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #8886; background: #1e1f23; color: #e8e8ec; }

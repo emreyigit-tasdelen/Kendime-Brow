@@ -125,6 +125,9 @@ pub enum Command {
     TermOpen {
         cols: u16,
         rows: u16,
+        /// Connect to a remote host instead of starting a local shell.
+        #[serde(default)]
+        ssh: Option<SshRequest>,
     },
     /// Sends input (base64) to a terminal session.
     TermWrite {
@@ -164,6 +167,27 @@ pub enum Command {
         #[serde(default)]
         dpi: Option<f32>,
     },
+}
+
+/// SSH target sent by `kb://term`. Credentials come from the vault (`vault_id`) or a one-off
+/// `password`; the host key policy is decided by the user via `trust_new_host`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct SshRequest {
+    pub host: String,
+    #[serde(default = "default_ssh_port")]
+    pub port: u16,
+    #[serde(default)]
+    pub user: String,
+    #[serde(default)]
+    pub vault_id: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
+    #[serde(default)]
+    pub trust_new_host: bool,
+}
+
+fn default_ssh_port() -> u16 {
+    22
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {

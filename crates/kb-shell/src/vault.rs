@@ -116,6 +116,14 @@ fn new_id() -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
+/// One decrypted entry for in-process use (SSH login). Fails while the vault is locked.
+pub fn secret(id: &str) -> Result<(Kind, Secret), String> {
+    let mut s = state();
+    touch(&mut s);
+    load(&mut s)?;
+    s.vault.as_ref().ok_or("no vault yet")?.get(id).map_err(err)
+}
+
 /// Runs one vault operation; `args` is the JSON object sent by the page.
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     let mut s = state();

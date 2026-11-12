@@ -134,7 +134,7 @@ impl BrowserSideHandler for ShellQueryHandler {
             Command::PdfMerge { paths } => {
                 spawn_pdf_edit(callback, move || crate::pdf::merge_files(&paths));
             }
-            Command::TermOpen { cols, rows } => {
+            Command::TermOpen { cols, rows, ssh } => {
                 if !persistent {
                     return fail(400, "term-open must be a persistent query");
                 }
@@ -153,16 +153,30 @@ impl BrowserSideHandler for ShellQueryHandler {
                         cb.success_str(&msg);
                     }
                 });
-                match crate::terminal::open(cols, rows, emit) {
-                    Ok(id) => {
-                        if let Ok(mut m) = TERM_QUERIES.lock() {
-                            m.insert(query_id, id);
-                        }
+                let started =
+                    move |r: Result<u32, String>, callback: Arc<Mutex<dyn BrowserSideCallback>>| {
                         if let Ok(cb) = callback.lock() {
-                            cb.success_str(&format!("{{\"id\":{id}}}"));
+                            match r {
+                                Ok(id) => {
+                                    if let Ok(mut m) = TERM_QUERIES.lock() {
+                                        m.insert(query_id, id);
+                                    }
+                                    cb.success_str(&format!("{{\"id\":{id}}}"));
+                                }
+                                Err(e) => cb.failure(500, &e),
+                            }
                         }
+                    };
+                match ssh {
+                    // Connecting can take seconds: never on the UI thread.
+                    Some(req) => {
+                        std::thread::spawn(move || {
+                            let r = crate::terminal::resolve_ssh(&req)
+                                .and_then(|t| crate::terminal::open_ssh(cols, rows, t, emit));
+                            started(r, callback);
+                        });
                     }
-                    Err(e) => return fail(500, &e),
+                    None => started(crate::terminal::open(cols, rows, emit), callback),
                 }
             }
             Command::TermWrite { id, data } => {

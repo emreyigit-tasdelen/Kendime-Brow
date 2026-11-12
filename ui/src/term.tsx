@@ -1,4 +1,5 @@
-// kb://term/ — local terminal (task 4A.2): xterm.js on a pseudo terminal owned by the shell.
+// kb://term/ — terminal (tasks 4A.2/4A.3): xterm.js on a local pseudo terminal or an SSH
+// session, both owned by the shell. `?host=&user=&port=&vault=` opens an SSH session.
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -39,20 +40,94 @@ term.focus();
 
 let sessionId = 0;
 const decoder = new TextDecoder();
+const NL = '\r\n';
 
-if (!window.kbQuery) {
-  term.write('Terminal bridge unavailable.\r\n');
-} else {
+interface SshParams {
+  host: string;
+  port: number;
+  user: string;
+  vault_id?: string;
+  password?: string;
+  trust_new_host?: boolean;
+}
+
+const params = new URLSearchParams(location.search);
+const target: SshParams | null = params.get('host')
+  ? {
+      host: params.get('host')!,
+      port: Number(params.get('port') ?? 22) || 22,
+      user: params.get('user') ?? '',
+      vault_id: params.get('vault') ?? undefined,
+    }
+  : null;
+
+function overlay(tag: 'div' | 'form', ...kids: HTMLElement[]): HTMLElement {
+  const box = document.createElement(tag);
+  box.className = 'term-overlay';
+  box.append(...kids);
+  root.append(box);
+  return box;
+}
+
+function button(label: string): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.textContent = label;
+  return b;
+}
+
+function ask(label: string, yes: () => void): void {
+  const ok = button(label);
+  const no = button('Cancel');
+  const box = overlay('div', ok, no);
+  ok.onclick = () => {
+    box.remove();
+    yes();
+  };
+  no.onclick = () => box.remove();
+}
+
+function connect(ssh?: SshParams): void {
+  if (!window.kbQuery) {
+    term.write(`Terminal bridge unavailable.${NL}`);
+    return;
+  }
   window.kbQuery({
-    request: JSON.stringify({ cmd: 'term-open', cols: term.cols, rows: term.rows }),
+    request: JSON.stringify({ cmd: 'term-open', cols: term.cols, rows: term.rows, ssh }),
     persistent: true,
     onSuccess: (msg) => {
       if (msg.startsWith('d:')) term.write(decoder.decode(b64.dec(msg.slice(2)), { stream: true }));
-      else if (msg.startsWith('x:')) term.write(`\r\n\x1b[90m[process exited with code ${msg.slice(2)}]\x1b[0m\r\n`);
+      else if (msg.startsWith('x:')) term.write(`${NL}\x1b[90m[session ended: ${msg.slice(2)}]\x1b[0m${NL}`);
       else sessionId = (JSON.parse(msg) as { id: number }).id;
     },
-    onFailure: (code, message) => term.write(`\r\n\x1b[31mterminal failed (${code}): ${message}\x1b[0m\r\n`),
+    onFailure: (code, message) => {
+      if (ssh && message.startsWith('unknown-host:')) {
+        const fp = message.slice('unknown-host:'.length);
+        term.write(`${NL}The authenticity of ${ssh.host} cannot be verified.${NL}Key fingerprint: ${fp}${NL}`);
+        ask('Trust this host and connect', () => connect({ ...ssh, trust_new_host: true }));
+      } else if (message.startsWith('host-key-changed:')) {
+        term.write(`${NL}\x1b[31mWARNING: the host key changed (${message.slice(17)}). Connection refused.\x1b[0m${NL}`);
+      } else {
+        term.write(`${NL}\x1b[31m${ssh ? 'ssh' : 'terminal'} failed (${code}): ${message}\x1b[0m${NL}`);
+      }
+    },
   });
+}
+
+if (target && !target.vault_id) {
+  const pw = document.createElement('input');
+  pw.type = 'password';
+  pw.placeholder = `Password for ${target.user || '?'}@${target.host}`;
+  const form = overlay('form', pw, button('Connect'));
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+    const password = pw.value;
+    form.remove();
+    connect({ ...target, password });
+    term.focus();
+  };
+  pw.focus();
+} else {
+  connect(target ?? undefined);
 }
 
 term.onData((data) => {
