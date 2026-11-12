@@ -24,7 +24,17 @@ export interface HistoryEntry {
   visitCount: number;
 }
 
+export interface FilterList {
+  id: string;
+  title: string;
+  enabled: boolean;
+  updated: number;
+  rules: number;
+  error: string;
+}
+
 export interface Profile {
+  filters: FilterList[];
   settings: Record<string, string>;
   bookmarks: Bookmark[];
   history: HistoryEntry[];
@@ -78,7 +88,9 @@ export type Command =
   | { cmd: 'pause-download'; id: number }
   | { cmd: 'resume-download'; id: number }
   | { cmd: 'reveal-download'; id: number }
-  | { cmd: 'clear-downloads' };
+  | { cmd: 'clear-downloads' }
+  | { cmd: 'set-filter-list'; id: string; enabled: boolean }
+  | { cmd: 'update-filters' };
 
 interface QueryOptions {
   request: string;

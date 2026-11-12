@@ -54,7 +54,7 @@ Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 
 - [x] 2.1 Flag/preference set disabling Google services + "zero unwanted connections" CI test (§4.1)
 - [x] 2.2 `kb-privacy`: adblock-rust integration, request blocking (§4.2)
-- [ ] 2.3 Filter list management + updates, cosmetic filtering, scriptlets (§4.2)
+- [~] 2.3 Filter list management + updates, cosmetic filtering, scriptlets (§4.2) → lists + updates + cosmetic CSS done; scriptlets pending (needs uBO resources)
 - [ ] 2.4 Tracking parameter stripping, per-site shield button (§4.2)
 - [ ] 2.5 Containers (separate `CefRequestContext`), private window, third-party cookie blocking (§4.3)
 - [ ] 2.6 **Validation:** V6 → fingerprinting protection injection, Standard/Strict levels (§4.4)

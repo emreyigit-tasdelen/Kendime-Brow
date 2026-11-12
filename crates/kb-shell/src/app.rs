@@ -75,7 +75,7 @@ wrap_browser_process_handler! {
                 .map(|dir| crate::store::Store::open(&dir.join("kb.sqlite")))
                 .unwrap_or_else(crate::store::Store::open_in_memory);
             if let Some(dir) = shell::profile_dir() {
-                let lists = crate::content_blocking::load_filters(&dir);
+                let lists = crate::content_blocking::reload(&dir);
                 if std::env::var_os("KB_DEBUG").is_some() {
                     eprintln!("[kb] filter lists loaded: {lists}");
                 }
@@ -83,6 +83,11 @@ wrap_browser_process_handler! {
             match store {
                 Ok(store) => shell::init_store(store),
                 Err(e) => eprintln!("[kb] profile database unavailable: {e}"),
+            }
+            if shell::setting_bool("filters_auto_update")
+                && let Some(dir) = shell::profile_dir()
+            {
+                crate::content_blocking::start_update(dir, false);
             }
 
             let command_line = command_line_get_global().expect("no global command line");
@@ -332,6 +337,24 @@ wrap_load_handler! {
     struct KbLoadHandler;
 
     impl LoadHandler {
+        fn on_load_start(
+            &self,
+            _browser: Option<&mut Browser>,
+            frame: Option<&mut Frame>,
+            _transition_type: TransitionType,
+        ) {
+            let Some(frame) = frame else { return };
+            let url = CefString::from(&frame.url()).to_string();
+            let js = crate::content_blocking::cosmetic_script(&url);
+            if !js.is_empty() {
+                frame.execute_java_script(
+                    Some(&CefString::from(js.as_str())),
+                    Some(&CefString::from("kb://cosmetic")),
+                    0,
+                );
+            }
+        }
+
         fn on_loading_state_change(
             &self,
             browser: Option<&mut Browser>,

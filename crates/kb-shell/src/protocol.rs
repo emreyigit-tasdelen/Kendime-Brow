@@ -73,6 +73,11 @@ pub enum Command {
         id: u32,
     },
     ClearDownloads,
+    SetFilterList {
+        id: String,
+        enabled: bool,
+    },
+    UpdateFilters,
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {

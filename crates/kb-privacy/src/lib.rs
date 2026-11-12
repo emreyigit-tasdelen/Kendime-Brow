@@ -3,8 +3,10 @@
 //! List download/update (2.3), cosmetic filtering + scriptlets (2.3) and per-site shields (2.4)
 //! build on this.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+
+pub mod lists;
 
 use adblock::Engine;
 use adblock::lists::{FilterSet, ParseOptions};
@@ -42,6 +44,12 @@ impl ResourceType {
             Self::Other => "other",
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Cosmetic {
+    pub css: String,
+    pub script: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -102,6 +110,48 @@ impl Blocker {
             }
         }
         Ok(self.load_lists(texts))
+    }
+
+    /// Loads exactly these files (missing ones are skipped).
+    pub fn load_files(&self, files: &[PathBuf]) -> usize {
+        let texts: Vec<String> = files
+            .iter()
+            .filter_map(|p| std::fs::read_to_string(p).ok())
+            .collect();
+        self.load_lists(texts)
+    }
+
+    /// CSS selectors to hide on `url` (page-specific cosmetic filters), joined into one
+    /// stylesheet, and the scriptlet injection script (empty without uBO resources).
+    pub fn cosmetic(&self, url: &str) -> Cosmetic {
+        let Ok(guard) = self.engine.read() else {
+            return Cosmetic::default();
+        };
+        let Some(engine) = guard.as_ref() else {
+            return Cosmetic::default();
+        };
+        let r = engine.url_cosmetic_resources(url);
+        let mut selectors: Vec<String> = r
+            .hide_selectors
+            .into_iter()
+            .filter(|s| !r.exceptions.contains(s))
+            .collect();
+        selectors.sort();
+        let css = if selectors.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "{} {{ display: none !important; }}",
+                selectors.join(
+                    ",
+"
+                )
+            )
+        };
+        Cosmetic {
+            css,
+            script: r.injected_script,
+        }
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -260,6 +310,19 @@ mod tests {
         );
         assert_eq!(Blocker::new().load_dir(&dir.join("missing")).unwrap(), 0);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn cosmetic_selectors_for_site() {
+        let b = Blocker::new();
+        b.load_lists(["news.org##.cookie-banner
+news.org##.ad-box
+news.org#@#.ad-box
+"]);
+        let c = b.cosmetic("https://news.org/a");
+        assert!(c.css.contains(".cookie-banner"));
+        assert!(!c.css.contains(".ad-box"));
+        assert!(b.cosmetic("https://other.org/").css.is_empty());
     }
 
     #[test]

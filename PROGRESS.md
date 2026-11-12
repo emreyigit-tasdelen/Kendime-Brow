@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.3 filter list management + updates, cosmetic filtering, scriptlets. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.4 tracking parameter stripping + per-site shield button (then finish 2.3 scriptlets). (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.3 Filter lists, updates, cosmetic filtering — PARTIAL (2026-11-12), scriptlets pending
+- **Done:** `kb-privacy::lists`: catalog (EasyList, EasyPrivacy, uBlock filters, uBlock privacy, Peter Lowe — on by default; Turkish list — off), `lists.json` state (enabled, last update, rule count, error), 24 h interval, sanity check against HTML error pages, atomic file replace, `custom*.txt` support, `download` via `ureq` (20 MB cap, 60 s timeout); 5 tests. `Blocker::load_files`, `Blocker::cosmetic(url)` → page-specific hide selectors (minus exceptions) as one stylesheet (+ scriptlet script, empty for now); test. Shell: startup reload + background update thread (engine swapped live, UI refreshed via a posted task); setting `filters_auto_update`; cosmetic CSS injected in `LoadHandler::on_load_start` as a constructable stylesheet (not affected by page CSP). Bridge: `set-filter-list`, `update-filters`; `profile.filters`. Settings page: "Content blocking" section (per-list toggle, rules, last update / error, auto-update, "Update now"). `check-connections.mjs` allowlists the list hosts (read from `lists.rs`). Verified: fresh profile downloads all 5 default lists (~145 k rules); theguardian.com → 13 requests blocked.
+- **Pending:** scriptlets (`##+js(...)`) need uBlock Origin's resource bundle loaded with `Engine::use_resources` (GPL, must be downloaded like the lists) — next part of 2.3. Generic cosmetic filters (class/id selectors via `hidden_class_id_selectors`) need a DOM observer in the page — also pending.
+- **Note:** a test window was closed by the user while I was testing (I had been bringing it to the foreground). From now on no foreground/mouse/keyboard tests while the user is at the computer — DevTools-only checks.
+- **Next step:** 2.4, then finish 2.3.
 
 ### 2.2 kb-privacy: adblock-rust request blocking — DONE (2026-11-12)
 - **Done:** New crate `kb-privacy` (adblock 0.13, MPL-2.0, built without the `single-thread` feature so the engine is `Send + Sync`): `Blocker` (`RwLock<Option<Engine>>`, `load_lists`, `load_dir` for `*.txt`, `check(url, source, type)` → block / rewritten URL), `ResourceType`, `is_filterable`; 6 tests (domain/type/path rules, exceptions, third-party, documents, dir loading). Shell: `content_blocking.rs` — `RequestHandler::resource_request_handler` → `on_before_resource_load` asks the global blocker for every sub-resource (CEF resource type mapped), cancels blocked ones, applies `$removeparam` rewrites, counts blocked requests per browser (reset on main-frame navigation) → `TabState.blocked`. Lists load from `<profile>/filters/*.txt` at startup. Verified live with a test list: blocked image → `ERR_ABORTED`, unblocked → normal DNS path, counter = 1.

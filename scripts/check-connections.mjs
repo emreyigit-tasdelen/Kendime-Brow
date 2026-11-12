@@ -18,6 +18,8 @@ const idleSeconds = Number(process.argv[3] ?? 60);
 
 // Hosts the browser may contact without a user action. Empty on purpose: update checks and
 // filter-list downloads (the documented exceptions) do not exist yet.
+// Filter-list update hosts (the documented §4.1 exception) are read from
+// crates/kb-privacy/src/lists.rs below; nothing else is allowed.
 const ALLOWLIST = [];
 
 const profile = mkdtempSync(join(tmpdir(), 'kb-netcheck-'));
@@ -61,6 +63,8 @@ const log = JSON.parse(text);
 // as "blocked attempts", not failures.
 const rs = readFileSync(join(import.meta.dirname, '..', 'crates', 'kb-shell', 'src', 'privacy_flags.rs'), 'utf8');
 const blockedPatterns = [...rs.slice(rs.indexOf('BLOCKED_HOSTS')).split('];')[0].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+const listsRs = readFileSync(join(import.meta.dirname, '..', 'crates', 'kb-privacy', 'src', 'lists.rs'), 'utf8');
+for (const m of listsRs.matchAll(/url: "https:\/\/([^/"]+)/g)) ALLOWLIST.push(m[1]);
 const isBlocked = (h) => blockedPatterns.some((p) => (p.startsWith('*.') ? h.endsWith(p.slice(1)) : h === p));
 
 const eventName = Object.fromEntries(Object.entries(log.constants?.logEventTypes ?? {}).map(([k, v]) => [v, k]));

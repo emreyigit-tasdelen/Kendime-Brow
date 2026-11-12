@@ -4,6 +4,7 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { profile, send } from './bridge';
 import './base.css';
 import './settings.css';
+import './downloads.css';
 
 const SEARCH_ENGINES: [string, string][] = [
   ['DuckDuckGo', 'https://duckduckgo.com/?q='],
@@ -58,6 +59,54 @@ function Settings() {
             onChange={(e) => void setSetting('history_enabled', String(e.currentTarget.checked))}
           />
         </label>
+      </section>
+
+      <section>
+        <h2>Content blocking</h2>
+        <label class="row">
+          <span>Update filter lists automatically (daily)</span>
+          <input
+            type="checkbox"
+            checked={bool('filters_auto_update')}
+            onChange={(e) => void setSetting('filters_auto_update', String(e.currentTarget.checked))}
+          />
+        </label>
+        <ul class="list">
+          <For each={data()?.filters}>
+            {(f) => (
+              <li>
+                <input
+                  type="checkbox"
+                  checked={f.enabled}
+                  onChange={async (e) => {
+                    await send({ cmd: 'set-filter-list', id: f.id, enabled: e.currentTarget.checked });
+                    await refetch();
+                  }}
+                />
+                <span class="name">{f.title}</span>
+                <span class="muted url">
+                  {f.error
+                    ? `Error: ${f.error}`
+                    : f.updated
+                      ? `${f.rules.toLocaleString()} rules · updated ${formatDate(f.updated)}`
+                      : 'Not downloaded yet'}
+                </span>
+              </li>
+            )}
+          </For>
+        </ul>
+        <div class="row">
+          <span class="muted">Lists are downloaded from their publishers; nothing is bundled.</span>
+          <button
+            class="plain"
+            onClick={async () => {
+              await send({ cmd: 'update-filters' });
+              setTimeout(() => void refetch(), 4000);
+            }}
+          >
+            Update now
+          </button>
+        </div>
       </section>
 
       <section>

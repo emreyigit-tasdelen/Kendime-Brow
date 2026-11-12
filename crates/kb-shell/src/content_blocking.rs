@@ -12,9 +12,60 @@ pub static BLOCKER: Blocker = Blocker::new();
 /// Blocked request count per browser id (reset on main-frame navigation).
 static BLOCKED: Mutex<Option<HashMap<i32, u64>>> = Mutex::new(None);
 
-/// Loads `<profile>/filters/*.txt`. Returns the number of lists.
-pub fn load_filters(profile: &std::path::Path) -> usize {
-    BLOCKER.load_dir(&profile.join("filters")).unwrap_or(0)
+use kb_privacy::lists::{self, ListsFile};
+
+pub fn filters_dir(profile: &std::path::Path) -> std::path::PathBuf {
+    profile.join("filters")
+}
+
+/// (Re)loads the enabled lists from `<profile>/filters`. Returns the number of lists.
+pub fn reload(profile: &std::path::Path) -> usize {
+    let dir = filters_dir(profile);
+    let state = ListsFile::load(&dir);
+    BLOCKER.load_files(&lists::enabled_files(&dir, &state))
+}
+
+/// Downloads due (or, with `force`, all enabled) lists on a background thread, swaps the
+/// engine and asks the UI thread to refresh.
+pub fn start_update(profile: std::path::PathBuf, force: bool) {
+    std::thread::spawn(move || {
+        let dir = filters_dir(&profile);
+        let mut state = ListsFile::load(&dir);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs() as i64);
+        let due = state.due(now, force);
+        if due.is_empty() {
+            return;
+        }
+        let changed = lists::update_lists(&dir, &mut state, &due, now, &lists::download);
+        let _ = state.save(&dir);
+        if changed {
+            reload(&profile);
+        }
+        let mut task = crate::shell::RefreshTask::new();
+        post_task(ThreadId::UI, Some(&mut task));
+    });
+}
+
+/// JavaScript that applies the cosmetic filters of `url` (empty if there are none). Uses a
+/// constructable stylesheet, which the page's own CSP does not restrict.
+pub fn cosmetic_script(url: &str) -> String {
+    if !kb_privacy::is_filterable(url) {
+        return String::new();
+    }
+    let c = BLOCKER.cosmetic(url);
+    let mut js = String::new();
+    if !c.css.is_empty() {
+        let css = serde_json::to_string(&c.css).unwrap_or_default();
+        js.push_str(&format!(
+            "(()=>{{try{{const s=new CSSStyleSheet();s.replaceSync({css});\
+             const d=document;const add=()=>{{d.adoptedStyleSheets=[...d.adoptedStyleSheets,s]}};\
+             add();}}catch(e){{}}}})();"
+        ));
+    }
+    js.push_str(&c.script);
+    js
 }
 
 pub fn blocked_count(browser_id: i32) -> u64 {

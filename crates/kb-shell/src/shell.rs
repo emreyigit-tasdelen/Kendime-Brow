@@ -111,6 +111,45 @@ fn with_store<R>(f: impl FnOnce(&mut Store) -> R) -> Option<R> {
     STORE.with(|s| s.borrow_mut().as_mut().map(f))
 }
 
+pub fn setting_bool(key: &str) -> bool {
+    with_store(|s| s.setting_bool(key)).unwrap_or(false)
+}
+
+wrap_task! {
+    // Refreshes the UI state on the UI thread (posted from background threads).
+    pub struct RefreshTask;
+
+    impl Task {
+        fn execute(&self) {
+            refresh();
+        }
+    }
+}
+
+/// Filter list state for kb://settings (catalog merged with on-disk state).
+fn filters_json() -> serde_json::Value {
+    let Some(dir) = profile_dir().map(|p| crate::content_blocking::filters_dir(&p)) else {
+        return serde_json::Value::Array(Vec::new());
+    };
+    let state = kb_privacy::lists::ListsFile::load(&dir);
+    serde_json::Value::Array(
+        state
+            .lists
+            .iter()
+            .map(|l| {
+                let title = kb_privacy::lists::CATALOG
+                    .iter()
+                    .find(|e| e.id == l.id)
+                    .map_or("", |e| e.title);
+                serde_json::json!({
+                    "id": l.id, "title": title, "enabled": l.enabled,
+                    "updated": l.updated, "rules": l.rules, "error": l.error,
+                })
+            })
+            .collect(),
+    )
+}
+
 /// Address bar text → URL using the configured search engine.
 fn to_url(text: &str) -> String {
     let search = with_store(|s| s.setting("search_url"))
@@ -148,6 +187,7 @@ pub fn profile_json(history_query: &str) -> String {
             "settings": settings,
             "bookmarks": s.bookmarks().unwrap_or_default(),
             "history": s.history(history_query, 200).unwrap_or_default(),
+            "filters": filters_json(),
         })
         .to_string()
     })
@@ -476,6 +516,24 @@ pub fn run_bridge_command(cmd: Command) {
         Command::PauseDownload { id } => crate::downloads::pause(id),
         Command::ResumeDownload { id } => crate::downloads::resume(id),
         Command::RevealDownload { id } => crate::downloads::reveal(id),
+        Command::SetFilterList { id, enabled } => {
+            if let Some(profile) = profile_dir() {
+                let dir = crate::content_blocking::filters_dir(&profile);
+                let mut state = kb_privacy::lists::ListsFile::load(&dir);
+                if state.set_enabled(&id, enabled) {
+                    let _ = state.save(&dir);
+                    crate::content_blocking::reload(&profile);
+                    if enabled {
+                        crate::content_blocking::start_update(profile, false);
+                    }
+                }
+            }
+        }
+        Command::UpdateFilters => {
+            if let Some(profile) = profile_dir() {
+                crate::content_blocking::start_update(profile, true);
+            }
+        }
         Command::ClearDownloads => {
             crate::downloads::clear_finished();
             refresh();

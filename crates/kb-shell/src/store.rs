@@ -38,6 +38,7 @@ pub const SETTINGS: &[(&str, &str)] = &[
     ("search_url", crate::protocol::SEARCH_URL),
     ("restore_session", "true"),
     ("history_enabled", "true"),
+    ("filters_auto_update", "true"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
