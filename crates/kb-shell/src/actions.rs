@@ -73,6 +73,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "logs.open",
+            "Open encrypted terminal session logs",
+            Command::NewTab {
+                url: Some("kb://logs/".into()),
+                container: None,
+            },
+        ),
+        (
             "net.open",
             "Open the network inspector",
             Command::NewTab {

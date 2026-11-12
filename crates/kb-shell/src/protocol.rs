@@ -151,6 +151,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Encrypted terminal session logs (see `sesslog.rs`): start/stop/list/read.
+    SessionLog {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Network inspector (see `net.rs`): list/har/curl/clear.
     Net {
         op: String,

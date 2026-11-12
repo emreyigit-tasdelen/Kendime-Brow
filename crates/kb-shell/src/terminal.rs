@@ -57,6 +57,16 @@ pub fn default_shell() -> (String, Vec<String>) {
     }
 }
 
+/// Wraps `emit` so received data is also recorded while a session log is active.
+fn logged(id: u32, emit: Emit) -> Emit {
+    Arc::new(move |o| {
+        if let Output::Data(d) = &o {
+            crate::sesslog::record(id, b'o', d);
+        }
+        emit(o);
+    })
+}
+
 fn which(exe: &str) -> bool {
     std::env::var_os("PATH")
         .is_some_and(|p| std::env::split_paths(&p).any(|d| d.join(exe).is_file()))
@@ -86,6 +96,7 @@ pub fn open(cols: u16, rows: u16, emit: Emit) -> Result<u32, String> {
     drop(pty.slave);
 
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let emit = logged(id, emit);
     sessions().lock().map_err(|_| "poisoned")?.insert(
         id,
         Session::Local {
@@ -139,6 +150,7 @@ pub struct SshTarget {
 /// and for changed keys with `host-key-changed:`, so the page can ask the user what to do.
 pub fn open_ssh(cols: u16, rows: u16, target: SshTarget, emit: Emit) -> Result<u32, String> {
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let emit = logged(id, emit);
     let cfg = kb_ssh::Config {
         host: target.host,
         port: target.port,
@@ -178,6 +190,7 @@ pub fn open_ssh(cols: u16, rows: u16, target: SshTarget, emit: Emit) -> Result<u
 /// Opens a plain Telnet session (unencrypted; the page warns the user).
 pub fn open_telnet(cols: u16, rows: u16, host: &str, port: u16, emit: Emit) -> Result<u32, String> {
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let emit = logged(id, emit);
     let t = kb_ssh::telnet::connect(
         host.trim(),
         port,
@@ -272,6 +285,7 @@ pub fn resolve_ssh(req: &crate::protocol::SshRequest) -> Result<SshTarget, Strin
 }
 
 pub fn write(id: u32, data: &[u8]) -> Result<(), String> {
+    crate::sesslog::record(id, b'i', data);
     let mut s = sessions().lock().map_err(|_| "poisoned")?;
     match s.get_mut(&id).ok_or("no such session")? {
         Session::Local { writer, .. } => {

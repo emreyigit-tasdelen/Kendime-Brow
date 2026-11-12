@@ -150,6 +150,28 @@ window.addEventListener('keydown', (ev) => {
   }
 });
 
+// Ctrl+Shift+L starts or stops an encrypted session log (needs the vault unlocked).
+let logging = false;
+const logBadge = document.createElement('div');
+logBadge.className = 'term-overlay';
+logBadge.hidden = true;
+root.append(logBadge);
+window.addEventListener('keydown', (ev) => {
+  if (!(ev.ctrlKey && ev.shiftKey && ev.code === 'KeyL') || !sessionId) return;
+  ev.preventDefault();
+  const want = !logging;
+  void send({ cmd: 'session-log', op: want ? 'start' : 'stop', args: { id: sessionId, label: target?.host ?? 'local' } })
+    .then(() => {
+      logging = want;
+      logBadge.textContent = 'LOGGING (encrypted). Ctrl+Shift+L to stop. View in kb://logs/';
+      logBadge.hidden = !want;
+    })
+    .catch((e) => {
+      logBadge.textContent = `Cannot log: ${String((e as Error).message ?? e).replace(/^\d+: /, '')}`;
+      logBadge.hidden = false;
+    });
+});
+
 term.onData((data) => {
   if (sessionId) void send({ cmd: 'term-write', id: sessionId, data: b64.enc(data), all: broadcast });
 });

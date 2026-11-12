@@ -124,6 +124,41 @@ pub fn secret(id: &str) -> Result<(Kind, Secret), String> {
     s.vault.as_ref().ok_or("no vault yet")?.get(id).map_err(err)
 }
 
+/// 32-byte key for encrypted session logs, created on first use and stored in the vault.
+/// Needs an existing, unlocked vault.
+pub fn log_key() -> Result<[u8; 32], String> {
+    const ID: &str = "kb-session-log-key";
+    let mut s = state();
+    touch(&mut s);
+    load(&mut s)?;
+    let v = s
+        .vault
+        .as_mut()
+        .ok_or("no vault yet: create and unlock the vault first")?;
+    let hex = match v.get(ID) {
+        Ok((_, sec)) => sec.password.clone(),
+        Err(_) => {
+            let mut k = [0u8; 32];
+            getrandom::fill(&mut k).map_err(|e| e.to_string())?;
+            let hex: String = k.iter().map(|b| format!("{b:02x}")).collect();
+            let mut sec = Secret::default();
+            sec.title = "Session log key (do not delete)".into();
+            sec.password = hex.clone();
+            v.put(ID, Kind::Note, &sec).map_err(err)?;
+            v.save(&path()?).map_err(err)?;
+            hex
+        }
+    };
+    if hex.len() != 64 {
+        return Err("session log key is damaged".into());
+    }
+    let mut key = [0u8; 32];
+    for (i, b) in key.iter_mut().enumerate() {
+        *b = u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).map_err(|e| e.to_string())?;
+    }
+    Ok(key)
+}
+
 /// Runs one vault operation; `args` is the JSON object sent by the page.
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     let mut s = state();

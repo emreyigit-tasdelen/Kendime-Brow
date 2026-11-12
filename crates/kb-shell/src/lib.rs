@@ -15,6 +15,7 @@ pub mod pdf_url;
 pub mod privacy_flags;
 pub mod protocol;
 pub mod scheme;
+pub mod sesslog;
 pub mod sftp_svc;
 pub mod shell;
 pub mod store;
