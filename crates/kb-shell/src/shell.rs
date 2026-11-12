@@ -481,7 +481,13 @@ pub fn debug_bounds() {
             s.window.child_view_count()
         );
         let u = s.ui.bounds();
-        eprintln!("[kb] ui y={} {}x{} visible={}", u.y, u.width, u.height, s.ui.is_visible());
+        eprintln!(
+            "[kb] ui y={} {}x{} visible={}",
+            u.y,
+            u.width,
+            u.height,
+            s.ui.is_visible()
+        );
         for (id, t) in s.tabs.iter() {
             let b = t.view.bounds();
             eprintln!(
