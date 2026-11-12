@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.11 performance scripts + CI budgets, 2.12 updater; then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.12 auto-updater; then reduce RAM (2.11), finish 2.3 scriptlets, fix 2.7 prefs, then Phase 3; then finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.11 Performance scripts — PARTIAL (2026-11-12)
+- **Done:** `scripts/perf.mjs` (cold start until `kb://ui` is loaded; memory sum of the process tree after 10 s; exit 1 when over budget). Release build on this machine: **cold start 681 ms (budget 800 ✔)**; **memory 702 MB over 13 processes with one empty tab (budget 250 ✘)**.
+- **Why / next:** Windows working-set numbers double-count shared pages, and the tree includes spare renderers, GPU and network/storage utility processes. Real levers to try: `--renderer-process-limit`, `--disable-gpu`-style / in-process GPU options, `--disable-features` for spare renderer, single network service. Needs measuring with private-bytes instead of working set. CI does not run it (no desktop session); run locally.
+- **Next step:** 2.12.
 
 ### 2.10 Resource monitor — DONE (2026-11-12)
 - **Done:** `tasks.rs` (sysinfo 0.40): browser process + descendants with kind (browser / renderer / gpu / utility from `--type=`), memory, CPU; `kill` only for descendants. Bridge `tasks`, `kill-process`; `kb://tasks/` page refreshing every 2 s with "End process"; action `tasks.open`; 2 tests. Verified live (browser, utility, 3 renderers, gpu listed).

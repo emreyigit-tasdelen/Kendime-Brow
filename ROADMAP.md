@@ -62,7 +62,7 @@ Output: a daily-usable, ad-free browser lighter than Chrome. Version `0.2`.
 - [x] 2.8 **Validation:** V7 → tab lifecycle: freezing, discarding, sleeping, exceptions (§5.2) → discard via about:blank swap; freeze step skipped
 - [x] 2.9 Memory pressure response, battery/metered connection modes (§5.2, §5.4) → discard thresholds shorten on battery (5 min) and low memory (1 min); autoplay/frame-rate parts not done
 - [x] 2.10 Resource monitor + `kb://tasks` (§5.5) → per-process list; tab mapping pending
-- [ ] 2.11 Performance measurement scripts, budgets tracked in CI (§5.1)
+- [~] 2.11 Performance measurement scripts, budgets tracked in CI (§5.1) → measuring script done; cold start OK (681 ms), RAM budget NOT met (702 MB vs 250 MB)
 - [ ] 2.12 Auto-updater (signed) (§13)
 
 ## Phase 3 — File processing modules
