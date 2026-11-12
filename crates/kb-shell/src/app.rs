@@ -90,6 +90,7 @@ wrap_browser_process_handler! {
                 Ok(store) => shell::init_store(store),
                 Err(e) => eprintln!("[kb] profile database unavailable: {e}"),
             }
+            shell::apply_network_settings();
             crate::privacy_flags::init_fingerprint(kb_privacy::fingerprint::Level::parse(
                 &shell::setting("fingerprint_protection"),
             ));

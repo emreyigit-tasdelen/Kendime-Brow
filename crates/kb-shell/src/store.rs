@@ -43,6 +43,11 @@ pub const SETTINGS: &[(&str, &str)] = &[
     ("history_enabled", "true"),
     ("filters_auto_update", "true"),
     ("fingerprint_protection", "standard"),
+    ("https_only", "true"),
+    ("doh", "off"),
+    ("proxy_personal", ""),
+    ("proxy_work", ""),
+    ("proxy_temporary", ""),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

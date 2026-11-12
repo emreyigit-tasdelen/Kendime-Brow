@@ -114,6 +114,31 @@ fn with_store<R>(f: impl FnOnce(&mut Store) -> R) -> Option<R> {
     STORE.with(|s| s.borrow_mut().as_mut().map(f))
 }
 
+/// HTTPS-Only + proxy for one container context.
+pub fn apply_context_network(ctx: &RequestContext, container: &str) {
+    let https = crate::net_privacy::apply_https_only(ctx, setting_bool("https_only"));
+    let proxy_setting = setting(&format!("proxy_{container}"));
+    let proxy = crate::net_privacy::apply_proxy(ctx, &proxy_setting);
+    debug_log(&format!(
+        "network prefs for {container}: https_only={https} proxy({proxy_setting:?})={proxy}"
+    ));
+}
+
+/// Applies DoH and the network settings of every existing context.
+pub fn apply_network_settings() {
+    crate::net_privacy::apply_doh(&setting("doh"));
+    if let Some(global) = request_context_get_global_context() {
+        apply_context_network(&global, crate::containers::DEFAULT);
+    }
+    for c in crate::containers::CONTAINERS {
+        if c.id != crate::containers::DEFAULT
+            && let Some(ctx) = crate::containers::existing(c.id)
+        {
+            apply_context_network(&ctx, c.id);
+        }
+    }
+}
+
 pub fn setting(key: &str) -> String {
     with_store(|s| s.setting(key)).flatten().unwrap_or_default()
 }
@@ -555,7 +580,13 @@ pub fn run_bridge_command(cmd: Command) {
             }
         }
         Command::SetSetting { key, value } => {
+            if key.starts_with("proxy_") && !crate::net_privacy::valid_proxy(&value) {
+                return;
+            }
             with_store(|s| s.set_setting(&key, &value));
+            if key == "doh" || key == "https_only" || key.starts_with("proxy_") {
+                apply_network_settings();
+            }
             if key == "fingerprint_protection" {
                 // Applies to renderer processes started from now on (new tabs / reloads).
                 crate::privacy_flags::set_fingerprint_level(kb_privacy::fingerprint::Level::parse(

@@ -81,8 +81,14 @@ pub fn context(id: &str) -> Option<RequestContext> {
     };
     let ctx = request_context_create_context(Some(&settings), None)?;
     crate::privacy_flags::apply_context_prefs(&ctx);
+    crate::shell::apply_context_network(&ctx, c.id);
     CONTEXTS.with(|m| m.borrow_mut().insert(c.id, ctx.clone()));
     Some(ctx)
+}
+
+/// The context of a container if it has been created already (no creation).
+pub fn existing(id: &str) -> Option<RequestContext> {
+    CONTEXTS.with(|m| m.borrow().get(id).cloned())
 }
 
 /// Drops a non-persistent container's context (its data disappears with it).

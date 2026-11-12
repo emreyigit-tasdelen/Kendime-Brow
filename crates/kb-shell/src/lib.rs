@@ -7,6 +7,7 @@ pub mod containers;
 pub mod content_blocking;
 pub mod downloads;
 pub mod kb_scheme;
+pub mod net_privacy;
 pub mod privacy_flags;
 pub mod protocol;
 pub mod scheme;

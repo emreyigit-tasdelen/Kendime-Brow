@@ -55,6 +55,38 @@ function Settings() {
           </select>
         </label>
         <label class="row">
+          <span>HTTPS-Only mode (upgrade every connection)</span>
+          <input
+            type="checkbox"
+            checked={bool('https_only')}
+            onChange={(e) => void setSetting('https_only', String(e.currentTarget.checked))}
+          />
+        </label>
+        <label class="row">
+          <span>DNS-over-HTTPS</span>
+          <select value={data()?.settings.doh ?? 'off'} onChange={(e) => void setSetting('doh', e.currentTarget.value)}>
+            <option value="off">Off (system resolver)</option>
+            <option value="quad9">Quad9</option>
+            <option value="mullvad">Mullvad</option>
+            <option value="cloudflare">Cloudflare</option>
+          </select>
+        </label>
+        <For each={[['personal', 'Personal'], ['work', 'Work'], ['temporary', 'Private']]}>
+          {([id, title]) => (
+            <label class="row">
+              <span>Proxy for {title} tabs</span>
+              <input
+                class="search proxy"
+                type="text"
+                spellcheck={false}
+                placeholder="direct — or socks5://127.0.0.1:1080"
+                value={data()?.settings[`proxy_${id}`] ?? ''}
+                onChange={(e) => void setSetting(`proxy_${id}`, e.currentTarget.value.trim())}
+              />
+            </label>
+          )}
+        </For>
+        <label class="row">
           <span>Restore tabs from the last session</span>
           <input
             type="checkbox"

@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.7 HTTPS-Only, DoH, WebRTC policy, preloading off, per-container proxy; then 2.8+, finish 2.3 scriptlets. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.8 tab lifecycle (V7); then 2.9+, finish 2.3 scriptlets, fix 2.7 prefs. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.7 Network privacy — BLOCKED (2026-11-12)
+- **Done (code):** `net_privacy.rs` (DoH providers Quad9/Mullvad/Cloudflare, proxy validation, HTTPS-Only/DoH/proxy appliers, 2 tests), settings (`https_only`, `doh`, `proxy_<container>`), settings-page controls, re-applied per container context.
+- **Blocked:** `RequestContext::set_preference` / `PreferenceManager::set_preference` return 0 with an empty error for EVERY pref (even `has=1 can=1`, value type correct, reading back shows the old value). This also means the prefs from 2.1/2.5/2.6 (search suggest, safebrowsing, third-party cookies, WebRTC policy…) are NOT applied — only the command-line switches and per-container isolation work. Suspects: cef-rs binding of the `error` out-param, or prefs only applying at a different moment. HTTPS upgrade seen in tests was HSTS, not our setting.
+- **Next:** investigate (try a `CefDictionaryValue`/`SetPreference` call via a tiny C++ shim, or `--enable-features` / policy-style alternatives); until then rely on switches. Tracked as a 2.7 follow-up.
 
 ### 2.6 Fingerprinting protection (V6) — DONE (2026-11-12)
 - **Done:** `kb-privacy::fingerprint` (levels Off/Standard/Strict, FNV-1a per-(session, site) seed, injected script; 2 tests). Script: canvas `getImageData`/`toDataURL`/`toBlob` and WebGL `readPixels` get deterministic low-bit noise; WebGL unmasked vendor/renderer generic; AudioBuffer/Analyser noise; `hardwareConcurrency` = 8, `deviceMemory` = 8; Battery/Bluetooth/USB/Serial/HID removed; Strict adds rounded screen size, en-US, UTC; overridden functions report `[native code]`. Browser process creates a random session seed and passes `--kb-fp-seed` / `--kb-fp-level` to child processes (`on_before_child_process_launch`); the renderer evals the script in `on_context_created` for every http(s) frame (main world, before page scripts). Setting `fingerprint_protection` (+ settings select). WebRTC `ip_handling_policy = disable_non_proxied_udp` added to the profile prefs.
