@@ -44,6 +44,17 @@ function Settings() {
           </select>
         </label>
         <label class="row">
+          <span>Fingerprinting protection (fully applied after restart)</span>
+          <select
+            value={data()?.settings.fingerprint_protection ?? 'standard'}
+            onChange={(e) => void setSetting('fingerprint_protection', e.currentTarget.value)}
+          >
+            <option value="standard">Standard</option>
+            <option value="strict">Strict</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+        <label class="row">
           <span>Restore tabs from the last session</span>
           <input
             type="checkbox"

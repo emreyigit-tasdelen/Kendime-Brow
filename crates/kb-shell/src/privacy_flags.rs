@@ -80,10 +80,64 @@ pub const PROFILE_PREFS: &[(&str, Pref)] = &[
     ("enable_do_not_track", Pref::Bool(true)),
     // 2 = never predict / preconnect (architecture §4.5).
     ("net.network_prediction_options", Pref::Int(2)),
+    // WebRTC must not reveal local IPs (architecture §4.4).
+    (
+        "webrtc.ip_handling_policy",
+        Pref::Str("disable_non_proxied_udp"),
+    ),
     // Block third-party cookies (architecture §4.3). 1 = block third-party.
     ("profile.cookie_controls_mode", Pref::Int(1)),
     ("profile.block_third_party_cookies", Pref::Bool(true)),
 ];
+
+// ------------------------------------------------------------ fingerprinting (task 2.6)
+
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Random per browser session; renderers derive per-site seeds from it.
+static FP_SEED: AtomicU64 = AtomicU64::new(0);
+static FP_LEVEL: Mutex<&'static str> = Mutex::new("standard");
+
+pub const SWITCH_FP_SEED: &str = "kb-fp-seed";
+pub const SWITCH_FP_LEVEL: &str = "kb-fp-level";
+
+/// Call once in the browser process before child processes start.
+pub fn init_fingerprint(level: kb_privacy::fingerprint::Level) {
+    use std::hash::{BuildHasher, Hasher};
+    let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+    h.write_u128(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos()),
+    );
+    FP_SEED.store(h.finish() | 1, Ordering::Relaxed);
+    if let Ok(mut l) = FP_LEVEL.lock() {
+        *l = level.as_str();
+    }
+}
+
+pub fn set_fingerprint_level(level: kb_privacy::fingerprint::Level) {
+    if let Ok(mut l) = FP_LEVEL.lock() {
+        *l = level.as_str();
+    }
+}
+
+/// Adds the fingerprinting switches to a child process command line.
+pub fn add_child_switches(cl: &mut cef::CommandLine) {
+    use cef::{CefString, ImplCommandLine};
+    let level = FP_LEVEL.lock().map(|l| *l).unwrap_or("standard");
+    cl.append_switch_with_value(
+        Some(&CefString::from(SWITCH_FP_SEED)),
+        Some(&CefString::from(
+            FP_SEED.load(Ordering::Relaxed).to_string().as_str(),
+        )),
+    );
+    cl.append_switch_with_value(
+        Some(&CefString::from(SWITCH_FP_LEVEL)),
+        Some(&CefString::from(level)),
+    );
+}
 
 /// Applies `PROFILE_PREFS` to one request context (used for every container). Returns the
 /// names that could not be set.

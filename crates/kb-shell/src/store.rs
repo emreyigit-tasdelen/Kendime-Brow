@@ -42,6 +42,7 @@ pub const SETTINGS: &[(&str, &str)] = &[
     ("restore_session", "true"),
     ("history_enabled", "true"),
     ("filters_auto_update", "true"),
+    ("fingerprint_protection", "standard"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

@@ -61,6 +61,12 @@ wrap_browser_process_handler! {
     struct KbBrowserProcessHandler;
 
     impl BrowserProcessHandler {
+        fn on_before_child_process_launch(&self, command_line: Option<&mut CommandLine>) {
+            if let Some(cl) = command_line {
+                crate::privacy_flags::add_child_switches(cl);
+            }
+        }
+
         fn on_context_initialized(&self) {
             assert!(
                 kb_scheme::install_handler_factory(),
@@ -84,6 +90,9 @@ wrap_browser_process_handler! {
                 Ok(store) => shell::init_store(store),
                 Err(e) => eprintln!("[kb] profile database unavailable: {e}"),
             }
+            crate::privacy_flags::init_fingerprint(kb_privacy::fingerprint::Level::parse(
+                &shell::setting("fingerprint_protection"),
+            ));
             if shell::setting_bool("filters_auto_update")
                 && let Some(dir) = shell::profile_dir()
             {

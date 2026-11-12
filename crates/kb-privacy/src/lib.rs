@@ -6,6 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
+pub mod fingerprint;
 pub mod lists;
 pub mod url_clean;
 

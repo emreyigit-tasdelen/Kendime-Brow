@@ -114,6 +114,10 @@ fn with_store<R>(f: impl FnOnce(&mut Store) -> R) -> Option<R> {
     STORE.with(|s| s.borrow_mut().as_mut().map(f))
 }
 
+pub fn setting(key: &str) -> String {
+    with_store(|s| s.setting(key)).flatten().unwrap_or_default()
+}
+
 pub fn setting_bool(key: &str) -> bool {
     with_store(|s| s.setting_bool(key)).unwrap_or(false)
 }
@@ -552,6 +556,12 @@ pub fn run_bridge_command(cmd: Command) {
         }
         Command::SetSetting { key, value } => {
             with_store(|s| s.set_setting(&key, &value));
+            if key == "fingerprint_protection" {
+                // Applies to renderer processes started from now on (new tabs / reloads).
+                crate::privacy_flags::set_fingerprint_level(kb_privacy::fingerprint::Level::parse(
+                    &value,
+                ));
+            }
         }
         Command::DeleteBookmark { id } => {
             with_store(|s| s.delete_bookmark(id));

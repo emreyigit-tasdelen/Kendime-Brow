@@ -160,7 +160,27 @@ wrap_render_process_handler! {
                 eprintln!("[kb] renderer context created: {url}");
             }
             if !protocol::is_trusted_origin(&url) {
-                return; // web content never gets kbQuery
+                // Web content: fingerprinting protection, never kbQuery.
+                if let Some(ctx) = context
+                    && let Some(js) = fingerprint_script(&url)
+                {
+                    let mut retval = None;
+                    let mut exception = None;
+                    let ok = ctx.eval(
+                        Some(&CefString::from(js.as_str())),
+                        Some(&CefString::from("kb://fingerprint")),
+                        0,
+                        Some(&mut retval),
+                        Some(&mut exception),
+                    );
+                    if std::env::var_os("KB_DEBUG").is_some() {
+                        let msg = exception
+                            .map(|e| CefString::from(&e.message()).to_string())
+                            .unwrap_or_default();
+                        eprintln!("[kb] fingerprint script on {url}: ok={ok} {msg}");
+                    }
+                }
+                return;
             }
             self.router.on_context_created(
                 browser.cloned(),
@@ -197,6 +217,34 @@ wrap_render_process_handler! {
 }
 
 static RENDERER_ROUTER: OnceLock<Arc<RendererSideRouter>> = OnceLock::new();
+
+/// (session seed, level) passed by the browser process on this renderer's command line.
+fn fp_config() -> (u64, kb_privacy::fingerprint::Level) {
+    static CFG: OnceLock<(u64, kb_privacy::fingerprint::Level)> = OnceLock::new();
+    *CFG.get_or_init(|| {
+        let cl = command_line_get_global();
+        let get = |name: &str| {
+            cl.as_ref()
+                .map(|c| CefString::from(&c.switch_value(Some(&CefString::from(name)))).to_string())
+                .unwrap_or_default()
+        };
+        let seed = get(crate::privacy_flags::SWITCH_FP_SEED)
+            .parse()
+            .unwrap_or(1);
+        let level =
+            kb_privacy::fingerprint::Level::parse(&get(crate::privacy_flags::SWITCH_FP_LEVEL));
+        (seed, level)
+    })
+}
+
+/// The protection script for a web frame URL (`None` for non-http(s) or level off).
+fn fingerprint_script(url: &str) -> Option<String> {
+    let host = kb_privacy::url_clean::host_of(url)?;
+    let (seed, level) = fp_config();
+    let js =
+        kb_privacy::fingerprint::script(level, kb_privacy::fingerprint::site_seed(seed, &host));
+    (!js.is_empty()).then_some(js)
+}
 
 /// Render process handler sharing one router per process.
 pub fn new_render_process_handler() -> RenderProcessHandler {

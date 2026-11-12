@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 2.6 V6 fingerprinting protection (Standard/Strict), then 2.7+, finish 2.3 scriptlets. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
+- **Next step:** 2.7 HTTPS-Only, DoH, WebRTC policy, preloading off, per-container proxy; then 2.8+, finish 2.3 scriptlets. (Phase 1 open items are all blocked: 1.1b, 1.2, 1.10b, 1.15.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,12 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 2.6 Fingerprinting protection (V6) — DONE (2026-11-12)
+- **Done:** `kb-privacy::fingerprint` (levels Off/Standard/Strict, FNV-1a per-(session, site) seed, injected script; 2 tests). Script: canvas `getImageData`/`toDataURL`/`toBlob` and WebGL `readPixels` get deterministic low-bit noise; WebGL unmasked vendor/renderer generic; AudioBuffer/Analyser noise; `hardwareConcurrency` = 8, `deviceMemory` = 8; Battery/Bluetooth/USB/Serial/HID removed; Strict adds rounded screen size, en-US, UTC; overridden functions report `[native code]`. Browser process creates a random session seed and passes `--kb-fp-seed` / `--kb-fp-level` to child processes (`on_before_child_process_launch`); the renderer evals the script in `on_context_created` for every http(s) frame (main world, before page scripts). Setting `fingerprint_protection` (+ settings select). WebRTC `ip_handling_policy = disable_non_proxied_udp` added to the profile prefs.
+- **V6 result:** confirmed — injection at context creation works in all frames before page scripts. Measured with a canvas probe: same site → same hash, other site → different, new session → different, all different from the unprotected hash; cores 12→8, memory 32→8, Battery/USB undefined.
+- **Note:** the level is read when a renderer process starts; Chromium keeps a spare renderer, so a change is fully effective after restart (UI says so). Font enumeration protection (§4.4) not done yet — needs a font allowlist in the renderer; later.
+- **Next step:** 2.7.
 
 ### 2.5 Containers, private tabs, third-party cookies — DONE (2026-11-12)
 - **Done:** `containers.rs`: Personal (global context), Work (own persistent `CefRequestContext` under `<profile>/cef/containers/work`), Private (`temporary`, in-memory context dropped when its last tab closes). Tabs carry their container; new tabs inherit the active tab's; popups inherit the opener's; `new-tab {container}`; actions `tab.new-private`, `tab.new-work`, `tab.new-personal`. Private tabs are never written to history or the session. Session table got a `container` column (schema v2, in-place migration). Third-party cookies blocked via profile prefs (`profile.cookie_controls_mode = 1`, `profile.block_third_party_cookies`), and all privacy prefs are applied to every container context. UI: orange (Work) / purple + "Private" tag (Private) tab marking. Verified via DevTools `Target.getTargets` (distinct `browserContextId`s): a cookie set in Personal is invisible in Private and Work; a Private cookie is gone after closing all private tabs and opening a new one; restart restores Personal + Work tabs, not Private.
