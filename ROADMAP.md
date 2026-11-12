@@ -102,7 +102,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 Versions `0.6`–`0.7`.
 
 **4A — Vault and remote connections (§10)**
-- [ ] 4A.1 `kb-vault`: vault format, keyring, master password, auto-lock (§10.2)
+- [~] 4A.1 `kb-vault`: vault format, keyring, master password, auto-lock (§10.2) → crypto core + file format done (kb-vault lib); host process, keyring unlock, auto-lock pending
 - [ ] 4A.2 Terminal infrastructure: xterm.js, `kb://term`, local shell (ConPTY)
 - [ ] 4A.3 SSH (russh): password + key (vault signing), `known_hosts`
 - [ ] 4A.4 Connection profiles + import (`ssh config`, PuTTY, `.rdp`) (§10.3)
