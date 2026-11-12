@@ -219,3 +219,315 @@ fn shell_echoes_input_and_reports_exit() {
         .iter()
         .any(|x| matches!(x, Event::Exited(Some(7))))));
 }
+
+// ------------------------------------------------------------------------ SFTP
+
+mod sftp_tests {
+    use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+    use russh_sftp::protocol::{
+        Attrs, Data, File, FileAttributes, Handle, Name, OpenFlags, Status, StatusCode, Version,
+    };
+
+    use super::*;
+    use crate::sftp::Sftp;
+
+    fn ok(id: u32) -> Status {
+        Status {
+            id,
+            status_code: StatusCode::Ok,
+            error_message: "Ok".into(),
+            language_tag: "en-US".into(),
+        }
+    }
+
+    /// In-memory file system: flat paths under `/`, directories tracked separately.
+    #[derive(Default)]
+    struct Fs {
+        files: BTreeMap<String, Vec<u8>>,
+        dirs: BTreeSet<String>,
+        listed: BTreeSet<String>,
+    }
+
+    fn base(path: &str) -> String {
+        path.trim_start_matches("./")
+            .trim_start_matches('/')
+            .to_string()
+    }
+
+    fn attrs(size: u64, dir: bool) -> FileAttributes {
+        FileAttributes {
+            size: Some(size),
+            permissions: Some(if dir { 0o040755 } else { 0o100644 }),
+            ..Default::default()
+        }
+    }
+
+    impl russh_sftp::server::Handler for Fs {
+        type Error = StatusCode;
+
+        fn unimplemented(&self) -> Self::Error {
+            StatusCode::OpUnsupported
+        }
+
+        async fn init(
+            &mut self,
+            _v: u32,
+            _e: HashMap<String, String>,
+        ) -> Result<Version, Self::Error> {
+            Ok(Version::new())
+        }
+
+        async fn realpath(&mut self, id: u32, path: String) -> Result<Name, Self::Error> {
+            let p = if path == "." || path.is_empty() {
+                "/".to_string()
+            } else {
+                path
+            };
+            Ok(Name {
+                id,
+                files: vec![File::dummy(p)],
+            })
+        }
+
+        async fn opendir(&mut self, id: u32, path: String) -> Result<Handle, Self::Error> {
+            self.listed.remove(&path);
+            Ok(Handle { id, handle: path })
+        }
+
+        async fn readdir(&mut self, id: u32, handle: String) -> Result<Name, Self::Error> {
+            if !self.listed.insert(handle.clone()) {
+                return Err(StatusCode::Eof);
+            }
+            let mut files = Vec::new();
+            for d in &self.dirs {
+                files.push(File::new(d.clone(), attrs(0, true)));
+            }
+            for (n, data) in &self.files {
+                files.push(File::new(n.clone(), attrs(data.len() as u64, false)));
+            }
+            Ok(Name { id, files })
+        }
+
+        async fn open(
+            &mut self,
+            id: u32,
+            filename: String,
+            flags: OpenFlags,
+            _a: FileAttributes,
+        ) -> Result<Handle, Self::Error> {
+            let key = base(&filename);
+            if flags.contains(OpenFlags::CREATE) {
+                let entry = self.files.entry(key.clone()).or_default();
+                if flags.contains(OpenFlags::TRUNCATE) {
+                    entry.clear();
+                }
+            } else if !self.files.contains_key(&key) {
+                return Err(StatusCode::NoSuchFile);
+            }
+            Ok(Handle { id, handle: key })
+        }
+
+        async fn read(
+            &mut self,
+            id: u32,
+            handle: String,
+            offset: u64,
+            len: u32,
+        ) -> Result<Data, Self::Error> {
+            let data = self.files.get(&handle).ok_or(StatusCode::NoSuchFile)?;
+            let start = offset as usize;
+            if start >= data.len() {
+                return Err(StatusCode::Eof);
+            }
+            let end = (start + len as usize).min(data.len());
+            Ok(Data {
+                id,
+                data: data[start..end].to_vec(),
+            })
+        }
+
+        async fn write(
+            &mut self,
+            id: u32,
+            handle: String,
+            offset: u64,
+            data: Vec<u8>,
+        ) -> Result<Status, Self::Error> {
+            let file = self.files.get_mut(&handle).ok_or(StatusCode::NoSuchFile)?;
+            let end = offset as usize + data.len();
+            if file.len() < end {
+                file.resize(end, 0);
+            }
+            file[offset as usize..end].copy_from_slice(&data);
+            Ok(ok(id))
+        }
+
+        async fn close(&mut self, id: u32, _h: String) -> Result<Status, Self::Error> {
+            Ok(ok(id))
+        }
+
+        async fn stat(&mut self, id: u32, path: String) -> Result<Attrs, Self::Error> {
+            let key = base(&path);
+            if let Some(d) = self.files.get(&key) {
+                return Ok(Attrs {
+                    id,
+                    attrs: attrs(d.len() as u64, false),
+                });
+            }
+            if key.is_empty() || self.dirs.contains(&key) {
+                return Ok(Attrs {
+                    id,
+                    attrs: attrs(0, true),
+                });
+            }
+            Err(StatusCode::NoSuchFile)
+        }
+
+        async fn lstat(&mut self, id: u32, path: String) -> Result<Attrs, Self::Error> {
+            self.stat(id, path).await
+        }
+
+        async fn fstat(&mut self, id: u32, handle: String) -> Result<Attrs, Self::Error> {
+            self.stat(id, handle).await
+        }
+
+        async fn mkdir(
+            &mut self,
+            id: u32,
+            path: String,
+            _a: FileAttributes,
+        ) -> Result<Status, Self::Error> {
+            self.dirs.insert(base(&path));
+            Ok(ok(id))
+        }
+
+        async fn rmdir(&mut self, id: u32, path: String) -> Result<Status, Self::Error> {
+            self.dirs.remove(&base(&path));
+            Ok(ok(id))
+        }
+
+        async fn remove(&mut self, id: u32, path: String) -> Result<Status, Self::Error> {
+            self.files
+                .remove(&base(&path))
+                .ok_or(StatusCode::NoSuchFile)?;
+            Ok(ok(id))
+        }
+
+        async fn rename(
+            &mut self,
+            id: u32,
+            from: String,
+            to: String,
+        ) -> Result<Status, Self::Error> {
+            let data = self
+                .files
+                .remove(&base(&from))
+                .ok_or(StatusCode::NoSuchFile)?;
+            self.files.insert(base(&to), data);
+            Ok(ok(id))
+        }
+    }
+
+    #[derive(Default)]
+    struct SftpServer {
+        channels: HashMap<ChannelId, Channel<Msg>>,
+    }
+
+    impl server::Server for SftpServer {
+        type Handler = Self;
+        fn new_client(&mut self, _: Option<std::net::SocketAddr>) -> Self {
+            Self::default()
+        }
+    }
+
+    impl server::Handler for SftpServer {
+        type Error = russh::Error;
+
+        async fn auth_password(&mut self, _u: &str, _p: &str) -> Result<SAuth, Self::Error> {
+            Ok(SAuth::Accept)
+        }
+
+        async fn channel_open_session(
+            &mut self,
+            channel: Channel<Msg>,
+            reply: server::ChannelOpenHandle,
+            _s: &mut Session,
+        ) -> Result<(), Self::Error> {
+            self.channels.insert(channel.id(), channel);
+            reply.accept().await;
+            Ok(())
+        }
+
+        async fn subsystem_request(
+            &mut self,
+            id: ChannelId,
+            name: &str,
+            session: &mut Session,
+        ) -> Result<(), Self::Error> {
+            if name == "sftp"
+                && let Some(channel) = self.channels.remove(&id)
+            {
+                session.channel_success(id)?;
+                russh_sftp::server::run(channel.into_stream(), Fs::default()).await;
+            } else {
+                session.channel_failure(id)?;
+            }
+            Ok(())
+        }
+    }
+
+    fn start() -> u16 {
+        let key = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
+        let config = Arc::new(server::Config {
+            keys: vec![key],
+            auth_rejection_time: Duration::from_millis(1),
+            ..Default::default()
+        });
+        let listener = runtime()
+            .block_on(TcpListener::bind(("127.0.0.1", 0)))
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+        runtime().spawn(async move {
+            let _ = SftpServer::default().run_on_socket(config, &listener).await;
+        });
+        port
+    }
+
+    #[test]
+    fn upload_list_download_rename_remove() {
+        let port = start();
+        let dir = tmp("sftp");
+        let sftp = Sftp::connect(cfg(port, &dir, "x", true)).unwrap();
+        assert_eq!(sftp.realpath(".").unwrap(), "/");
+
+        let local = dir.join("up.txt");
+        std::fs::write(&local, b"hello sftp").unwrap();
+        assert_eq!(sftp.upload(&local, "/note.txt").unwrap(), 10);
+        sftp.mkdir("/docs").unwrap();
+
+        let list = sftp.list("/").unwrap();
+        assert_eq!(list.len(), 2, "{list:?}");
+        assert!(
+            list[0].is_dir && list[0].name == "docs",
+            "dirs first: {list:?}"
+        );
+        assert_eq!((list[1].name.as_str(), list[1].size), ("note.txt", 10));
+
+        let back = dir.join("down.txt");
+        assert_eq!(sftp.download("/note.txt", &back).unwrap(), 10);
+        assert_eq!(std::fs::read(&back).unwrap(), b"hello sftp");
+
+        sftp.rename("/note.txt", "/renamed.txt").unwrap();
+        assert!(
+            sftp.list("/")
+                .unwrap()
+                .iter()
+                .any(|e| e.name == "renamed.txt")
+        );
+        sftp.remove_file("/renamed.txt").unwrap();
+        sftp.remove_dir("/docs").unwrap();
+        assert!(sftp.list("/").unwrap().is_empty());
+        assert!(sftp.download("/missing", &back).is_err());
+    }
+}

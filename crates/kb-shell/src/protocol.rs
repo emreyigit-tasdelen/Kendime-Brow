@@ -154,6 +154,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Remote file operations over SFTP (see `sftp_svc.rs`).
+    Files {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Table preview of a spreadsheet file (xlsx/xls/xlsb/ods/csv/tsv).
     SheetPreview {
         path: String,

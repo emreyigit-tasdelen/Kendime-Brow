@@ -28,6 +28,7 @@ const HOSTS: &[(&str, &str)] = &[
     ("tools", "tools"),
     ("term", "term"),
     ("vault", "vault"),
+    ("files", "files"),
     ("connections", "connections"),
 ];
 

@@ -152,7 +152,7 @@ fn remember(path: &Path, id: &str, fingerprint: &str) -> std::io::Result<()> {
     writeln!(f, "{id} {fingerprint}")
 }
 
-struct Client {
+pub(crate) struct Client {
     known_hosts: PathBuf,
     id: String,
     trust_new: bool,
@@ -201,6 +201,60 @@ impl client::Handler for Client {
 
 // ---------------------------------------------------------------------- connect
 
+/// Connects and authenticates (host key check included). Runs on the private runtime.
+pub(crate) async fn connect_authed(cfg: &Config) -> Result<client::Handle<Client>, SshError> {
+    let verdict = Arc::new(Mutex::new(None));
+    let handler = Client {
+        known_hosts: cfg.known_hosts.clone(),
+        id: host_id(&cfg.host, cfg.port),
+        trust_new: cfg.trust_new_host,
+        verdict: verdict.clone(),
+    };
+    let config = Arc::new(client::Config {
+        inactivity_timeout: None,
+        keepalive_interval: Some(Duration::from_secs(30)),
+        ..Default::default()
+    });
+    let connect = tokio::time::timeout(
+        Duration::from_secs(15),
+        client::connect(config, (cfg.host.as_str(), cfg.port), handler),
+    )
+    .await
+    .map_err(|_| SshError::Other("connection timed out".into()))?;
+    let mut handle = match connect {
+        Ok(h) => h,
+        Err(e) => {
+            // A refused host key surfaces as a generic error; report the real reason.
+            if let Some(v) = verdict.lock().ok().and_then(|mut v| v.take()) {
+                return Err(v);
+            }
+            return Err(e.into());
+        }
+    };
+    let ok = match &cfg.auth {
+        Auth::Password(pw) => handle
+            .authenticate_password(cfg.user.clone(), pw.clone())
+            .await?
+            .success(),
+        Auth::Key { pem, passphrase } => {
+            let key = decode_secret_key(pem, passphrase.as_deref())
+                .map_err(|e| SshError::Other(format!("cannot read private key: {e}")))?;
+            let hash = handle.best_supported_rsa_hash().await?.flatten();
+            handle
+                .authenticate_publickey(
+                    cfg.user.clone(),
+                    PrivateKeyWithHashAlg::new(Arc::new(key), hash),
+                )
+                .await?
+                .success()
+        }
+    };
+    if !ok {
+        return Err(SshError::AuthFailed);
+    }
+    Ok(handle)
+}
+
 /// Connects, authenticates and starts an interactive shell. `on_event` is called from the SSH
 /// worker thread for every chunk of output and once at the end.
 pub fn open_shell(
@@ -208,55 +262,7 @@ pub fn open_shell(
     on_event: Arc<dyn Fn(Event) + Send + Sync>,
 ) -> Result<Shell, SshError> {
     runtime().block_on(async move {
-        let verdict = Arc::new(Mutex::new(None));
-        let handler = Client {
-            known_hosts: cfg.known_hosts.clone(),
-            id: host_id(&cfg.host, cfg.port),
-            trust_new: cfg.trust_new_host,
-            verdict: verdict.clone(),
-        };
-        let config = Arc::new(client::Config {
-            inactivity_timeout: None,
-            keepalive_interval: Some(Duration::from_secs(30)),
-            ..Default::default()
-        });
-        let connect = tokio::time::timeout(
-            Duration::from_secs(15),
-            client::connect(config, (cfg.host.as_str(), cfg.port), handler),
-        )
-        .await
-        .map_err(|_| SshError::Other("connection timed out".into()))?;
-        let mut handle = match connect {
-            Ok(h) => h,
-            Err(e) => {
-                // A refused host key surfaces as a generic error; report the real reason.
-                if let Some(v) = verdict.lock().ok().and_then(|mut v| v.take()) {
-                    return Err(v);
-                }
-                return Err(e.into());
-            }
-        };
-        let ok = match &cfg.auth {
-            Auth::Password(pw) => handle
-                .authenticate_password(cfg.user.clone(), pw.clone())
-                .await?
-                .success(),
-            Auth::Key { pem, passphrase } => {
-                let key = decode_secret_key(pem, passphrase.as_deref())
-                    .map_err(|e| SshError::Other(format!("cannot read private key: {e}")))?;
-                let hash = handle.best_supported_rsa_hash().await?.flatten();
-                handle
-                    .authenticate_publickey(
-                        cfg.user.clone(),
-                        PrivateKeyWithHashAlg::new(Arc::new(key), hash),
-                    )
-                    .await?
-                    .success()
-            }
-        };
-        if !ok {
-            return Err(SshError::AuthFailed);
-        }
+        let handle = connect_authed(&cfg).await?;
         let mut channel = handle.channel_open_session().await?;
         channel
             .request_pty(
@@ -304,6 +310,8 @@ pub fn open_shell(
         Ok(Shell { tx })
     })
 }
+
+pub mod sftp;
 
 #[cfg(test)]
 mod tests;

@@ -57,9 +57,15 @@ async function render(): Promise<void> {
   for (const c of list) {
     const go = el('button', { class: 'primary' }, 'Connect');
     go.onclick = () => openTerm(c);
+    const files = el('button', {}, 'Files');
+    files.onclick = () => {
+      const q = new URLSearchParams({ host: c.host, port: String(c.port), user: c.user });
+      if (c.vault_id) q.set('vault', c.vault_id);
+      void send({ cmd: 'new-tab', url: `kb://files/?${q}` });
+    };
     const edit = el('button', {}, 'Edit');
     edit.onclick = () => void editor(c);
-    card.append(el('div', { class: 'row' }, el('div', {}, c.name, el('div', { class: 'meta' }, `${c.user ? c.user + '@' : ''}${c.host}:${c.port}`)), el('div', { class: 'actions' }, go, edit)));
+    card.append(el('div', { class: 'row' }, el('div', {}, c.name, el('div', { class: 'meta' }, `${c.user ? c.user + '@' : ''}${c.host}:${c.port}`)), el('div', { class: 'actions' }, go, files, edit)));
   }
   root.replaceChildren(el('h1', {}, 'Connections'), el('div', { class: 'bar' }, el('span', {}, `${list.length} saved`), el('div', { class: 'actions' }, add, imp)), err, card);
 }

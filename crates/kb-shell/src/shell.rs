@@ -760,6 +760,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::PdfFields
         | Command::SheetPreview { .. }
         | Command::Vault { .. }
+        | Command::Files { .. }
         | Command::Connections { .. }
         | Command::TermOpen { .. }
         | Command::TermWrite { .. }

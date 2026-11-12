@@ -81,6 +81,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "files.open",
+            "Open remote files (SFTP)",
+            Command::NewTab {
+                url: Some("kb://files/".into()),
+                container: None,
+            },
+        ),
+        (
             "vault.open",
             "Open the password vault",
             Command::NewTab {

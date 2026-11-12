@@ -102,6 +102,7 @@ export type Command =
   | { cmd: 'term-resize'; id: number; cols: number; rows: number }
   | { cmd: 'term-close'; id: number }
   | { cmd: 'vault'; op: string; args?: Record<string, string> }
+  | { cmd: 'files'; op: string; args?: Record<string, unknown> }
   | { cmd: 'connections'; op: string; args?: Record<string, string> }
   | { cmd: 'sheet-preview'; path: string }
   | { cmd: 'image-meta'; path: string }
