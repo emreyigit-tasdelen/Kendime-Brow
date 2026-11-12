@@ -1,5 +1,6 @@
 //! kb-shell library: code shared by the browser binary and the helper (subprocess) binary.
 
+pub mod actions;
 pub mod app;
 pub mod bridge;
 pub mod kb_scheme;

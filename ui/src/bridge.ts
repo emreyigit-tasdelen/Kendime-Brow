@@ -12,6 +12,13 @@ export interface TabState {
 
 export interface State {
   tabs: TabState[];
+  palette: boolean;
+}
+
+export interface ActionInfo {
+  id: string;
+  title: string;
+  module: string;
 }
 
 export type Command =
@@ -23,7 +30,12 @@ export type Command =
   | { cmd: 'back' }
   | { cmd: 'forward' }
   | { cmd: 'reload' }
-  | { cmd: 'stop' };
+  | { cmd: 'stop' }
+  | { cmd: 'close-active-tab' }
+  | { cmd: 'cycle-tab'; forward: boolean }
+  | { cmd: 'actions'; query?: string }
+  | { cmd: 'run-action'; id: string }
+  | { cmd: 'set-palette'; open: boolean };
 
 interface QueryOptions {
   request: string;
@@ -62,4 +74,8 @@ export function subscribe(onState: (state: State) => void): () => void {
     onFailure: (code, message) => console.error('subscribe failed', code, message),
   });
   return () => window.kbQueryCancel?.(id);
+}
+
+export async function actions(query: string): Promise<ActionInfo[]> {
+  return JSON.parse(await send({ cmd: 'actions', query })) as ActionInfo[];
 }

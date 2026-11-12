@@ -27,3 +27,16 @@ body { overflow: hidden; user-select: none; }
   background: var(--bg-input); color: var(--fg); font: inherit; outline: none;
 }
 .address:focus { border-color: var(--accent); }
+
+.tabs { flex: none; }
+.toolbar { flex: none; height: 40px; }
+.palette { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 8px 12px 12px; background: var(--bg-tab-active); border-top: 1px solid var(--border); }
+.palette-input {
+  height: 32px; padding: 0 12px; border: 1px solid var(--accent); border-radius: 6px;
+  background: var(--bg-input); color: var(--fg); font: inherit; outline: none;
+}
+.palette-list { flex: 1; overflow: auto; margin: 6px 0 0; padding: 0; list-style: none; }
+.palette-list li { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 5px; cursor: default; }
+.palette-list li.selected { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.palette-list .id { color: var(--fg-muted); font-family: ui-monospace, monospace; font-size: 12px; }
+.palette-list .empty { color: var(--fg-muted); }

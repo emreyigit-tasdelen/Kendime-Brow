@@ -2,6 +2,7 @@
 import { render } from 'solid-js/web';
 import { createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
 import { send, subscribe, type State, type TabState } from './bridge';
+import { Palette } from './Palette';
 import './base.css';
 import './strip.css';
 
@@ -12,7 +13,7 @@ function tabLabel(t: TabState): string {
 }
 
 function Strip() {
-  const [state, setState] = createSignal<State>({ tabs: [] });
+  const [state, setState] = createSignal<State>({ tabs: [], palette: false });
   const unsubscribe = subscribe(setState);
   onCleanup(unsubscribe);
 
@@ -116,7 +117,18 @@ function Strip() {
             }
           }}
         />
+        <button
+          type="button"
+          class="palette-button"
+          title="Command palette (Ctrl+Shift+P)"
+          onClick={() => void send({ cmd: 'set-palette', open: !state().palette })}
+        >
+          ⌘
+        </button>
       </form>
+      <Show when={state().palette}>
+        <Palette />
+      </Show>
     </div>
   );
 }

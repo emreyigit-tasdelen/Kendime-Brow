@@ -89,6 +89,11 @@ impl BrowserSideHandler for ShellQueryHandler {
                     subs.push((query_id, callback));
                 }
             }
+            Command::Actions { query } => {
+                if let Ok(cb) = callback.lock() {
+                    cb.success_str(&crate::actions::list_json(&query));
+                }
+            }
             Command::State => {
                 if let Ok(cb) = callback.lock() {
                     cb.success_str(&shell::state().to_json());

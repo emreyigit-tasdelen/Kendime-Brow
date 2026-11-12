@@ -29,6 +29,22 @@ pub enum Command {
     Forward,
     Reload,
     Stop,
+    CloseActiveTab,
+    CycleTab {
+        forward: bool,
+    },
+    /// One-shot: returns the action list (JSON array), filtered by `query`.
+    Actions {
+        #[serde(default)]
+        query: String,
+    },
+    RunAction {
+        id: String,
+    },
+    /// Opens/closes the command palette (the UI strip grows while it is open).
+    SetPalette {
+        open: bool,
+    },
 }
 
 pub fn parse(request: &str) -> Result<Command, String> {
@@ -50,6 +66,8 @@ pub struct TabState {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct State {
     pub tabs: Vec<TabState>,
+    /// Command palette open (the UI strip is expanded).
+    pub palette: bool,
 }
 
 impl State {
@@ -149,6 +167,22 @@ mod tests {
                 text: "example.org".into()
             })
         );
+        assert_eq!(
+            parse(r#"{"cmd":"run-action","id":"tab.new"}"#),
+            Ok(Command::RunAction {
+                id: "tab.new".into()
+            })
+        );
+        assert_eq!(
+            parse(r#"{"cmd":"actions"}"#),
+            Ok(Command::Actions {
+                query: String::new()
+            })
+        );
+        assert_eq!(
+            parse(r#"{"cmd":"set-palette","open":true}"#),
+            Ok(Command::SetPalette { open: true })
+        );
         assert!(parse(r#"{"cmd":"rm-rf"}"#).is_err());
         assert!(parse("not json").is_err());
     }
@@ -191,6 +225,7 @@ mod tests {
                 can_go_back: true,
                 ..Default::default()
             }],
+            palette: false,
         };
         assert!(s.to_json().contains("\"canGoBack\":true"));
     }

@@ -19,6 +19,8 @@ use crate::tabs::{TabId, Tabs};
 pub const UI_URL: &str = "kb://ui/";
 pub const NEW_TAB_URL: &str = "kb://newtab/";
 pub const UI_STRIP_HEIGHT: i32 = 76;
+/// Strip height while the command palette is open.
+pub const UI_PALETTE_HEIGHT: i32 = 420;
 pub const DEFAULT_WINDOW_SIZE: (i32, i32) = (1280, 800);
 
 /// Window accelerator command ids.
@@ -30,6 +32,7 @@ pub mod command {
     pub const BACK: i32 = 5;
     pub const FORWARD: i32 = 6;
     pub const RELOAD: i32 = 7;
+    pub const PALETTE: i32 = 8;
 }
 
 // Windows virtual key codes (CEF uses them on every platform for accelerators).
@@ -39,6 +42,7 @@ const VK_RIGHT: i32 = 0x27;
 const VK_T: i32 = 0x54;
 const VK_W: i32 = 0x57;
 const VK_F5: i32 = 0x74;
+const VK_P: i32 = 0x50;
 
 /// (command, key, shift, ctrl, alt)
 pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
@@ -49,6 +53,7 @@ pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
     (command::BACK, VK_LEFT, false, false, true),
     (command::FORWARD, VK_RIGHT, false, false, true),
     (command::RELOAD, VK_F5, false, false, false),
+    (command::PALETTE, VK_P, true, true, false),
 ];
 
 /// One tab: its view plus the state shown in the UI strip.
@@ -92,6 +97,7 @@ thread_local! {
     static SHELL: RefCell<Option<Shell>> = const { RefCell::new(None) };
     static BROWSER_COUNT: RefCell<usize> = const { RefCell::new(0) };
     static WINDOW_CLOSING: RefCell<bool> = const { RefCell::new(false) };
+    static PALETTE_OPEN: RefCell<bool> = const { RefCell::new(false) };
 }
 
 fn with_shell<R>(f: impl FnOnce(&mut Shell) -> R) -> Option<R> {
@@ -151,7 +157,9 @@ pub fn add_tab_view(view: BrowserView) {
     });
     if let Some(window) = window {
         let mut v = View::from(&view);
-        window.add_child_view(Some(&mut v));
+        // Index 0: tabs stay below the UI strip in z-order (a new BrowserView otherwise painted
+        // over the strip until the next resize).
+        window.add_child_view_at(Some(&mut v), 0);
         refresh();
     }
 }
@@ -164,7 +172,12 @@ pub fn apply_layout(width: i32, height: i32) {
     }) else {
         return;
     };
-    let strip = UI_STRIP_HEIGHT.min(height);
+    let wanted = if PALETTE_OPEN.with(|p| *p.borrow()) {
+        UI_PALETTE_HEIGHT
+    } else {
+        UI_STRIP_HEIGHT
+    };
+    let strip = wanted.min(height);
     ui.set_bounds(Some(&Rect {
         x: 0,
         y: 0,
@@ -182,11 +195,30 @@ pub fn apply_layout(width: i32, height: i32) {
     }
 }
 
-/// Re-runs the manual layout with the current window size.
+/// Re-runs the manual layout with the current window size, now and once more after CEF's own
+/// layout pass (adding a child view triggers the window's default fill layout, which would
+/// otherwise overwrite our bounds).
 fn relayout() {
+    relayout_now();
+    let mut task = RelayoutTask::new();
+    post_task(ThreadId::UI, Some(&mut task));
+}
+
+fn relayout_now() {
     if let Some(window) = with_shell(|s| s.window.clone()) {
         let b = window.client_area_bounds_in_screen();
         apply_layout(b.width, b.height);
+    }
+    debug_bounds();
+}
+
+wrap_task! {
+    struct RelayoutTask;
+
+    impl Task {
+        fn execute(&self) {
+            relayout_now();
+        }
     }
 }
 
@@ -208,7 +240,9 @@ pub fn refresh() {
     for (is_active, view) in &views {
         view.set_visible(*is_active as i32);
         if *is_active {
-            view.request_focus();
+            if !PALETTE_OPEN.with(|p| *p.borrow()) {
+                view.request_focus();
+            }
             if let Some(entry) = view
                 .browser()
                 .and_then(|b| b.host())
@@ -245,9 +279,22 @@ pub fn state() -> protocol::State {
                     can_go_forward: t.can_go_forward,
                 })
                 .collect(),
+            palette: PALETTE_OPEN.with(|p| *p.borrow()),
         }
     })
     .unwrap_or_default()
+}
+
+/// Opens or closes the command palette: resizes the strip and tells the UI.
+pub fn set_palette(open: bool) {
+    PALETTE_OPEN.with(|p| *p.borrow_mut() = open);
+    if open && let Some(ui) = with_shell(|s| s.ui.clone()) {
+        ui.request_focus();
+    }
+    refresh();
+    if !open && let Some(view) = active_view() {
+        view.request_focus();
+    }
 }
 
 /// Runs a command received from a `kb://` page.
@@ -285,7 +332,19 @@ pub fn run_bridge_command(cmd: Command) {
                 b.stop_load();
             }
         }
-        Command::State | Command::Subscribe => {}
+        Command::CloseActiveTab => close_active_tab(),
+        Command::CycleTab { forward } => {
+            with_shell(|s| s.tabs.cycle(forward));
+            refresh();
+        }
+        Command::RunAction { id } => {
+            set_palette(false);
+            if let Some(cmd) = crate::actions::command_for(&id) {
+                run_bridge_command(cmd);
+            }
+        }
+        Command::SetPalette { open } => set_palette(open),
+        Command::State | Command::Subscribe | Command::Actions { .. } => {}
     }
 }
 
@@ -344,6 +403,7 @@ pub fn run_command(cmd: i32) -> bool {
     }
     match cmd {
         command::NEW_TAB => new_tab(NEW_TAB_URL),
+        command::PALETTE => set_palette(!PALETTE_OPEN.with(|p| *p.borrow())),
         command::CLOSE_TAB => close_active_tab(),
         command::NEXT_TAB | command::PREV_TAB => {
             with_shell(|s| s.tabs.cycle(cmd == command::NEXT_TAB));
@@ -420,9 +480,18 @@ pub fn debug_bounds() {
             w.height,
             s.window.child_view_count()
         );
-        if let Some(t) = s.tabs.active_item() {
+        let u = s.ui.bounds();
+        eprintln!("[kb] ui y={} {}x{} visible={}", u.y, u.width, u.height, s.ui.is_visible());
+        for (id, t) in s.tabs.iter() {
             let b = t.view.bounds();
-            eprintln!("[kb] active tab y={} {}x{}", b.y, b.width, b.height);
+            eprintln!(
+                "[kb] tab {} y={} {}x{} visible={}",
+                id.0,
+                b.y,
+                b.width,
+                b.height,
+                t.view.is_visible()
+            );
         }
     });
 }

@@ -6,7 +6,7 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Current status (summary)
 
 - **Phase:** 1 in progress. 1.1 done (V1/V3/V4 confirmed). 1.1b and 1.2 blocked (see task log).
-- **Next step:** 1.11 action registry + command palette, then 1.12+. (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
+- **Next step:** 1.12 profile, settings (kb://settings), kb.sqlite (bookmarks, history, session restore), then 1.13+. (1.10b Linux sandbox needs the Ubuntu VM — blocked like 1.1b.)
 - **Needs a manual check by the user:** keyboard shortcuts from 1.6 (Ctrl+T/W/Tab, Alt+←/→, F5).
 - **Blocked, needs the user:** 1.1b — SSH access (key) to an Ubuntu VM (`D:/VMware-Virtual-Machines/Ubuntu/...`). 1.2 — ~100+ GB free disk for a Chromium checkout, or a decision to skip proprietary codecs.
 - **Build prerequisites (Windows):** VS 2022 Build Tools, CMake and Ninja (winget; add their WinGet package folders to `PATH` if not found).
@@ -39,6 +39,11 @@ In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 ## Task log
 
 Newest on top. Format: task · done · decision · next step.
+
+### 1.11 Action registry + command palette — DONE (2026-11-12)
+- **Done:** `kb-shell/src/actions.rs` registers the shell actions in `kb-actions` (`tab.new/close/next/prev`, `nav.back/forward/reload/stop`) and maps each id to a bridge command. New bridge commands `actions` (search), `run-action`, `set-palette`, `close-active-tab`, `cycle-tab`; `State.palette`. UI: ⌘ button + `Palette.tsx` (search, ↑/↓, Enter, Esc, click). While open the strip grows to 420 px. Shortcut Ctrl+Shift+P added to the accelerator table (same manual-check caveat as 1.6). Verified with real input: open palette, filter, run "New tab" and "Close tab".
+- **Fixed on the way:** (1) a new tab BrowserView was painted over the UI strip → tab views are now inserted at child index 0 so the strip stays on top; layout is re-applied once more in a posted UI task after CEF's own layout pass. (2) Ubuntu CI: second Linux-only type difference (`cef_event_flags_t` is u32 there).
+- **Next step:** 1.12.
 
 ### 1.10 Module host launcher (Windows) — DONE (2026-11-12), AppContainer pending
 - **Done:** `kb-platform::sandbox`: `spawn(SpawnSpec)` with a restricted primary token (`DISABLE_MAX_PRIVILEGE`, LOW integrity) via `CreateProcessAsUserW` (suspended → assigned to a Job Object → resumed). Job: kill-on-close, active process limit, optional per-process memory limit, die on unhandled exception. Windows pipes now have an explicit SDDL `D:P(A;;GA;;;<user SID>)S:(ML;;NW;;;LW)` (closes the 1.9 follow-up; low-IL hosts can connect, other users cannot). `kb-ipc::launch`: fresh endpoint + token per host (env `KB_IPC_ENDPOINT` / `KB_IPC_TOKEN`), 10 s connect timeout, `wait_exit`, `RestartPolicy` (restart non-zero exits up to 3×). Test host `kb-echo-host`. Integration tests: sandboxed round trip; low-IL host cannot write a user file; crash detected → restart works; clean exit not restarted.

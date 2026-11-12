@@ -300,6 +300,8 @@ fn handle_key(event: &KeyEvent) -> bool {
     if event.type_ != KeyEventType::RAWKEYDOWN && event.type_ != KeyEventType::KEYDOWN {
         return false;
     }
+    // The flag type is i32 on Windows and u32 on Linux in the cef bindings.
+    #[allow(clippy::unnecessary_cast)]
     let flag = |f: sys::cef_event_flags_t| event.modifiers & (f.0 as u32) != 0;
     let shift = flag(sys::cef_event_flags_t::EVENTFLAG_SHIFT_DOWN);
     let ctrl = flag(sys::cef_event_flags_t::EVENTFLAG_CONTROL_DOWN);

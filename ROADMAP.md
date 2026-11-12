@@ -42,7 +42,7 @@ Output: a navigable, tabbed window with its own UI. Version `0.1`.
 - [x] 1.9 `kb-ipc`: named pipe (Windows) + Unix socket (Linux) transport, protobuf, token-based handshake (§3.3)
 - [x] 1.10 Module host launcher (Windows): AppContainer/restricted token + Job Object, restart on crash (§3.2) → restricted token + low IL + Job Object done; AppContainer is a follow-up
 - [ ] 1.10b **Validation:** V14 → module host sandbox (Linux): user namespace + seccomp + Landlock (§3.8)
-- [ ] 1.11 Action registry + command palette (§3.5)
+- [x] 1.11 Action registry + command palette (§3.5)
 - [ ] 1.12 Profile, settings (`kb://settings`), `kb.sqlite`: bookmarks, history, session restore (§3.7)
 - [ ] 1.13 Download manager (basic) (§8.3)
 - [ ] 1.14 Packaging: Windows installer + Linux `.deb`/AppImage, single taskbar icon, `just install-dev` (§13)
