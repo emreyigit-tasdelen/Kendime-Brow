@@ -1,0 +1,15 @@
+[package]
+name = "kb-ssh"
+description = "SSH client sessions (russh) with known_hosts verification (architecture section 10.3)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+russh = { version = "0.65.1", default-features = false, features = ["flate2", "ring", "rsa"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "time", "macros", "net"] }
+
+[dev-dependencies]
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "time", "macros", "net"] }
+rand = { version = "0.10", features = ["thread_rng"] }
