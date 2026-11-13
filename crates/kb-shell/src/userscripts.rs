@@ -1,6 +1,8 @@
 //! Userscripts (task 6.5): scripts live in `<profile>/userscripts/*.user.js` (`.off` suffix =
 //! disabled). Matching scripts are injected into the main frame of http(s) pages, at load start
 //! for `@run-at document-start` and at load end otherwise. A small `GM_*` shim is provided.
+//! Also `GM_listValues`, `GM_openInTab`, `GM_setClipboard`; `GM_registerMenuCommand` is a no-op and
+//! `GM_xmlhttpRequest` is not provided (web pages have no bridge to the shell).
 //! Limitation: `GM_getValue`/`GM_setValue` use the page's localStorage, so values are per site.
 
 use kb_userscript::{Meta, parse_meta, should_run};
@@ -49,7 +51,7 @@ function GM_log(...a){{console.log('[userscript '+NAME+']',...a)}}\
 function GM_getValue(k,d){{try{{const v=localStorage.getItem(P+k);return v===null?d:JSON.parse(v)}}catch(e){{return d}}}}\
 function GM_setValue(k,v){{try{{localStorage.setItem(P+k,JSON.stringify(v))}}catch(e){{}}}}\
 function GM_deleteValue(k){{try{{localStorage.removeItem(P+k)}}catch(e){{}}}}\
-function GM_addStyle(css){{const s=document.createElement('style');s.textContent=css;(document.head||document.documentElement).appendChild(s);return s}}\
+function GM_listValues(){{const o=[];try{{for(let i=0;i<localStorage.length;i++){{const k=localStorage.key(i);if(k&&k.startsWith(P))o.push(k.slice(P.length))}}}}catch(e){{}}return o}}function GM_registerMenuCommand(){{}}function GM_openInTab(u){{window.open(u,'_blank')}}function GM_setClipboard(t){{try{{navigator.clipboard.writeText(String(t))}}catch(e){{}}}}function GM_addStyle(css){{const s=document.createElement('style');s.textContent=css;(document.head||document.documentElement).appendChild(s);return s}}\
 try{{\n{source}\n}}catch(e){{console.error('[userscript '+NAME+']',e)}}}})();"
     )
 }
@@ -178,6 +180,7 @@ mod tests {
         assert!(w.contains("const NAME=\"He said \\\"hi\\\"\""));
         assert!(w.contains("GM_log(1);"));
         assert!(w.contains("function GM_getValue"));
+        assert!(w.contains("function GM_listValues"));
     }
 
     #[test]

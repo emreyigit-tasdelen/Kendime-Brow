@@ -4,6 +4,7 @@ Decision log and hand-off notes between sessions. Newest entry on top.
 In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
+- 6.5 follow-up: GM_listValues, GM_openInTab, GM_setClipboard, no-op GM_registerMenuCommand added. GM_xmlhttpRequest blocked: web pages have no shell bridge (needs a content-process message route). 3C.5 AVIF/HEIC/RAW: blocked, only C-based decoders (dav1d/libheif) or heavy RAW demosaic; not started.
 - 3A.9: batch UI added to kb://pdf (paths separated by |; rotate 90° / extract pages). Type-checked, not live-tested.
 - 3C.3: `image.edit` in kb-doc (rotate/flip/crop/resize/grayscale/brightness/contrast, unit-tested) + `image-edit` command + three buttons in the image viewer; always writes a copy. Crop and resize have a text-box UI too (type-checked only).
 - 3C.2: sequential conversion queue (`enqueue`/`queue` ops, worker thread, status list in kb://avinfo); tested with real FFmpeg. In-memory only (lost on restart).
