@@ -81,7 +81,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [ ] 3A.9 Batch processing + all PDF actions in the action registry
 
 **3B — Office (§7)**
-- [ ] 3B.1 Fast spreadsheet preview with `calamine` (7a)
+- [x] 3B.1 Fast spreadsheet preview with `calamine` (7a)
 - [ ] 3B.2 Component downloader (LibreOffice), `kb-doc-lok` subprocess
 - [ ] 3B.3 LOK tile rendering + `kb://office` viewer (7b)
 - [ ] 3B.4 Format conversion + batch conversion (7b)
@@ -108,17 +108,17 @@ Versions `0.6`–`0.7`.
 - [ ] 4A.4 Connection profiles + import (`ssh config`, PuTTY, `.rdp`) (§10.3)
 - [ ] 4A.5 SFTP/SCP → `kb://files` remote pane
 - [ ] 4A.6 Tunneling (local/remote/dynamic) + container proxy binding (§10.4)
-- [ ] 4A.7 Telnet, FTP/FTPS
+- [x] 4A.7 Telnet, FTP/FTPS
 - [ ] 4A.8 **Validation:** V8 → RDP (IronRDP), native child window rendering, clipboard
 - [ ] 4A.9 Multi-session: split panes, groups, broadcast, encrypted session log (§10.5)
 
 **4B — Network analysis (§9)**
-- [ ] 4B.1 `kb-net` + CDP Network observer, `kb://net` request list and details
+- [x] 4B.1 `kb-net` + CDP Network observer, `kb://net` request list and details
 - [ ] 4B.2 NetLog integration (DNS/TLS/socket events)
-- [ ] 4B.3 Filter language (DSL) + field registry
-- [ ] 4B.4 HAR/cURL export, edit-and-resend request
+- [x] 4B.3 Filter language (DSL) + field registry
+- [x] 4B.4 HAR/cURL export, edit-and-resend request
 - [ ] 4B.5 `kb-capture`: Npcap/pktmon capture, browser-specific filtering
-- [ ] 4B.6 TLS key log + pcapng (DSB) writing
+- [x] 4B.6 TLS key log + pcapng (DSB) writing
 - [ ] 4B.7 Protocol dissectors, stream reassembly, three-pane view, statistics
 
 ## Phase 5 — VPN/Mesh, Companion, Headscale
