@@ -208,6 +208,19 @@ pub fn resume(id: u32) {
     }
 }
 
+/// Opens a finished download with the default application (not for executable types).
+pub fn open(id: u32) {
+    let path = DOWNLOADS.with(|d| {
+        d.borrow()
+            .iter()
+            .find(|e| e.state.id == id && e.state.status == DownloadStatus::Complete)
+            .map(|e| PathBuf::from(&e.state.path))
+    });
+    if let Some(path) = path {
+        let _ = kb_platform::files::open_default(&path);
+    }
+}
+
 pub fn reveal(id: u32) {
     let path = DOWNLOADS.with(|d| {
         d.borrow()

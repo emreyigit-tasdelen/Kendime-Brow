@@ -725,6 +725,7 @@ pub fn run_bridge_command(cmd: Command) {
         Command::PauseDownload { id } => crate::downloads::pause(id),
         Command::ResumeDownload { id } => crate::downloads::resume(id),
         Command::RevealDownload { id } => crate::downloads::reveal(id),
+        Command::OpenDownload { id } => crate::downloads::open(id),
         Command::SetFilterList { id, enabled } => {
             if let Some(profile) = profile_dir() {
                 let dir = crate::content_blocking::filters_dir(&profile);

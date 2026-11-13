@@ -92,6 +92,7 @@ export type Command =
   | { cmd: 'pause-download'; id: number }
   | { cmd: 'resume-download'; id: number }
   | { cmd: 'reveal-download'; id: number }
+  | { cmd: 'open-download'; id: number }
   | { cmd: 'clear-downloads' }
   | { cmd: 'set-filter-list'; id: string; enabled: boolean }
   | { cmd: 'update-filters' }

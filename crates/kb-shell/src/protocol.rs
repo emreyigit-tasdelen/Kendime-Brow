@@ -75,6 +75,9 @@ pub enum Command {
     RevealDownload {
         id: u32,
     },
+    OpenDownload {
+        id: u32,
+    },
     ClearDownloads,
     SetFilterList {
         id: String,

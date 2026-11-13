@@ -95,9 +95,53 @@ pub fn reveal(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// File types that run code when opened; the browser never opens these itself.
+pub fn is_executable_type(path: &Path) -> bool {
+    const RISKY: &[&str] = &[
+        "exe", "com", "bat", "cmd", "msi", "msp", "ps1", "psm1", "vbs", "vbe", "js", "jse", "wsf",
+        "wsh", "scr", "pif", "lnk", "hta", "jar", "reg", "dll", "cpl", "msc", "sh", "appimage",
+        "app", "command", "desktop", "deb", "rpm", "apk", "dmg", "pkg",
+    ];
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_none_or(|e| RISKY.contains(&e.to_ascii_lowercase().as_str()))
+}
+
+/// Opens a file with the default application. Refuses executable types and files without an
+/// extension (use `reveal` for those).
+pub fn open_default(path: &Path) -> std::io::Result<()> {
+    use std::process::Command;
+    if is_executable_type(path) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "refusing to open an executable file type",
+        ));
+    }
+    if cfg!(windows) {
+        Command::new("explorer.exe").arg(path).spawn()?;
+    } else if cfg!(target_os = "macos") {
+        Command::new("open").arg(path).spawn()?;
+    } else {
+        Command::new("xdg-open").arg(path).spawn()?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn executables_are_never_opened() {
+        for n in [
+            "a.exe", "A.BAT", "x.ps1", "y.lnk", "z.msi", "noext", "a.tar.sh",
+        ] {
+            assert!(is_executable_type(Path::new(n)), "{n}");
+        }
+        for n in ["a.pdf", "b.PNG", "c.txt", "d.zip"] {
+            assert!(!is_executable_type(Path::new(n)), "{n}");
+        }
+    }
 
     #[test]
     fn sanitizes_names() {

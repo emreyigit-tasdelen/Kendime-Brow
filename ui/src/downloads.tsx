@@ -84,6 +84,9 @@ function Downloads() {
                     </button>
                   </Show>
                   <Show when={d.status === 'complete'}>
+                    <button class="plain" onClick={() => void send({ cmd: 'open-download', id: d.id })}>
+                      Open
+                    </button>
                     <button class="plain" onClick={() => void send({ cmd: 'reveal-download', id: d.id })}>
                       Show in folder
                     </button>
