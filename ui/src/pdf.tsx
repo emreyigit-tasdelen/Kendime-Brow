@@ -302,6 +302,14 @@ function Viewer() {
           <input type="number" min="1" style="width:4em" value={notePage()} onInput={(e) => setNotePage(e.currentTarget.value)} />
           <button onClick={() => void annotate('note')}>Add note</button>
           <button onClick={() => void annotate('highlight')}>Add highlight</button>
+          <button
+            onClick={async () => {
+              const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'tools-status', args: {} })) as { tools: { name: string; found: boolean; version?: string }[] };
+              setStatus({ text: r.tools.map((t) => `${t.name}: ${t.found ? t.version || 'ok' : 'missing'}`).join(' · ') });
+            }}
+          >
+            Check tools
+          </button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>

@@ -253,6 +253,28 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             )?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "tools-status" => {
+            let probe = |name: &str, exe: String| {
+                let out = Command::new(&exe).arg("--version").output();
+                match out {
+                    Ok(o) if o.status.success() || !o.stdout.is_empty() => json!({
+                        "name": name, "found": true, "path": exe,
+                        "version": String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").trim(),
+                    }),
+                    _ => json!({ "name": name, "found": false, "path": exe }),
+                }
+            };
+            // `soffice --version` can start a headless instance and hang: only look for the file.
+            let exe = soffice();
+            let office =
+                json!({ "name": "libreoffice", "found": Path::new(&exe).is_file(), "path": exe });
+            Ok(json!({ "tools": [
+                probe("qpdf", qpdf()),
+                probe("tesseract", tesseract()),
+                office,
+            ] })
+            .to_string())
+        }
         "verify" => {
             let p = pdf_path(args)?;
             let bytes = std::fs::read(p).map_err(|e| e.to_string())?;
@@ -332,6 +354,12 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tools_status_lists_three_tools() {
+        let v: Value = serde_json::from_str(&call("tools-status", &json!({})).unwrap()).unwrap();
+        assert_eq!(v["tools"].as_array().unwrap().len(), 3);
+    }
 
     #[test]
     fn builds_qpdf_arguments() {

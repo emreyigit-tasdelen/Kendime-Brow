@@ -392,3 +392,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2.11: perf.mjs budget check now uses private bytes on Windows. Default 259-287 MB (OVER), KB_LOW_MEMORY=1 134-145 MB (WITHIN). Open: decide whether low memory mode should become a settings toggle or default.
 
 - 2.11: Settings page now has a "Low memory mode" checkbox (setting low_memory writes <profile>/lowmem.on, read at next start; KB_LOW_MEMORY=1 still works). Clippy and tsc clean; not exercised in the app.
+
+- 3B.2 (partial): pdf-tool op tools-status + "Check tools" button report whether qpdf, Tesseract and LibreOffice are found (LibreOffice by file only; soffice --version can hang). The downloader and kb-doc-lok subprocess are still open.
