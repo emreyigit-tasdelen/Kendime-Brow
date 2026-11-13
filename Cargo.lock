@@ -1987,6 +1987,7 @@ dependencies = [
  "sysinfo",
  "tokio",
  "ureq",
+ "zip",
 ]
 
 [[package]]

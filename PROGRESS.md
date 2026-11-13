@@ -4,6 +4,7 @@ Decision log and hand-off notes between sessions. Newest entry on top.
 In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
+- 3C.6 zip: `zip-list/zip-extract/zip-create` in localfs.rs (zip-slip safe, size cap, no overwrite) + Zip/Unzip buttons; unit-tested. Other formats and drag and drop open.
 - 3C.1/3C.2 partial: `media.rs` (ffprobe info, ffmpeg convert/trim with presets, never overwrites) + `kb://avinfo/?file=`; unit-tested only, needs FFmpeg installed (KB_FFMPEG_DIR / PATH).
 
 - **DONE 2026-11-13:** cargo target dir moved to `C:\Claude-Temp\target` via `~/.cargo/config.toml` (`target-dir`), D: was nearly full. All big folders go to C:\Claude-Temp from now on; when the whole project is finished, delete everything in `C:\Claude-Temp` (user asked). Next step still: 6.2 autofill wiring (`Command::Autofill` using `kb_vault::origin::may_fill`), owned by the main session.

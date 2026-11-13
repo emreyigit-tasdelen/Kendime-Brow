@@ -1,5 +1,5 @@
 // kb://localfiles/ — dual-pane local file explorer (task 3C.6): browse, new folder, rename,
-// copy to the other pane, delete (two clicks). Archives and drag and drop are not done yet.
+// copy to the other pane, delete (two clicks). Zip/Unzip go to the other pane (no overwrite). Drag and drop is not done yet.
 import './base.css';
 import './vault.css';
 import { send } from './bridge';
@@ -132,6 +132,14 @@ const bar = el(
   button('Copy → other pane', () => {
     const s = activePane.selected;
     if (s) void run(() => fs('copy', { from: join(activePane.path, s.name), to: join(other().path, s.name) }));
+  }),
+  button('Zip → other pane', () => {
+    const s = activePane.selected;
+    if (s) void run(() => fs('zip-create', { from: join(activePane.path, s.name), to: join(other().path, s.name + '.zip') }));
+  }),
+  button('Unzip → other pane', () => {
+    const s = activePane.selected;
+    if (s) void run(() => fs('zip-extract', { from: join(activePane.path, s.name), to: join(other().path, s.name.replace(/\.zip$/i, '')) }));
   }),
   delBtn,
   nameBox,

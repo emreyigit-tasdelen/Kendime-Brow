@@ -42,6 +42,96 @@ fn copy_all(from: &Path, to: &Path) -> std::io::Result<()> {
     }
 }
 
+/// Total uncompressed size and entry-count caps guard against zip bombs.
+const MAX_UNPACKED: u64 = 4 << 30;
+const MAX_ENTRIES: usize = 50_000;
+
+fn extract_zip(from: &Path, to: &Path) -> Result<(), String> {
+    use std::io::Read;
+    let f = std::fs::File::open(from).map_err(|e| e.to_string())?;
+    let mut z = zip::ZipArchive::new(f).map_err(|e| e.to_string())?;
+    if z.len() > MAX_ENTRIES {
+        return Err("too many entries".into());
+    }
+    std::fs::create_dir(to).map_err(|e| e.to_string())?;
+    let mut total = 0u64;
+    for i in 0..z.len() {
+        let e = z.by_index(i).map_err(|e| e.to_string())?;
+        // enclosed_name rejects absolute paths and `..` (zip-slip).
+        let Some(rel) = e.enclosed_name() else {
+            continue;
+        };
+        let dest = to.join(rel);
+        if e.is_dir() {
+            std::fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
+            continue;
+        }
+        if let Some(d) = dest.parent() {
+            std::fs::create_dir_all(d).map_err(|e| e.to_string())?;
+        }
+        let mut out = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&dest)
+            .map_err(|e| e.to_string())?;
+        let n = std::io::copy(&mut e.take(MAX_UNPACKED - total + 1), &mut out)
+            .map_err(|e| e.to_string())?;
+        total += n;
+        if total > MAX_UNPACKED {
+            return Err("archive too large when unpacked".into());
+        }
+    }
+    Ok(())
+}
+
+fn add_dir(w: &mut zip::ZipWriter<std::fs::File>, root: &Path, dir: &Path) -> Result<(), String> {
+    use std::io::Write;
+    let opts = zip::write::SimpleFileOptions::default();
+    for e in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let e = e.map_err(|e| e.to_string())?;
+        if e.file_type().map_err(|e| e.to_string())?.is_symlink() {
+            continue;
+        }
+        let p = e.path();
+        let name = p
+            .strip_prefix(root)
+            .map_err(|e| e.to_string())?
+            .to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "/");
+        if p.is_dir() {
+            w.add_directory(format!("{name}/"), opts)
+                .map_err(|e| e.to_string())?;
+            add_dir(w, root, &p)?;
+        } else {
+            w.start_file(name, opts).map_err(|e| e.to_string())?;
+            let data = std::fs::read(&p).map_err(|e| e.to_string())?;
+            w.write_all(&data).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+fn create_zip(from: &Path, to: &Path) -> Result<(), String> {
+    let out = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(to)
+        .map_err(|e| e.to_string())?;
+    let mut w = zip::ZipWriter::new(out);
+    if from.is_dir() {
+        add_dir(&mut w, from, from)?;
+    } else {
+        use std::io::Write;
+        let name = from.file_name().and_then(|n| n.to_str()).unwrap_or("file");
+        w.start_file(name, zip::write::SimpleFileOptions::default())
+            .map_err(|e| e.to_string())?;
+        w.write_all(&std::fs::read(from).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+    }
+    w.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     let io = |e: std::io::Error| e.to_string();
     match op {
@@ -121,6 +211,37 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             }
             Ok("{}".into())
         }
+        "zip-list" => {
+            let f = std::fs::File::open(path_arg(args, "path")?).map_err(io)?;
+            let mut z = zip::ZipArchive::new(f).map_err(|e| e.to_string())?;
+            let mut out = Vec::new();
+            for i in 0..z.len().min(5000) {
+                let e = z.by_index(i).map_err(|e| e.to_string())?;
+                out.push(json!({ "name": e.enclosed_name().map(|p| p.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/")), "size": e.size(), "dir": e.is_dir() }));
+            }
+            Ok(json!({ "entries": out }).to_string())
+        }
+        "zip-extract" => {
+            let from = path_arg(args, "from")?;
+            let to = path_arg(args, "to")?;
+            if to.exists() {
+                return Err("the target already exists".into());
+            }
+            extract_zip(&from, &to)?;
+            Ok("{}".into())
+        }
+        "zip-create" => {
+            let from = path_arg(args, "from")?;
+            let to = path_arg(args, "to")?;
+            if to.exists() {
+                return Err("the target already exists".into());
+            }
+            if to.starts_with(&from) {
+                return Err("cannot zip a folder into itself".into());
+            }
+            create_zip(&from, &to)?;
+            Ok("{}".into())
+        }
         _ => Err(format!("unknown localfs op: {op}")),
     }
 }
@@ -156,6 +277,51 @@ mod tests {
             serde_json::from_str(&call("list", &json!({ "path": s(&d) })).unwrap()).unwrap();
         assert_eq!(list["entries"][0]["name"], "a");
         assert!(call("delete", &json!({ "path": "/", "confirm": true })).is_err());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn zip_round_trip_and_zip_slip() {
+        let d = std::env::temp_dir().join(format!("kb-zip-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(d.join("src/sub")).unwrap();
+        std::fs::write(d.join("src/sub/a.txt"), "hello").unwrap();
+        let s = |p: &Path| p.display().to_string();
+        let z = json!({ "from": s(&d.join("src")), "to": s(&d.join("o.zip")) });
+        call("zip-create", &z).unwrap();
+        assert!(call("zip-create", &z).is_err(), "never overwrites");
+        let x = json!({ "from": s(&d.join("o.zip")), "to": s(&d.join("out")) });
+        call("zip-extract", &x).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(d.join("out/sub/a.txt")).unwrap(),
+            "hello"
+        );
+        assert!(call("zip-extract", &x).is_err());
+        let l: Value = serde_json::from_str(
+            &call("zip-list", &json!({ "path": s(&d.join("o.zip")) })).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            l["entries"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|e| e["name"] == "sub/a.txt")
+        );
+        // zip-slip entry is skipped, not written outside the target.
+        let evil = std::fs::File::create(d.join("evil.zip")).unwrap();
+        let mut w = zip::ZipWriter::new(evil);
+        use std::io::Write;
+        w.start_file("../escape.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        w.write_all(b"x").unwrap();
+        w.finish().unwrap();
+        call(
+            "zip-extract",
+            &json!({ "from": s(&d.join("evil.zip")), "to": s(&d.join("out2")) }),
+        )
+        .unwrap();
+        assert!(!d.join("escape.txt").exists());
         let _ = std::fs::remove_dir_all(&d);
     }
 }
