@@ -116,6 +116,43 @@ pub fn output_path(input: &str, suffix: &str) -> PathBuf {
     kb_platform::files::unique_path(dir, &format!("{stem} ({suffix}).pdf"))
 }
 
+/// Runs `op` over every path, collecting a result per file (task 3A.9).
+pub fn batch(
+    op: &str,
+    paths: &[String],
+    pages: &str,
+    degrees: i32,
+    password: &str,
+) -> Result<serde_json::Value, String> {
+    if !matches!(op, "rotate" | "extract" | "unlock") {
+        return Err(format!("unknown batch op: {op}"));
+    }
+    if paths.is_empty() || paths.len() > 200 {
+        return Err("give between 1 and 200 files".into());
+    }
+    let results: Vec<serde_json::Value> = paths
+        .iter()
+        .map(|p| {
+            let r = match op {
+                "rotate" => {
+                    let j = serde_json::json!({ "pages": pages, "degrees": degrees }).to_string();
+                    edit_file(p, "pdf.rotate", j, "rotated")
+                }
+                "extract" => {
+                    let j = serde_json::json!({ "pages": pages }).to_string();
+                    edit_file(p, "pdf.extract", j, "pages")
+                }
+                _ => unlock_file(p, password),
+            };
+            match r {
+                Ok(o) => serde_json::json!({ "path": p, "output": o }),
+                Err(e) => serde_json::json!({ "path": p, "error": e }),
+            }
+        })
+        .collect();
+    Ok(serde_json::json!({ "results": results }))
+}
+
 /// Merges the given PDF files into `<first> (merged).pdf`; returns the output path.
 pub fn merge_files(paths: &[String]) -> Result<String, String> {
     if paths.len() < 2 {

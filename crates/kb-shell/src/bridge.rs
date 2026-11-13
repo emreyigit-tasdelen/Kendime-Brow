@@ -134,6 +134,23 @@ impl BrowserSideHandler for ShellQueryHandler {
                     crate::pdf::edit_file(&path, "pdf.rotate", json, "rotated")
                 });
             }
+            Command::PdfBatch {
+                op,
+                paths,
+                pages,
+                degrees,
+                password,
+            } => {
+                std::thread::spawn(move || {
+                    let r = crate::pdf::batch(&op, &paths, &pages, degrees, &password);
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(v) => cb.success_str(&v.to_string()),
+                            Err(e) => cb.failure(400, &e),
+                        }
+                    }
+                });
+            }
             Command::PdfMerge { paths } => {
                 spawn_pdf_edit(callback, move || crate::pdf::merge_files(&paths));
             }

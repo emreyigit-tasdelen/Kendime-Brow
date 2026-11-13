@@ -78,7 +78,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [ ] 3A.6 OCR pipeline (Tesseract) + language pack download
 - [~] 3A.7 Text and table extraction → text extraction + in-document search done; table extraction pending
 - [ ] 3A.8 Signing (PAdES-B-B) + signature verification
-- [ ] 3A.9 Batch processing + all PDF actions in the action registry
+- [ ] 3A.9 Batch processing + all PDF actions in the action registry (partial: `pdf-batch` command for rotate/extract/unlock over many files; no UI or registry actions yet)
 
 **3B — Office (§7)**
 - [x] 3B.1 Fast spreadsheet preview with `calamine` (7a)

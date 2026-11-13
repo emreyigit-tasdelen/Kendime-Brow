@@ -112,6 +112,18 @@ pub enum Command {
         pages: String,
         degrees: i32,
     },
+    /// Runs one operation (`rotate`, `extract`, `unlock`) over several PDFs; one failing file
+    /// does not stop the rest. Replies `{results:[{path, output|error}]}`.
+    PdfBatch {
+        op: String,
+        paths: Vec<String>,
+        #[serde(default)]
+        pages: String,
+        #[serde(default)]
+        degrees: i32,
+        #[serde(default)]
+        password: String,
+    },
     /// Writes `<first> (merged).pdf`.
     PdfMerge {
         paths: Vec<String>,
