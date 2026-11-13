@@ -1,0 +1,16 @@
+// Example Headscale ACL policy for Kendime-Brow (task 5.10). Replace <user> names; load with
+// `policy.path` in config.yaml, then `sudo systemctl reload headscale` (or restart).
+// Model: browser nodes (tag:browser) may reach companion nodes (tag:companion) only on the ports below.
+{
+  "tagOwners": {
+    "tag:browser":   ["<user>@"],
+    "tag:companion": ["<user>@"]
+  },
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["tag:browser"],
+      "dst": ["tag:companion:22,3389,8443"]   // SSH/SFTP, RDP, companion status API
+    }
+  ]
+}

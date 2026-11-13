@@ -313,3 +313,4 @@ Newest on top. Format: task · done · decision · next step.
 - 4B.4 edit-and-resend done: net ops get/resend (fresh request, no cookies, http(s) only, 256 KB body cap, runs off the UI thread) + "Edit & resend" in kb://net. Live-verified with scripts/resend-smoke.mjs. NB: cargo target dir is C:/Claude-Temp/target (binary at C:/Claude-Temp/target/debug/kendime-brow.exe).
 - 4B.2 NetLog done (opt-in): kb://net "NetLog" toggle writes <profile>/netlog.on; next start passes --log-net-log=<profile>/netlog.json (default capture mode: cookies/auth stripped). Live-verified file is created. Off by default.
 - 5.1 docs done: docs/SERVER-SETUP.md + deploy/headscale/config.yaml.example (placeholders only, no secrets). 5.2 needs the user (server + credentials).
+- 5.10 ACL template: deploy/headscale/acl.hujson.example (browser -> companion on 22/3389/8443 only). Admin panel not done.
