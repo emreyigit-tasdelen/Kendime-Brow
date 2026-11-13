@@ -75,7 +75,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [~] 3A.3 Form filling, annotations → form filling done (text + checkbox); annotations pending
 - [~] 3A.4 qpdf: encrypt, linearize, repair done (backend `pdf-tool`, tested with real qpdf; UI buttons in the PDF viewer)
 - [ ] 3A.5 Compression: image resampling (DPI), color profile (lcms2)
-- [~] 3A.6 OCR: `pdf-tool` op `ocr` runs Tesseract on a page image (no PDF page rasterising or UI yet)
+- [~] 3A.6 OCR: "OCR (English)" button in the PDF viewer renders pages, runs Tesseract, merges with qpdf (type-checked, not run end to end; language pack download pending)
 - [~] 3A.7 Text and table extraction → text extraction + in-document search done; table extraction pending
 - [ ] 3A.8 Signing (PAdES-B-B) + signature verification
 - [ ] 3A.9 Batch processing + all PDF actions in the action registry (partial: `pdf-batch` command for rotate/extract/unlock over many files; UI in the PDF viewer (batch rotate 90°, batch extract); registry actions still open)

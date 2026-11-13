@@ -70,6 +70,15 @@ function Viewer() {
   const [pages, setPages] = createSignal('');
   const [mergeList, setMergeList] = createSignal('');
   const [batchList, setBatchList] = createSignal('');
+  const ocr = async () => {
+    setStatus({ text: 'Running OCR (this can take a while)…' });
+    try {
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'ocr', args: { path: file } })) as { path: string };
+      setStatus({ text: `Saved ${r.path}` });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
   const [toolPw, setToolPw] = createSignal('');
   const tool = async (op: 'encrypt' | 'linearize' | 'repair') => {
     setStatus({ text: `${op}…` });
@@ -252,6 +261,7 @@ function Viewer() {
           <button disabled={!toolPw()} onClick={() => void tool('encrypt')}>Encrypt</button>
           <button onClick={() => void tool('linearize')}>Linearize</button>
           <button onClick={() => void tool('repair')}>Repair</button>
+          <button onClick={() => void ocr()}>OCR (English)</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>

@@ -204,20 +204,42 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             {
                 return Err("invalid language code".into());
             }
-            // Tesseract reads images, not PDFs: it is given page images produced by the caller.
-            let img = PathBuf::from(s("image"));
-            if !img.is_absolute() || !img.is_file() {
-                return Err("image must be an absolute path to an existing image".into());
-            }
-            let base = output(&p, "ocr").with_extension("");
-            run_out(
-                Command::new(tesseract())
-                    .arg(&img)
-                    .arg(&base)
-                    .args(["-l", lang, "pdf"]),
-                "tesseract",
-            )?;
-            Ok(json!({ "path": base.with_extension("pdf").display().to_string() }).to_string())
+            // Render each page to a PNG, OCR it into a one-page searchable PDF, then merge.
+            let meta = crate::pdf::open(crate::pdf::read_pdf(&p.display().to_string())?)?;
+            let pages = serde_json::from_slice::<Value>(&meta)
+                .ok()
+                .and_then(|v| v["pages"].as_u64())
+                .ok_or("could not read the page count")?
+                .min(500) as usize;
+            let work = std::env::temp_dir().join(format!("kb-ocr-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&work);
+            std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
+            let res = (|| -> Result<PathBuf, String> {
+                let mut parts = Vec::new();
+                for i in 0..pages {
+                    let png = work.join(format!("p{i}.png"));
+                    std::fs::write(&png, crate::pdf::render(i, 200.0)?)
+                        .map_err(|e| e.to_string())?;
+                    let base = work.join(format!("p{i}"));
+                    run_out(
+                        Command::new(tesseract())
+                            .arg(&png)
+                            .arg(&base)
+                            .args(["-l", lang, "pdf"]),
+                        "tesseract",
+                    )?;
+                    parts.push(base.with_extension("pdf"));
+                }
+                let out = output(&p, "ocr");
+                let mut cmd = Command::new(qpdf());
+                cmd.args(["--empty", "--pages"]);
+                cmd.args(&parts);
+                cmd.arg("--").arg(&out);
+                run_out(&mut cmd, "qpdf")?;
+                Ok(out)
+            })();
+            let _ = std::fs::remove_dir_all(&work);
+            Ok(json!({ "path": res?.display().to_string() }).to_string())
         }
         _ => Err(format!("unknown pdf-tool op: {op}")),
     }
