@@ -202,6 +202,20 @@ wrap_window_delegate! {
             shell::run_command(command_id) as i32
         }
 
+        // Without these the frame shows no minimize/maximize buttons and Windows snapping
+        // (drag to an edge) does not work.
+        fn can_resize(&self, _window: Option<&mut Window>) -> i32 {
+            1
+        }
+
+        fn can_maximize(&self, _window: Option<&mut Window>) -> i32 {
+            1
+        }
+
+        fn can_minimize(&self, _window: Option<&mut Window>) -> i32 {
+            1
+        }
+
         fn window_runtime_style(&self) -> RuntimeStyle {
             // CEF limits (verified in 1.6): a Chrome-style BrowserView cannot be added to an
             // Alloy-style window, and a window cannot hold more than one Chrome-style
