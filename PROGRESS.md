@@ -366,3 +366,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3C.6: drag a row to the other pane copies it (no overwrite). Type-checked only.
 
 - 3C.5: JXL already supported; AVIF/HEIC/RAW deferred (native libs dav1d/libheif/libraw not in the build). Moving on.
+
+- 3A.8: visible signature box added (sign visible=true, UI uses it); test verifies with OpenSSL and qpdf. Timestamps still need a TSA (network).

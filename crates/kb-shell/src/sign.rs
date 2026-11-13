@@ -112,9 +112,10 @@ pub fn sign_pdf(
     key_pem: &str,
     cert_pem: &str,
     signer_name: &str,
+    visible: bool,
 ) -> Result<(), String> {
     let tmp = out.with_extension("kbtmp.pdf");
-    let r = sign_inner(qpdf, input, &tmp, key_pem, cert_pem, signer_name);
+    let r = sign_inner(qpdf, input, &tmp, key_pem, cert_pem, signer_name, visible);
     match r {
         Ok(bytes) => {
             let _ = std::fs::remove_file(&tmp);
@@ -139,6 +140,7 @@ fn sign_inner(
     key_pem: &str,
     cert_pem: &str,
     signer_name: &str,
+    visible: bool,
 ) -> Result<Vec<u8>, String> {
     let st = Command::new(qpdf)
         .arg("--object-streams=disable")
@@ -239,13 +241,33 @@ fn sign_inner(
         esc(signer_name)
     );
     push_obj(&mut pdf, sig_n, &sig_obj);
+    let ap_n = size + 2;
+    let (rect, ap) = if visible {
+        ("[36 36 266 86]", format!(" /AP << /N {ap_n} 0 R >>"))
+    } else {
+        ("[0 0 0 0]", String::new())
+    };
     push_obj(
         &mut pdf,
         wid_n,
         &format!(
-            "<< /Type /Annot /Subtype /Widget /FT /Sig /Rect [0 0 0 0] /F 132 /T (Signature1) /V {sig_n} 0 R /P {page} 0 R >>"
+            "<< /Type /Annot /Subtype /Widget /FT /Sig /Rect {rect} /F 132 /T (Signature1) /V {sig_n} 0 R /P {page} 0 R{ap} >>"
         ),
     );
+    if visible {
+        let text = format!("Digitally signed by {}", esc(signer_name));
+        let content = format!(
+            "0.5 g 0 0 230 50 re S 0 g BT /F1 10 Tf 8 30 Td ({text}) Tj 0 -14 Td ({now}) Tj ET"
+        );
+        let body = format!(
+            "<< /Type /XObject /Subtype /Form /BBox [0 0 230 50] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Length {} >>
+stream
+{content}
+endstream",
+            content.len()
+        );
+        push_obj(&mut pdf, ap_n, &body);
+    }
     let xref_pos = pdf.len();
     let mut x = String::from("xref\n");
     let mut sorted = offsets.clone();
@@ -255,7 +277,7 @@ fn sign_inner(
     }
     x.push_str(&format!(
         "trailer\n<< /Size {} /Root {root} 0 R /Prev {prev} >>\nstartxref\n{xref_pos}\n%%EOF\n",
-        size + 2
+        size + if visible { 3 } else { 2 }
     ));
     pdf.extend_from_slice(x.as_bytes());
 
@@ -431,6 +453,7 @@ trailer
             &std::fs::read_to_string(&key).unwrap(),
             &std::fs::read_to_string(&crt).unwrap(),
             "Test",
+            true,
         )
         .unwrap();
         let check = Command::new(qpdf)

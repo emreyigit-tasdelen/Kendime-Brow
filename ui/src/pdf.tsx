@@ -92,7 +92,7 @@ function Viewer() {
   const sign = async () => {
     setStatus({ text: 'Signing…' });
     try {
-      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'sign', args: { path: file, key: keyPath(), cert: certPath() } })) as { path: string };
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'sign', args: { path: file, key: keyPath(), cert: certPath(), visible: true } })) as { path: string };
       setStatus({ text: `Saved ${r.path}` });
     } catch (e) {
       setStatus({ text: String(e) });

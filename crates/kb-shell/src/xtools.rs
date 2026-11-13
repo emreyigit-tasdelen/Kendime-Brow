@@ -227,7 +227,15 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
                 s("name")
             };
             let out = output(&p, "signed");
-            crate::sign::sign_pdf(&qpdf(), &p, &out, &key, &cert, name)?;
+            crate::sign::sign_pdf(
+                &qpdf(),
+                &p,
+                &out,
+                &key,
+                &cert,
+                name,
+                args["visible"].as_bool().unwrap_or(false),
+            )?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
         "verify" => {
