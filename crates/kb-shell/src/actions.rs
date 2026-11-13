@@ -78,6 +78,14 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             Command::Autofill,
         ),
         (
+            "localfiles.open",
+            "Open local file explorer",
+            Command::NewTab {
+                url: Some("kb://localfiles/".into()),
+                container: None,
+            },
+        ),
+        (
             "scripts.open",
             "Open userscripts",
             Command::NewTab {

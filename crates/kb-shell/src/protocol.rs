@@ -171,6 +171,12 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Local file explorer ops (see `localfs.rs`).
+    LocalFs {
+        op: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
     /// Fill the saved login for the active tab (user-initiated only).
     Autofill,
     /// Network inspector (see `net.rs`): list/har/curl/clear.
