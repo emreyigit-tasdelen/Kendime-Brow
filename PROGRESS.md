@@ -370,3 +370,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.8: visible signature box added (sign visible=true, UI uses it); test verifies with OpenSSL and qpdf. Timestamps still need a TSA (network).
 
 - 3C.6: archive-extract op (system bsdtar/libarchive: tar, tgz, 7z, rar, iso) + button; tested with tar.gz. Needs tar on PATH (Windows 10+ has it).
+
+- 3A.3: annotate op (note/highlight, incremental update, tested) + buttons in kb://pdf. Position is fixed (top-left area); click-to-place and editing existing annotations still open.

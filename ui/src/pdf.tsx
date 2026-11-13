@@ -99,6 +99,18 @@ function Viewer() {
     }
   };
   const [toolPw, setToolPw] = createSignal('');
+  const [noteText, setNoteText] = createSignal('');
+  const [notePage, setNotePage] = createSignal('1');
+  const annotate = async (kind: 'note' | 'highlight') => {
+    setStatus({ text: 'Annotating…' });
+    try {
+      const args = { path: file, page: Number(notePage()) || 1, kind, text: noteText(), x1: 36, y1: 700, x2: 300, y2: 720 };
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'annotate', args })) as { path: string };
+      setStatus({ text: `Saved ${r.path}` });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
   const tool = async (op: 'encrypt' | 'linearize' | 'repair' | 'compress') => {
     setStatus({ text: `${op}…` });
     try {
@@ -286,6 +298,10 @@ function Viewer() {
           <input type="text" placeholder="certificate (PEM path)" value={certPath()} onInput={(e) => setCertPath(e.currentTarget.value)} />
           <button disabled={!keyPath() || !certPath()} onClick={() => void sign()}>Sign</button>
           <button onClick={() => void verify()}>Verify signatures</button>
+          <input type="text" placeholder="note text" value={noteText()} onInput={(e) => setNoteText(e.currentTarget.value)} />
+          <input type="number" min="1" style="width:4em" value={notePage()} onInput={(e) => setNotePage(e.currentTarget.value)} />
+          <button onClick={() => void annotate('note')}>Add note</button>
+          <button onClick={() => void annotate('highlight')}>Add highlight</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>

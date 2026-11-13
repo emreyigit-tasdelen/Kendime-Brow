@@ -238,6 +238,21 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             )?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "annotate" => {
+            let p = pdf_path(args)?;
+            let n = |k: &str| args[k].as_f64().unwrap_or(0.0);
+            let out = output(&p, "annotated");
+            crate::annot::annotate(
+                &qpdf(),
+                &p,
+                &out,
+                args["page"].as_u64().unwrap_or(1),
+                s("kind"),
+                [n("x1"), n("y1"), n("x2"), n("y2")],
+                s("text"),
+            )?;
+            Ok(json!({ "path": out.display().to_string() }).to_string())
+        }
         "verify" => {
             let p = pdf_path(args)?;
             let bytes = std::fs::read(p).map_err(|e| e.to_string())?;

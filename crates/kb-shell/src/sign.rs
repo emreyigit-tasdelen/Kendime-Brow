@@ -28,7 +28,7 @@ const SIG_BYTES: usize = 8192;
 const OID_SIGNING_CERT_V2: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.16.2.47");
 
-fn qpdf_text(qpdf: &str, args: &[&str]) -> Result<String, String> {
+pub(crate) fn qpdf_text(qpdf: &str, args: &[&str]) -> Result<String, String> {
     let o = Command::new(qpdf)
         .args(args)
         .output()
@@ -39,11 +39,11 @@ fn qpdf_text(qpdf: &str, args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&o.stdout).into_owned())
 }
 
-fn find_last(hay: &[u8], needle: &[u8]) -> Option<usize> {
+pub(crate) fn find_last(hay: &[u8], needle: &[u8]) -> Option<usize> {
     hay.windows(needle.len()).rposition(|w| w == needle)
 }
 
-fn number_after(hay: &str, key: &str) -> Option<u64> {
+pub(crate) fn number_after(hay: &str, key: &str) -> Option<u64> {
     let i = hay.find(key)? + key.len();
     hay[i..]
         .trim_start()
@@ -54,7 +54,7 @@ fn number_after(hay: &str, key: &str) -> Option<u64> {
 }
 
 /// Appends `extra` just before the final `>>` of a dictionary's text.
-fn add_to_dict(dict: &str, extra: &str) -> Result<String, String> {
+pub(crate) fn add_to_dict(dict: &str, extra: &str) -> Result<String, String> {
     let end = dict.rfind(">>").ok_or("unexpected object syntax")?;
     Ok(format!("{} {extra} {}", &dict[..end], &dict[end..]))
 }

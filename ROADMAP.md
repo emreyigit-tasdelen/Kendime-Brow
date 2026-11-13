@@ -72,7 +72,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 **3A — PDF (§6)**
 - [x] 3A.1 `kb-doc` host + PDFium rendering, `kb://pdf` viewer (lazy pages, zoom) → text search and tile rendering of huge pages still pending
 - [x] 3A.2 Merge / split / reorder / rotate (host methods + viewer tools; thumbnails/drag-reorder UI later)
-- [~] 3A.3 Form filling, annotations → form filling done (text + checkbox); annotations pending
+- [~] 3A.3 Form filling, annotations → form filling done (text + checkbox); sticky notes and highlights (annotate op, fixed position near page top, tested with qpdf) done; free placement and editing existing annotations pending
 - [~] 3A.4 qpdf: encrypt, linearize, repair done (backend `pdf-tool`, tested with real qpdf; UI buttons in the PDF viewer)
 - [~] 3A.5 Compression: lossless qpdf compress button done; image resampling (DPI) and lcms2 colour profiles pending
 - [~] 3A.6 OCR: "OCR (English)" button in the PDF viewer renders pages, runs Tesseract, merges with qpdf (type-checked, not run end to end; language pack download pending)
