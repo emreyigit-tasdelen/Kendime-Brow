@@ -555,6 +555,11 @@ wrap_display_handler! {
     struct KbDisplayHandler;
 
     impl DisplayHandler {
+        fn on_fullscreen_mode_change(&self, _browser: Option<&mut Browser>, fullscreen: i32) {
+            // HTML5 fullscreen (video players): make the whole window fullscreen.
+            shell::set_fullscreen(fullscreen != 0);
+        }
+
         fn on_title_change(&self, browser: Option<&mut Browser>, title: Option<&CefString>) {
             if let Some(browser) = browser {
                 let title = title.map(CefString::to_string).unwrap_or_default();

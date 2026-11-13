@@ -34,10 +34,12 @@ pub mod command {
     pub const FORWARD: i32 = 6;
     pub const RELOAD: i32 = 7;
     pub const PALETTE: i32 = 8;
+    pub const FULLSCREEN: i32 = 9;
 }
 
 // Windows virtual key codes (CEF uses them on every platform for accelerators).
 const VK_TAB: i32 = 0x09;
+const VK_F11: i32 = 0x7A;
 const VK_LEFT: i32 = 0x25;
 const VK_RIGHT: i32 = 0x27;
 const VK_T: i32 = 0x54;
@@ -55,6 +57,7 @@ pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
     (command::FORWARD, VK_RIGHT, false, false, true),
     (command::RELOAD, VK_F5, false, false, false),
     (command::PALETTE, VK_P, true, true, false),
+    (command::FULLSCREEN, VK_F11, false, false, false),
 ];
 
 /// One tab: its view plus the state shown in the UI strip.
@@ -383,6 +386,14 @@ pub fn add_tab_view(view: BrowserView, container: &'static str) {
 }
 
 /// Positions the UI strip and the tab views inside a client area of `width`×`height`.
+/// Enters or leaves fullscreen; the UI strip is hidden while fullscreen.
+pub fn set_fullscreen(on: bool) {
+    if let Some(w) = with_shell(|s| s.window.clone()) {
+        w.set_fullscreen(on as i32);
+        relayout();
+    }
+}
+
 pub fn apply_layout(width: i32, height: i32) {
     let Some((ui, views)) = with_shell(|s| {
         let views: Vec<BrowserView> = s.tabs.iter().map(|(_, t)| t.view.clone()).collect();
@@ -395,7 +406,8 @@ pub fn apply_layout(width: i32, height: i32) {
     } else {
         UI_STRIP_HEIGHT
     };
-    let strip = wanted.min(height);
+    let fullscreen = with_shell(|s| s.window.is_fullscreen() != 0).unwrap_or(false);
+    let strip = if fullscreen { 0 } else { wanted.min(height) };
     ui.set_bounds(Some(&Rect {
         x: 0,
         y: 0,
@@ -881,6 +893,10 @@ pub fn run_command(cmd: i32) -> bool {
     match cmd {
         command::NEW_TAB => new_tab(NEW_TAB_URL),
         command::PALETTE => set_palette(!PALETTE_OPEN.with(|p| *p.borrow())),
+        command::FULLSCREEN => {
+            let on = with_shell(|s| s.window.is_fullscreen() == 0).unwrap_or(false);
+            set_fullscreen(on);
+        }
         command::CLOSE_TAB => close_active_tab(),
         command::NEXT_TAB | command::PREV_TAB => {
             with_shell(|s| s.tabs.cycle(cmd == command::NEXT_TAB));
