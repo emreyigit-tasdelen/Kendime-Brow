@@ -53,6 +53,7 @@ export interface DownloadState {
   percent: number;
   speed: number;
   status: 'in-progress' | 'paused' | 'complete' | 'canceled' | 'interrupted';
+  sha256: string;
 }
 
 export interface State {

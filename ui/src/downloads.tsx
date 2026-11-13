@@ -57,6 +57,11 @@ function Downloads() {
                   <span class="muted url" title={d.url}>
                     {d.url}
                   </span>
+                  <Show when={d.status === 'complete'}>
+                    <span class="muted url" title="SHA-256">
+                      {d.sha256 ? `SHA-256 ${d.sha256}` : 'SHA-256 …'}
+                    </span>
+                  </Show>
                   <Show when={live(d)}>
                     <progress max="100" value={d.percent >= 0 ? d.percent : undefined} />
                   </Show>

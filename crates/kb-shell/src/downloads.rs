@@ -29,6 +29,8 @@ pub struct DownloadState {
     pub percent: i32,
     pub speed: i64,
     pub status: DownloadStatus,
+    /// SHA-256 of the finished file (hex); empty until computed.
+    pub sha256: String,
 }
 
 struct Entry {
@@ -40,8 +42,61 @@ thread_local! {
     static DOWNLOADS: RefCell<Vec<Entry>> = const { RefCell::new(Vec::new()) };
 }
 
+/// Checksums of finished downloads (computed on a background thread); `None` while running.
+static SHA: std::sync::Mutex<Option<std::collections::HashMap<u32, Option<String>>>> =
+    std::sync::Mutex::new(None);
+
+fn start_hash(id: u32, path: String) {
+    {
+        let mut g = SHA.lock().unwrap_or_else(|e| e.into_inner());
+        let m = g.get_or_insert_with(Default::default);
+        if m.contains_key(&id) {
+            return;
+        }
+        m.insert(id, None);
+    }
+    std::thread::spawn(move || {
+        use sha2::{Digest, Sha256};
+        use std::io::Read;
+        let hex = std::fs::File::open(&path)
+            .ok()
+            .and_then(|mut f| {
+                let mut h = Sha256::new();
+                let mut buf = vec![0u8; 1 << 20];
+                loop {
+                    match f.read(&mut buf) {
+                        Ok(0) => break,
+                        Ok(n) => h.update(&buf[..n]),
+                        Err(_) => return None,
+                    }
+                }
+                Some(
+                    h.finalize()
+                        .iter()
+                        .map(|b| format!("{b:02x}"))
+                        .collect::<String>(),
+                )
+            })
+            .unwrap_or_else(|| "unavailable".into());
+        let mut g = SHA.lock().unwrap_or_else(|e| e.into_inner());
+        g.get_or_insert_with(Default::default).insert(id, Some(hex));
+    });
+}
+
 pub fn list() -> Vec<DownloadState> {
-    DOWNLOADS.with(|d| d.borrow().iter().map(|e| e.state.clone()).collect())
+    let sha = SHA.lock().unwrap_or_else(|e| e.into_inner());
+    DOWNLOADS.with(|d| {
+        d.borrow()
+            .iter()
+            .map(|e| {
+                let mut s = e.state.clone();
+                if let Some(Some(h)) = sha.as_ref().and_then(|m| m.get(&s.id)) {
+                    s.sha256 = h.clone();
+                }
+                s
+            })
+            .collect()
+    })
 }
 
 /// Picks the target path and starts the download without a dialog.
@@ -72,6 +127,7 @@ pub fn on_before_download(
                 percent: 0,
                 speed: 0,
                 status: DownloadStatus::InProgress,
+                sha256: String::new(),
             },
             callback: None,
         })
@@ -94,6 +150,9 @@ pub fn on_download_updated(item: &mut DownloadItem, callback: Option<&mut Downlo
         DownloadStatus::InProgress
     };
     let full = CefString::from(&item.full_path()).to_string();
+    if status == DownloadStatus::Complete && !full.is_empty() {
+        start_hash(item.id(), full.clone());
+    }
     DOWNLOADS.with(|d| {
         let mut d = d.borrow_mut();
         let Some(e) = d.iter_mut().find(|e| e.state.id == item.id()) else {
