@@ -49,6 +49,64 @@ fn tesseract() -> String {
     )
 }
 
+fn soffice() -> String {
+    find(
+        "soffice",
+        "KB_LIBREOFFICE_DIR",
+        &["C:/Program Files/LibreOffice/program"],
+    )
+}
+
+const OFFICE_TARGETS: &[&str] = &[
+    "pdf", "docx", "odt", "xlsx", "ods", "pptx", "odp", "csv", "txt", "html",
+];
+
+/// Converts an office document with headless LibreOffice into `<name> (converted).<fmt>`.
+fn office_convert(path: &str, fmt: &str) -> Result<PathBuf, String> {
+    if !OFFICE_TARGETS.contains(&fmt) {
+        return Err(format!("unsupported target format: {fmt}"));
+    }
+    let src = PathBuf::from(path);
+    if !src.is_absolute() || !src.is_file() {
+        return Err("path must be an absolute existing file".into());
+    }
+    let work = std::env::temp_dir().join(format!("kb-office-{}-{}", std::process::id(), fmt));
+    let _ = std::fs::remove_dir_all(&work);
+    std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
+    // A throwaway profile keeps the conversion away from any running LibreOffice instance.
+    let profile = work.join("profile");
+    let url = format!(
+        "-env:UserInstallation=file:///{}",
+        profile.display().to_string().replace('\\', "/")
+    );
+    let r = run_out(
+        Command::new(soffice())
+            .arg(url)
+            .args(["--headless", "--convert-to", fmt, "--outdir"])
+            .arg(&work)
+            .arg(&src),
+        "LibreOffice",
+    );
+    let stem = src
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("document");
+    let made = work.join(format!("{stem}.{fmt}"));
+    let res = match r {
+        Ok(()) if made.is_file() => {
+            let dir = src.parent().unwrap_or(Path::new("."));
+            let dest = kb_platform::files::unique_path(dir, &format!("{stem} (converted).{fmt}"));
+            std::fs::copy(&made, &dest)
+                .map(|_| dest)
+                .map_err(|e| e.to_string())
+        }
+        Ok(()) => Err("conversion produced no output".into()),
+        Err(e) => Err(e),
+    };
+    let _ = std::fs::remove_dir_all(&work);
+    res
+}
+
 fn pdf_path(args: &Value) -> Result<PathBuf, String> {
     let p = PathBuf::from(args.get("path").and_then(Value::as_str).unwrap_or_default());
     if !p.is_absolute() || !p.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf")) {
@@ -132,6 +190,10 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             run_out(Command::new(qpdf()).args(a), "qpdf")?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "office-convert" => {
+            let out = office_convert(s("path"), s("format"))?;
+            Ok(json!({ "path": out.display().to_string() }).to_string())
+        }
         "ocr" => {
             let p = pdf_path(args)?;
             let lang = s("lang");
@@ -176,6 +238,24 @@ mod tests {
         assert_eq!(e[..4], ["--encrypt", "pw", "pw", "256"]);
         assert!(qpdf_args("encrypt", i, o, "", "").is_err());
         assert!(qpdf_args("zip", i, o, "", "").is_err());
+    }
+
+    #[test]
+    fn office_convert_validates_and_converts() {
+        assert!(office_convert("/x.docx", "exe").is_err());
+        assert!(office_convert("rel.docx", "pdf").is_err());
+        if Command::new(soffice()).arg("--version").output().is_err() {
+            eprintln!("LibreOffice not available; skipped");
+            return;
+        }
+        let d = std::env::temp_dir().join(format!("kb-oc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        let f = d.join("a.txt");
+        std::fs::write(&f, "hello").unwrap();
+        let out = office_convert(&f.display().to_string(), "pdf").unwrap();
+        assert!(std::fs::read(&out).unwrap().starts_with(b"%PDF"));
+        let _ = std::fs::remove_dir_all(&d);
     }
 
     #[test]

@@ -340,3 +340,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.4/3A.6 backend: kb-shell xtools.rs (qpdf encrypt/linearize/repair, tesseract ocr); UI and page rasterising pending.
 
 - 3A.4 UI: Encrypt/Linearize/Repair buttons in pdf.tsx (type-checked only). LibreOffice installed via winget (3B.x next).
+
+- 3B.4 backend: office-convert in xtools.rs (LibreOffice headless, real test passes; first run is slow ~9 min cold start). UI/batch pending; 3B.2/3B.3/3B.5/3B.6 (LOK) not started.

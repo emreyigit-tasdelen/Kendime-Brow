@@ -84,7 +84,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [x] 3B.1 Fast spreadsheet preview with `calamine` (7a)
 - [ ] 3B.2 Component downloader (LibreOffice), `kb-doc-lok` subprocess
 - [ ] 3B.3 LOK tile rendering + `kb://office` viewer (7b)
-- [ ] 3B.4 Format conversion + batch conversion (7b)
+- [~] 3B.4 Format conversion: `pdf-tool` op `office-convert` (headless LibreOffice, tested; no UI or batch yet)
 - [ ] 3B.5 In-place editing: input events, UNO-command toolbar (7c)
 - [ ] 3B.6 Style/template manager, formula bar, macro policy (7d)
 
