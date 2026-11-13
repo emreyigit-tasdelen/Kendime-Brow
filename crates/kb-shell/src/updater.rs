@@ -99,7 +99,11 @@ pub fn verify(public_key_b64: &str, signature_text: &str, data: &[u8]) -> Result
 pub enum Check {
     Disabled,
     UpToDate,
-    Available { version: String, url: String },
+    Available {
+        version: String,
+        url: String,
+        sig_url: String,
+    },
     Error(String),
 }
 
@@ -127,12 +131,72 @@ pub fn check_for_update() -> Check {
         return Check::UpToDate;
     }
     match pick_assets(&release) {
-        Some((pkg, _)) => Check::Available {
+        Some((pkg, sig)) => Check::Available {
             version: release.tag_name.trim_start_matches('v').to_string(),
             url: pkg.browser_download_url.clone(),
+            sig_url: sig.browser_download_url.clone(),
         },
         None => Check::UpToDate,
     }
+}
+
+/// Writes `data` to `<dir>/<name>` only if its minisign signature is valid for `key`.
+/// Never overwrites an existing file and never runs the package.
+pub fn store_verified(
+    key: &str,
+    dir: &std::path::Path,
+    name: &str,
+    data: &[u8],
+    signature_text: &str,
+) -> Result<std::path::PathBuf, String> {
+    if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
+        return Err("bad file name".into());
+    }
+    verify(key, signature_text, data).map_err(|e| format!("signature check failed: {e:?}"))?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let path = dir.join(name);
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    std::io::Write::write_all(&mut f, data).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+/// Downloads an update package and its signature (blocking), checks the signature against
+/// `UPDATE_PUBLIC_KEY` and stores the package in `dir`. The package is not executed.
+pub fn download_verified(
+    url: &str,
+    sig_url: &str,
+    name: &str,
+    dir: &std::path::Path,
+) -> Result<std::path::PathBuf, String> {
+    if !url.starts_with("https://") || !sig_url.starts_with("https://") {
+        return Err("updates must come over https".into());
+    }
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(std::time::Duration::from_secs(600)))
+        .user_agent("Kendime-Brow updater")
+        .build()
+        .into();
+    let sig = agent
+        .get(sig_url)
+        .call()
+        .map_err(|e| e.to_string())?
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| e.to_string())?;
+    let data = agent
+        .get(url)
+        .call()
+        .map_err(|e| e.to_string())?
+        .body_mut()
+        .with_config()
+        .limit(1 << 30)
+        .read_to_vec()
+        .map_err(|e| e.to_string())?;
+    store_verified(UPDATE_PUBLIC_KEY, dir, name, &data, &sig)
 }
 
 #[cfg(test)]
@@ -202,6 +266,25 @@ mod tests {
         );
         assert_eq!(verify("", sig, b"test"), Err(VerifyError::NoKey));
         assert_eq!(verify("not-a-key", sig, b"test"), Err(VerifyError::BadKey));
+    }
+
+    #[test]
+    fn store_verified_checks_signature_and_name() {
+        let key = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+        let sig = "untrusted comment: signature from minisign secret key
+RUQf6LRCGA9i559r3g7V1qNyJDApGip8MfqcadIgT9CuhV3EMhHoN1mGTkUidF/z7SrlQgXdy8ofjb7bNJJylDOocrCo8KLzZwo=
+trusted comment: timestamp:1633700835	file:test	prehashed
+wLMDjy9FLAuxZ3q4NlEvkgtyhrr0gtTu6KC4KBJdITbbOeAi1zBIYo0v4iTgt8jJpIidRJnp94ABQkJAgAooBQ==";
+        let d = std::env::temp_dir().join(format!("kb-upd-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        assert!(store_verified(key, &d, "pkg", b"tampered", sig).is_err());
+        assert!(!d.join("pkg").exists());
+        assert!(store_verified(key, &d, "../pkg", b"test", sig).is_err());
+        let p = store_verified(key, &d, "pkg", b"test", sig).unwrap();
+        assert_eq!(std::fs::read(&p).unwrap(), b"test");
+        assert!(store_verified(key, &d, "pkg", b"test", sig).is_err());
+        assert!(download_verified("http://x", "https://y", "p", &d).is_err());
+        let _ = std::fs::remove_dir_all(&d);
     }
 
     #[test]
