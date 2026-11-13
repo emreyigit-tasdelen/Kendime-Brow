@@ -172,17 +172,47 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
         "convert" => {
             let p = media_path(args)?;
             let name = args.get("preset").and_then(Value::as_str).unwrap_or("mp4");
-            let (ext, _) = preset(name)?;
+            let raw = args.get("raw").and_then(Value::as_str).unwrap_or("").trim();
+            // A raw argument string replaces the preset's output options; the output name
+            // and `-i` stay under our control, so the input/output files cannot be redirected.
+            let (ext, _) = if raw.is_empty() {
+                preset(name)?
+            } else {
+                ("mkv", Vec::new())
+            };
+            let ext = match args.get("ext").and_then(Value::as_str) {
+                Some(e)
+                    if !raw.is_empty()
+                        && e.chars().all(|c| c.is_ascii_alphanumeric())
+                        && !e.is_empty()
+                        && e.len() <= 5 =>
+                {
+                    e
+                }
+                _ => ext,
+            };
             let dir = p.parent().unwrap_or(Path::new("."));
             let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("media");
             let target = kb_platform::files::unique_path(dir, &format!("{stem} (converted).{ext}"));
-            let a = convert_args(
+            let mut a = convert_args(
                 &p,
                 &target,
-                name,
+                if raw.is_empty() { name } else { "copy" },
                 seconds(args, "start")?,
                 seconds(args, "end")?,
             )?;
+            if !raw.is_empty() {
+                if raw.split_whitespace().any(|t| {
+                    t == "-i" || t == "-y" || !t.starts_with('-') && t.contains(['/', '\\'])
+                }) {
+                    return Err("raw arguments may not contain -i, -y or file paths".into());
+                }
+                // Replace the "-c copy" placeholder (the two args before the output file).
+                let out = a.pop().unwrap_or_default();
+                a.truncate(a.len() - 2);
+                a.extend(raw.split_whitespace().map(String::from));
+                a.push(out);
+            }
             let out = Command::new(tool("ffmpeg"))
                 .args(&a)
                 .stdin(Stdio::null())
@@ -270,6 +300,14 @@ mod tests {
         )
         .unwrap();
         assert!(std::path::Path::new(r["path"].as_str().unwrap()).exists());
+        let raw = call(
+            "convert",
+            &json!({ "path": p, "raw": "-c:a libmp3lame -b:a 64k", "ext": "mp3" }),
+        )
+        .unwrap();
+        let raw: Value = serde_json::from_str(&raw).unwrap();
+        assert!(raw["path"].as_str().unwrap().ends_with(".mp3"));
+        assert!(call("convert", &json!({ "path": p, "raw": "-i /etc/passwd" })).is_err());
         let _ = std::fs::remove_dir_all(&d);
     }
 }

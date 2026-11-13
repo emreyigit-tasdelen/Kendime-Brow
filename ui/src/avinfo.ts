@@ -29,6 +29,8 @@ const out = el('div', { class: 'meta' });
 const preset = el('select', {}, ...['mp4', 'webm', 'mp3', 'm4a', 'copy'].map((p) => el('option', { value: p }, p === 'copy' ? 'copy streams (mkv, no re-encode)' : p)));
 const start = el('input', { placeholder: 'trim start (s)', size: 10 });
 const end = el('input', { placeholder: 'trim end (s)', size: 10 });
+const raw = el('input', { placeholder: 'raw ffmpeg output args (optional, replaces preset)', size: 36 });
+const ext = el('input', { placeholder: 'ext (mkv)', size: 6 });
 const go = el('button', { class: 'primary' }, 'Convert');
 go.onclick = async () => {
   const num = (i: HTMLInputElement) => (i.value.trim() === '' ? null : Number(i.value));
@@ -36,7 +38,7 @@ go.onclick = async () => {
   out.textContent = 'Converting… this can take a while.';
   status.textContent = '';
   try {
-    const r = JSON.parse(await media('convert', { path: file, preset: preset.value, start: num(start), end: num(end) })) as { path: string };
+    const r = JSON.parse(await media('convert', { path: file, preset: preset.value, start: num(start), end: num(end), raw: raw.value, ext: ext.value || undefined })) as { path: string };
     out.textContent = `Saved ${r.path}`;
   } catch (e) {
     out.textContent = '';
@@ -51,7 +53,7 @@ root.replaceChildren(
   el('div', { class: 'meta' }, 'Runs FFmpeg on this computer. Open only media you trust.'),
   status,
   info,
-  el('div', { class: 'card' }, el('div', { class: 'actions' }, preset, start, end, go), out),
+  el('div', { class: 'card' }, el('div', { class: 'actions' }, preset, start, end, go), el('div', { class: 'actions' }, raw, ext), out),
 );
 
 void (async () => {

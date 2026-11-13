@@ -4,6 +4,7 @@ Decision log and hand-off notes between sessions. Newest entry on top.
 In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
+- 3C.2: raw ffmpeg output-args editor added (rejects -i, -y and paths); verified with real FFmpeg. Queue still open.
 - 3A.9 partial: `Command::PdfBatch` + `pdf::batch` (per-file results, 200 file cap). Unit-tested for validation and per-file errors (not live); UI and action-registry entries still open.
 - 3C.6 zip: `zip-list/zip-extract/zip-create` in localfs.rs (zip-slip safe, size cap, no overwrite) + Zip/Unzip buttons; unit-tested. Other formats and drag and drop open.
 - 3C.1/3C.2 partial: `media.rs` (ffprobe info, ffmpeg convert/trim with presets, never overwrites) + `kb://avinfo/?file=`; verified against a real FFmpeg 9 (probe + m4a trim) in a unit test; needs FFmpeg installed (KB_FFMPEG_DIR / PATH).
