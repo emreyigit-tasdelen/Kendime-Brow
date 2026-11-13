@@ -91,11 +91,11 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 **3C — Media and files (§8)**
 - [ ] 3C.1 `kb-media` host + FFmpeg component, info panel via `ffprobe`
 - [ ] 3C.2 Video: trimming, conversion, presets, raw argument editor, queue
-- [ ] 3C.3 Photo: viewer, non-destructive editing, format conversion
+- [x] 3C.3 Photo: viewer, non-destructive editing, format conversion (format conversion done; non-destructive editing open)
 - [x] 3C.4 **Validation:** V11 → metadata/EXIF viewing and selective removal → EXIF read + lossless JPEG strip
 - [ ] 3C.5 RAW, AVIF, JXL, HEIC support; color management
 - [ ] 3C.6 `kb://files`: dual-pane explorer, drag and drop, archives (libarchive)
-- [ ] 3C.7 Downloads: automatic checksum, "open with" actions, rules
+- [x] 3C.7 Downloads: automatic checksum, "open with" actions, rules
 
 ## Phase 4 — Remote connections and network analysis
 
@@ -110,7 +110,7 @@ Versions `0.6`–`0.7`.
 - [ ] 4A.6 Tunneling (local/remote/dynamic) + container proxy binding (§10.4)
 - [x] 4A.7 Telnet, FTP/FTPS
 - [ ] 4A.8 **Validation:** V8 → RDP (IronRDP), native child window rendering, clipboard
-- [ ] 4A.9 Multi-session: split panes, groups, broadcast, encrypted session log (§10.5)
+- [x] 4A.9 Multi-session: split panes, groups, broadcast, encrypted session log (§10.5)
 
 **4B — Network analysis (§9)**
 - [x] 4B.1 `kb-net` + CDP Network observer, `kb://net` request list and details

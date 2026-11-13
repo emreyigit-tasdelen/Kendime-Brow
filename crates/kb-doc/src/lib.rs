@@ -31,6 +31,7 @@ impl std::fmt::Display for DocError {
 
 impl std::error::Error for DocError {}
 
+pub mod convert;
 pub mod edit;
 pub mod forms;
 pub mod meta;

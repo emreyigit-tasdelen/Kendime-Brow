@@ -110,6 +110,7 @@ export type Command =
   | { cmd: 'sheet-preview'; path: string }
   | { cmd: 'image-meta'; path: string }
   | { cmd: 'image-strip'; path: string }
+  | { cmd: 'image-convert'; path: string; format: string }
   | { cmd: 'image-data'; path: string }
   | { cmd: 'net'; op: string; args: Record<string, unknown> }
   | { cmd: 'session-log'; op: string; args: Record<string, unknown> }

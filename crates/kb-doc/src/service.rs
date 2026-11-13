@@ -100,6 +100,12 @@ pub fn handle(
             let m = crate::meta::read(body)?;
             serde_json::to_vec(&m).map_err(|e| e.to_string())
         }
+        "image.convert" => {
+            // body: target format, a newline, then the image bytes.
+            let nl = body.iter().position(|b| *b == 10).ok_or("missing format")?;
+            let target = String::from_utf8_lossy(&body[..nl]).to_ascii_lowercase();
+            crate::convert::convert(&body[nl + 1..], &target)
+        }
         "image.strip" => crate::meta::strip_jpeg_metadata(body).map(|(bytes, _)| bytes),
         "sheet.preview" => {
             // body: extension, a newline, then the file bytes.

@@ -119,6 +119,11 @@ pub enum Command {
     ImageStrip {
         path: String,
     },
+    /// Converts an image to another format (png, jpg, bmp, gif, webp), saved next to it.
+    ImageConvert {
+        path: String,
+        format: String,
+    },
     /// The image as a `data:` URL for display.
     ImageData {
         path: String,

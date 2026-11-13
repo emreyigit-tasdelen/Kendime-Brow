@@ -788,6 +788,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::TermClose { .. }
         | Command::ImageMeta { .. }
         | Command::ImageStrip { .. }
+        | Command::ImageConvert { .. }
         | Command::ImageData { .. }
         | Command::PdfFill { .. }
         | Command::PdfExtract { .. }

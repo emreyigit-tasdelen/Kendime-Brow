@@ -51,12 +51,22 @@ function Viewer() {
     }
   };
 
+  const convert = async (format: string) => {
+    try {
+      const { path } = JSON.parse(await send({ cmd: 'image-convert', path: file, format })) as { path: string };
+      setMessage({ text: `Saved a ${format.toUpperCase()} copy:`, path });
+    } catch (e) {
+      setMessage({ text: String(e) });
+    }
+  };
+
   const isJpeg = /\.jpe?g$/i.test(file);
   return (
     <div class="media">
       <header>
         <span class="title" title={file}>{file.split(/[\\/]/).pop()}</span>
         <span class="spacer" />
+        <For each={['png', 'jpg', 'webp']}>{(f) => <button onClick={() => void convert(f)}>Save as {f.toUpperCase()}</button>}</For>
         <Show when={meta() && meta()!.entries.length > 0 && isJpeg}>
           <button onClick={() => void strip()}>Remove metadata (save copy)</button>
         </Show>
