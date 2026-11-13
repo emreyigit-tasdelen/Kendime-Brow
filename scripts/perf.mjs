@@ -71,6 +71,6 @@ rmSync(profile, { recursive: true, force: true });
 console.log(`cold start (UI loaded): ${startMs} ms (budget ${budgetStartMs})`);
 if (privateMb !== null) console.log(`private bytes of the tree: ${privateMb} MB`);
 console.log(`memory, ${tasks.length} processes, empty tab: ${ramMb} MB (budget ${budgetRamMb})`);
-const failed = startMs === null || startMs > budgetStartMs || ramMb > budgetRamMb;
+const failed = startMs === null || startMs > budgetStartMs || (privateMb ?? ramMb) > budgetRamMb; // Windows: private bytes (working set double-counts shared pages)
 console.log(failed ? 'OVER BUDGET' : 'WITHIN BUDGET');
 process.exit(failed ? 1 : 0);
