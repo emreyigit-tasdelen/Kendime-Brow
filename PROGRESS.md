@@ -364,3 +364,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.7: table extraction already existed (copyTables); roadmap corrected to done. 3A.9 registry actions need a file argument, so only pdf.open exists; left as is.
 
 - 3C.6: drag a row to the other pane copies it (no overwrite). Type-checked only.
+
+- 3C.5: JXL already supported; AVIF/HEIC/RAW deferred (native libs dav1d/libheif/libraw not in the build). Moving on.
