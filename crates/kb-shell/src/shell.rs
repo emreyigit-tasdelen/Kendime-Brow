@@ -99,6 +99,9 @@ impl Tab {
     }
 }
 
+/// Window/view background (ARGB), matches the UI's dark theme.
+const BACKGROUND: u32 = 0xFF1E1F22;
+
 struct Shell {
     window: Window,
     client: Client,
@@ -273,6 +276,10 @@ pub fn init_window(window: &mut Window, ui_view: BrowserView, client: Client) {
     // the full height, see PROGRESS 1.7), so `apply_layout` positions the views itself after
     // every window layout pass (`WindowDelegate::on_layout_changed`).
     let mut ui = View::from(&ui_view);
+    // Dark backgrounds everywhere: on window activation the views repaint and any default
+    // (white/black) background briefly showed through as a flicker.
+    window.set_background_color(BACKGROUND);
+    ui.set_background_color(BACKGROUND);
     window.add_child_view(Some(&mut ui));
 
     // Window accelerators (also matched in the key handlers, see app.rs `handle_key`).
@@ -380,6 +387,7 @@ pub fn add_tab_view(view: BrowserView, container: &'static str) {
         let mut v = View::from(&view);
         // Index 0: tabs stay below the UI strip in z-order (a new BrowserView otherwise painted
         // over the strip until the next resize).
+        v.set_background_color(BACKGROUND);
         window.add_child_view_at(Some(&mut v), 0);
         refresh();
     }

@@ -45,6 +45,15 @@ wrap_app! {
             {
                 cl.append_switch(Some(&CefString::from("disable-gpu")));
             }
+            // GPU compositing flickered on resize (user-confirmed); software compositing keeps
+            // GPU rasterization but composites on the CPU.
+            cl.append_switch(Some(&CefString::from("disable-gpu-compositing")));
+            // Diagnostics: extra Chromium switches, comma separated (e.g. to bisect GPU issues).
+            if let Ok(extra) = std::env::var("KB_EXTRA_SWITCHES") {
+                for s in extra.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+                    cl.append_switch(Some(&CefString::from(s)));
+                }
+            }
             if let (Some(m), Some(p)) = (crate::net::netlog_marker(), crate::net::netlog_path())
                 && m.exists()
             {
