@@ -76,7 +76,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [~] 3A.4 qpdf: encrypt, linearize, repair done (backend `pdf-tool`, tested with real qpdf; UI buttons in the PDF viewer)
 - [~] 3A.5 Compression: lossless qpdf compress button done; image resampling (DPI) and lcms2 colour profiles pending
 - [~] 3A.6 OCR: "OCR (English)" button in the PDF viewer renders pages, runs Tesseract, merges with qpdf (type-checked, not run end to end; language pack download pending)
-- [~] 3A.7 Text and table extraction → text extraction + in-document search done; table extraction pending
+- [x] 3A.7 Text and table extraction → text extraction, in-document search, and table detection with CSV copy (▦ button) done
 - [~] 3A.8 Signing: PAdES-B-B style detached CAdES signature (invisible field, RSA PKCS#8 key + PEM cert) done and verified with OpenSSL; visible signatures, timestamps and docs that already have forms pending
 - [ ] 3A.9 Batch processing + all PDF actions in the action registry (partial: `pdf-batch` command for rotate/extract/unlock over many files; UI in the PDF viewer (batch rotate 90°, batch extract); registry actions still open)
 

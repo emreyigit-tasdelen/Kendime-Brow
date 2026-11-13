@@ -360,3 +360,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3B.3: office preview via PDF conversion (not LOK tiles). Type-checked, not live-tested.
 
 - 2.3: built-in scriptlets (aopr/aopw/set/nostif/nosiif) loaded via adblock-rust resources; tested, generated JS syntax-checked. Full uBO resources not bundled.
+
+- 3A.7: table extraction already existed (copyTables); roadmap corrected to done. 3A.9 registry actions need a file argument, so only pdf.open exists; left as is.
