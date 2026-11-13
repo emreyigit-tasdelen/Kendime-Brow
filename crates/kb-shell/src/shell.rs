@@ -408,12 +408,15 @@ pub fn apply_layout(width: i32, height: i32) {
     };
     let fullscreen = with_shell(|s| s.window.is_fullscreen() != 0).unwrap_or(false);
     let strip = if fullscreen { 0 } else { wanted.min(height) };
-    ui.set_bounds(Some(&Rect {
-        x: 0,
-        y: 0,
-        width,
-        height: strip,
-    }));
+    set_bounds_if_changed(
+        &ui,
+        Rect {
+            x: 0,
+            y: 0,
+            width,
+            height: strip,
+        },
+    );
     let content = Rect {
         x: 0,
         y: strip,
@@ -421,7 +424,16 @@ pub fn apply_layout(width: i32, height: i32) {
         height: (height - strip).max(0),
     };
     for view in views {
-        view.set_bounds(Some(&content));
+        set_bounds_if_changed(&view, content.clone());
+    }
+}
+
+/// Setting identical bounds still invalidates the view's layout and makes the page re-layout,
+/// which showed up as constant flicker; only touch views whose bounds actually differ.
+fn set_bounds_if_changed(view: &BrowserView, r: Rect) {
+    let cur = view.bounds();
+    if (cur.x, cur.y, cur.width, cur.height) != (r.x, r.y, r.width, r.height) {
+        view.set_bounds(Some(&r));
     }
 }
 

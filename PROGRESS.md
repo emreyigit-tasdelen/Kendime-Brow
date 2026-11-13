@@ -403,3 +403,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2026-11-13 3C.1: FFmpeg is already usable here (winget install on PATH); bundled download needs a pinned release URL+hash and zip extraction wiring (not done).
 - 2026-11-13 F11 + HTML5 fullscreen (hides UI strip). Flicker/black startup frames reported by user: GPU SharedImageManager errors in log; suspect GPU compositing, testing with KB_LOW_MEMORY=1 (disable-gpu).
 - 2026-11-13 Fixed: helper exe was console subsystem (black terminal per tab) -> windows_subsystem; window delegate can_resize/can_maximize/can_minimize=1 (caption buttons + snap). Flicker: video shows new-tab content oscillating ~12px vertically while logged view bounds are stable -> suspect GPU compositing; user to test KB_LOW_MEMORY=1.
+
+- Flicker fix: the exe had no Windows application manifest, so the page alternated between two device scale factors (content jumped ~every 150 ms). `crates/kb-shell/build.rs` now embeds `app.manifest` (Win10 compat, PerMonitorV2 DPI). Screen-capture test: 4/12 distinct frames -> 1/12. Layout also skips `set_bounds` when bounds are unchanged.
