@@ -31,7 +31,7 @@ kb-privacy.workspace = true
 sysinfo = "0.40.3"
 minisign-verify = "0.3.0"
 ureq = "3.5"
-sha2 = "0.11.1"
+sha2 = "0.10"
 kb-ipc.workspace = true
 tokio = { version = "1.54.1", features = ["rt", "time", "macros"] }
 base64 = "0.23.1"
@@ -41,5 +41,14 @@ kb-ssh = { path = "../kb-ssh" }
 kb-net = { path = "../kb-net" }
 kb-userscript = { path = "../kb-userscript" }
 getrandom = "0.4"
+cms = { version = "0.2.3", features = ["builder"] }
+rsa = { version = "0.9", features = ["sha2"] }
+const-oid = "0.9"
+spki = "0.7"
+signature = "2"
+pkcs8 = { version = "0.10", features = ["pem"] }
+pem-rfc7468 = "0.7"
+x509-cert = "0.2"
+der = "0.7"
 
 

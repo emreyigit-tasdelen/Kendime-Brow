@@ -204,6 +204,19 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             let out = office_convert(s("path"), s("format"))?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "sign" => {
+            let p = pdf_path(args)?;
+            let read = |k: &str| std::fs::read_to_string(s(k)).map_err(|e| format!("{k}: {e}"));
+            let (key, cert) = (read("key")?, read("cert")?);
+            let name = if s("name").is_empty() {
+                "Signer"
+            } else {
+                s("name")
+            };
+            let out = output(&p, "signed");
+            crate::sign::sign_pdf(&qpdf(), &p, &out, &key, &cert, name)?;
+            Ok(json!({ "path": out.display().to_string() }).to_string())
+        }
         "office-batch" => {
             let paths: Vec<&str> = args
                 .get("paths")

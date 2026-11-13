@@ -79,6 +79,17 @@ function Viewer() {
       setStatus({ text: String(e) });
     }
   };
+  const [keyPath, setKeyPath] = createSignal('');
+  const [certPath, setCertPath] = createSignal('');
+  const sign = async () => {
+    setStatus({ text: 'Signing…' });
+    try {
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'sign', args: { path: file, key: keyPath(), cert: certPath() } })) as { path: string };
+      setStatus({ text: `Saved ${r.path}` });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
   const [toolPw, setToolPw] = createSignal('');
   const tool = async (op: 'encrypt' | 'linearize' | 'repair' | 'compress') => {
     setStatus({ text: `${op}…` });
@@ -263,6 +274,9 @@ function Viewer() {
           <button onClick={() => void tool('repair')}>Repair</button>
           <button onClick={() => void tool('compress')}>Compress (lossless)</button>
           <button onClick={() => void ocr()}>OCR (English)</button>
+          <input type="text" placeholder="signing key (PKCS#8 PEM path)" value={keyPath()} onInput={(e) => setKeyPath(e.currentTarget.value)} />
+          <input type="text" placeholder="certificate (PEM path)" value={certPath()} onInput={(e) => setCertPath(e.currentTarget.value)} />
+          <button disabled={!keyPath() || !certPath()} onClick={() => void sign()}>Sign</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>

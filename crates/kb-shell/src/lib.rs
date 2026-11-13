@@ -21,6 +21,7 @@ pub mod scheme;
 pub mod sesslog;
 pub mod sftp_svc;
 pub mod shell;
+pub mod sign;
 pub mod store;
 pub mod tabs;
 pub mod tasks;
