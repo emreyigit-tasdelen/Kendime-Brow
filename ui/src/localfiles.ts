@@ -141,6 +141,10 @@ const bar = el(
     const s = activePane.selected;
     if (s) void run(() => fs('zip-extract', { from: join(activePane.path, s.name), to: join(other().path, s.name.replace(/\.zip$/i, '')) }));
   }),
+  button('Convert to PDF', () => {
+    const s = activePane.selected;
+    if (s && !s.dir) void run(() => send({ cmd: 'pdf-tool', op: 'office-convert', args: { path: join(activePane.path, s.name), format: 'pdf' } }));
+  }),
   delBtn,
   nameBox,
 );
