@@ -497,7 +497,10 @@ mod tests {
         assert!(batch("explode", &["a.pdf".into()], "", 0, "").is_err());
         assert!(batch("rotate", &[], "", 90, "").is_err());
         let r = batch("unlock", &["/no/such.pdf".into()], "", 0, "x").unwrap();
-        assert!(r["results"][0]["error"].is_string(), "per-file error, no abort");
+        assert!(
+            r["results"][0]["error"].is_string(),
+            "per-file error, no abort"
+        );
     }
 
     #[test]

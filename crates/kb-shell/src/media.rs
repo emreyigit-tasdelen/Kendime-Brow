@@ -242,4 +242,34 @@ mod tests {
         assert!(seconds(&json!({ "start": -1 }), "start").is_err());
         assert_eq!(seconds(&json!({}), "start").unwrap(), None);
     }
+
+    #[test]
+    fn probe_and_convert_with_real_ffmpeg() {
+        let d = std::env::temp_dir().join(format!("kb-media-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        let wav = d.join("tone.wav");
+        let made = Command::new(tool("ffmpeg"))
+            .args(["-v", "error", "-f", "lavfi", "-i", "sine=duration=2"])
+            .arg(&wav)
+            .status();
+        if !matches!(made, Ok(s) if s.success()) {
+            eprintln!("ffmpeg not available; skipped");
+            return;
+        }
+        let p = wav.display().to_string();
+        let info: Value =
+            serde_json::from_str(&call("probe", &json!({ "path": p })).unwrap()).unwrap();
+        assert_eq!(info["streams"][0]["type"], "audio");
+        let r: Value = serde_json::from_str(
+            &call(
+                "convert",
+                &json!({ "path": p, "preset": "m4a", "start": 0, "end": 1 }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(std::path::Path::new(r["path"].as_str().unwrap()).exists());
+        let _ = std::fs::remove_dir_all(&d);
+    }
 }
