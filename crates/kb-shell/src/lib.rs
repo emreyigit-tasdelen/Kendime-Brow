@@ -29,6 +29,7 @@ pub mod tunnels;
 pub mod updater;
 pub mod userscripts;
 pub mod vault;
+pub mod xtools;
 
 use cef::*;
 

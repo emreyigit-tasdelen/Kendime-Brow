@@ -73,9 +73,9 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [x] 3A.1 `kb-doc` host + PDFium rendering, `kb://pdf` viewer (lazy pages, zoom) → text search and tile rendering of huge pages still pending
 - [x] 3A.2 Merge / split / reorder / rotate (host methods + viewer tools; thumbnails/drag-reorder UI later)
 - [~] 3A.3 Form filling, annotations → form filling done (text + checkbox); annotations pending
-- [ ] 3A.4 qpdf: encryption, password removal, linearization, repair
+- [~] 3A.4 qpdf: encrypt, linearize, repair done (backend `pdf-tool`, tested with real qpdf; no UI yet)
 - [ ] 3A.5 Compression: image resampling (DPI), color profile (lcms2)
-- [ ] 3A.6 OCR pipeline (Tesseract) + language pack download
+- [~] 3A.6 OCR: `pdf-tool` op `ocr` runs Tesseract on a page image (no PDF page rasterising or UI yet)
 - [~] 3A.7 Text and table extraction → text extraction + in-document search done; table extraction pending
 - [ ] 3A.8 Signing (PAdES-B-B) + signature verification
 - [ ] 3A.9 Batch processing + all PDF actions in the action registry (partial: `pdf-batch` command for rotate/extract/unlock over many files; UI in the PDF viewer (batch rotate 90°, batch extract); registry actions still open)
