@@ -74,7 +74,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [x] 3A.2 Merge / split / reorder / rotate (host methods + viewer tools; thumbnails/drag-reorder UI later)
 - [~] 3A.3 Form filling, annotations → form filling done (text + checkbox); annotations pending
 - [~] 3A.4 qpdf: encrypt, linearize, repair done (backend `pdf-tool`, tested with real qpdf; UI buttons in the PDF viewer)
-- [ ] 3A.5 Compression: image resampling (DPI), color profile (lcms2)
+- [~] 3A.5 Compression: lossless qpdf compress button done; image resampling (DPI) and lcms2 colour profiles pending
 - [~] 3A.6 OCR: "OCR (English)" button in the PDF viewer renders pages, runs Tesseract, merges with qpdf (type-checked, not run end to end; language pack download pending)
 - [~] 3A.7 Text and table extraction → text extraction + in-document search done; table extraction pending
 - [ ] 3A.8 Signing (PAdES-B-B) + signature verification

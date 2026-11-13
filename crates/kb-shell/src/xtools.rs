@@ -139,6 +139,15 @@ pub fn qpdf_args(
     let (i, o) = (input.display().to_string(), out.display().to_string());
     Ok(match op {
         "linearize" => vec!["--linearize".into(), i, o],
+        // Lossless size reduction: stronger Flate, object streams, unused-resource removal.
+        "compress" => vec![
+            "--recompress-flate".into(),
+            "--compression-level=9".into(),
+            "--object-streams=generate".into(),
+            "--remove-unreferenced-resources=yes".into(),
+            i,
+            o,
+        ],
         // qpdf rewrites the file, rebuilding the cross-reference table of damaged PDFs.
         "repair" => vec![i, o],
         "encrypt" => {
@@ -178,10 +187,11 @@ fn run_out(cmd: &mut Command, what: &str) -> Result<(), String> {
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     let s = |k: &str| args.get(k).and_then(Value::as_str).unwrap_or_default();
     match op {
-        "linearize" | "repair" | "encrypt" => {
+        "linearize" | "repair" | "encrypt" | "compress" => {
             let p = pdf_path(args)?;
             let suffix = match op {
                 "linearize" => "linearized",
+                "compress" => "compressed",
                 "repair" => "repaired",
                 _ => "encrypted",
             };

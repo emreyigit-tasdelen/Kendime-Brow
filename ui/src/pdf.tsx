@@ -80,7 +80,7 @@ function Viewer() {
     }
   };
   const [toolPw, setToolPw] = createSignal('');
-  const tool = async (op: 'encrypt' | 'linearize' | 'repair') => {
+  const tool = async (op: 'encrypt' | 'linearize' | 'repair' | 'compress') => {
     setStatus({ text: `${op}…` });
     try {
       const r = JSON.parse(await send({ cmd: 'pdf-tool', op, args: { path: file, password: toolPw() } })) as { path: string };
@@ -261,6 +261,7 @@ function Viewer() {
           <button disabled={!toolPw()} onClick={() => void tool('encrypt')}>Encrypt</button>
           <button onClick={() => void tool('linearize')}>Linearize</button>
           <button onClick={() => void tool('repair')}>Repair</button>
+          <button onClick={() => void tool('compress')}>Compress (lossless)</button>
           <button onClick={() => void ocr()}>OCR (English)</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
