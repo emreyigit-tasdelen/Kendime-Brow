@@ -52,6 +52,15 @@ const tasks = await new Promise((resolveTasks) => {
 });
 const ramMb = Math.round(tasks.reduce((n, t) => n + t.memory, 0) / 1048576);
 
+// Private bytes of the whole process tree (shared pages are not counted twice), Windows only.
+let privateMb = null;
+if (platform() === 'win32') {
+  const ps = `$all=Get-CimInstance Win32_Process; $ids=@(${child.pid}); do{$n=$ids.Count; $ids=@($ids + ($all | Where-Object {$ids -contains $_.ParentProcessId}).ProcessId | Select-Object -Unique)}while($ids.Count -gt $n); [math]::Round((Get-Process -Id $ids -ErrorAction SilentlyContinue | Measure-Object PrivateMemorySize64 -Sum).Sum/1MB)`;
+  try {
+    privateMb = Number(execFileSync('powershell', ['-NoProfile', '-Command', ps]).toString().trim());
+  } catch {}
+}
+
 if (platform() === 'win32') {
   execFileSync('powershell', ['-NoProfile', '-Command', `(Get-Process -Id ${child.pid}).CloseMainWindow() | Out-Null`]);
 } else child.kill('SIGTERM');
@@ -60,6 +69,7 @@ child.kill('SIGKILL');
 rmSync(profile, { recursive: true, force: true });
 
 console.log(`cold start (UI loaded): ${startMs} ms (budget ${budgetStartMs})`);
+if (privateMb !== null) console.log(`private bytes of the tree: ${privateMb} MB`);
 console.log(`memory, ${tasks.length} processes, empty tab: ${ramMb} MB (budget ${budgetRamMb})`);
 const failed = startMs === null || startMs > budgetStartMs || ramMb > budgetRamMb;
 console.log(failed ? 'OVER BUDGET' : 'WITHIN BUDGET');
