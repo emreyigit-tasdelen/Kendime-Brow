@@ -4,7 +4,7 @@ import './base.css';
 import './vault.css';
 import { send } from './bridge';
 
-interface Conn { id: string; name: string; host: string; port: number; user: string; vault_id: string }
+interface Conn { id: string; name: string; host: string; port: number; user: string; vault_id: string; group: string }
 
 // Port 23 profiles open as Telnet.
 const isTelnet = (c: Conn) => c.port === 23;
@@ -58,6 +58,12 @@ async function render(): Promise<void> {
   };
   const card = el('div', { class: 'card' });
   if (!list.length) card.append('No saved connections yet.');
+  const groups = [...new Set(list.map((c) => c.group).filter(Boolean))];
+  for (const g of groups) {
+    const all = el('button', {}, `Open group: ${g}`);
+    all.onclick = () => list.filter((c) => c.group === g).forEach((c) => openTerm(c));
+    card.append(el('div', { class: 'row' }, el('div', {}, `Group ${g}`, el('div', { class: 'meta' }, `${list.filter((c) => c.group === g).length} connections`)), el('div', { class: 'actions' }, all)));
+  }
   for (const c of list) {
     const go = el('button', { class: 'primary' }, 'Connect');
     go.onclick = () => openTerm(c);
@@ -72,7 +78,7 @@ async function render(): Promise<void> {
     tun.onclick = () => tunnelPanel(c);
     const edit = el('button', {}, 'Edit');
     edit.onclick = () => void editor(c);
-    card.append(el('div', { class: 'row' }, el('div', {}, c.name, el('div', { class: 'meta' }, `${c.user ? c.user + '@' : ''}${c.host}:${c.port}`)), el('div', { class: 'actions' }, go, files, tun, edit)));
+    card.append(el('div', { class: 'row' }, el('div', {}, c.name, el('div', { class: 'meta' }, `${c.group ? c.group + ' · ' : ''}${c.user ? c.user + '@' : ''}${c.host}:${c.port}`)), el('div', { class: 'actions' }, go, files, tun, edit)));
   }
   root.replaceChildren(el('h1', {}, 'Connections'), el('div', { class: 'bar' }, el('span', {}, `${list.length} saved`), el('div', { class: 'actions' }, add, imp)), err, card, await tunnelList());
 }
@@ -83,17 +89,18 @@ async function editor(c?: Conn): Promise<void> {
   const host = el('input', { value: c?.host ?? '' });
   const port = el('input', { value: String(c?.port ?? 22) });
   const user = el('input', { value: c?.user ?? '' });
+  const group = el('input', { value: c?.group ?? '', placeholder: 'optional, e.g. Production' });
   const vault = el('select', {}, el('option', { value: '' }, 'Ask for a password each time'), ...items.map((i) => el('option', { value: i.id, selected: i.id === c?.vault_id }, `${i.title} (${i.kind})`)));
   const err = el('div', { class: 'error' });
   const label = (t: string, i: HTMLElement) => el('label', {}, t, i);
   const save = el('button', { class: 'primary', type: 'submit' }, 'Save');
   const back = el('button', { type: 'button' }, 'Back');
   back.onclick = () => void render();
-  const form = el('form', {}, label('Name', name), label('Host', host), label('Port', port), label('User', user), label('Credentials (vault entry)', vault), err, el('div', { class: 'actions' }, save, back));
+  const form = el('form', {}, label('Name', name), label('Host', host), label('Port', port), label('User', user), label('Group', group), label('Credentials (vault entry)', vault), err, el('div', { class: 'actions' }, save, back));
   form.onsubmit = async (ev) => {
     ev.preventDefault();
     try {
-      await conn('put', { id: c?.id ?? '', name: name.value, host: host.value, port: port.value, user: user.value, vault_id: vault.value });
+      await conn('put', { id: c?.id ?? '', name: name.value, host: host.value, port: port.value, user: user.value, vault_id: vault.value, group: group.value });
       await render();
     } catch (e) {
       err.textContent = msg(e);

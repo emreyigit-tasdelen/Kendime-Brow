@@ -19,6 +19,9 @@ pub struct Conn {
     /// Vault entry holding the password or private key.
     #[serde(default)]
     pub vault_id: String,
+    /// Optional session group; "Open group" connects every profile in it.
+    #[serde(default)]
+    pub group: String,
 }
 
 fn default_port() -> u16 {
@@ -83,6 +86,7 @@ pub fn parse_ssh_config(text: &str) -> Vec<Conn> {
                         port: 22,
                         user: String::new(),
                         vault_id: String::new(),
+                        group: String::new(),
                     });
                 }
             }
@@ -143,6 +147,7 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
                 port,
                 user: text(args, "user").trim().to_string(),
                 vault_id: text(args, "vault_id").to_string(),
+                group: text(args, "group").trim().to_string(),
             };
             match list.iter_mut().find(|c| c.id == id) {
                 Some(slot) => *slot = conn,
