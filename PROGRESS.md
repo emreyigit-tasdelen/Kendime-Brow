@@ -386,3 +386,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2.11: PERF_ARGS trials: --enable-low-end-device-mode -> 281 MB private / 9 procs (now a default flag). Adding --renderer-process-limit=1 --disable-site-isolation-trials -> 262 MB / 7 procs but removes site isolation, NOT applied. Budget 250 MB still not met.
 
 - 2.11: --disable-gpu alone gives 165 MB private (budget 250 met on private bytes; working set 412 MB) but means software rendering (slower, no WebGL/accelerated video), so it is NOT a default. Candidate for an opt-in "low memory mode" setting. --disable-gpu-compositing: 203 MB; NetworkServiceInProcess: no change.
+
+- 2.11: opt-in low memory mode: env KB_LOW_MEMORY=1 adds --disable-gpu. Release, with low-end flag: 134 MB private (vs 259 MB without) — under the 250 MB budget on private bytes. Software rendering; a settings toggle is still to do. Working-set readings right after a build are unreliable (700-1000 MB).
