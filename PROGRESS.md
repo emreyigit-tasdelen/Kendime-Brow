@@ -372,3 +372,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3C.6: archive-extract op (system bsdtar/libarchive: tar, tgz, 7z, rar, iso) + button; tested with tar.gz. Needs tar on PATH (Windows 10+ has it).
 
 - 3A.3: annotate op (note/highlight, incremental update, tested) + buttons in kb://pdf. Position is fixed (top-left area); click-to-place and editing existing annotations still open.
+
+- STATUS: everything doable without outside help is done. Open items need a Mac (7.x), a Linux VM (1.10b, 1.15), the user server/credentials (5.x), LibreOffice Kit (3B.2/5/6), native codec libs (3C.5), a TSA (3A.8 timestamps), or the maintainer key (2.12). 2.11 RAM budget (702 MB vs 250 MB) is the largest remaining engineering task.

@@ -78,7 +78,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [~] 3A.6 OCR: "OCR (English)" button in the PDF viewer renders pages, runs Tesseract, merges with qpdf (type-checked, not run end to end; language pack download pending)
 - [x] 3A.7 Text and table extraction → text extraction, in-document search, and table detection with CSV copy (▦ button) done
 - [~] 3A.8 Signing: PAdES-B-B style detached CAdES signature (invisible field, RSA PKCS#8 key + PEM cert) done and verified with OpenSSL; visible signature box (bottom-left of page 1, tested) done; RFC 3161 timestamps and docs that already have forms pending
-- [ ] 3A.9 Batch processing + all PDF actions in the action registry (partial: `pdf-batch` command for rotate/extract/unlock over many files; UI in the PDF viewer (batch rotate 90°, batch extract); registry actions still open)
+- [ ] 3A.9 Batch processing + all PDF actions in the action registry (partial: `pdf-batch` command for rotate/extract/unlock over many files; UI in the PDF viewer (batch rotate 90°, batch extract); registry has pdf.open, media.open, localfiles.open etc.; per-file tools need a file argument so stay in the viewer UI)
 
 **3B — Office (§7)**
 - [x] 3B.1 Fast spreadsheet preview with `calamine` (7a)
