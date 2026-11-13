@@ -316,4 +316,4 @@ Newest on top. Format: task · done · decision · next step.
 - 5.1 docs done: docs/SERVER-SETUP.md + deploy/headscale/config.yaml.example (placeholders only, no secrets). 5.2 needs the user (server + credentials).
 - 5.10 ACL template: deploy/headscale/acl.hujson.example (browser -> companion on 22/3389/8443 only). Admin panel not done.
 - 4B.7 (part): kb://net "Statistics" view (per-host and per-type requests/bytes/failures, op net stats). Not live-tested; dissectors, stream reassembly and three-pane view open (they need 4B.5 capture).
-- 3C.7 (part): automatic SHA-256 of finished downloads (background thread, shown in kb://downloads). Not live-tested; the page may show "SHA-256 …" until the next state push (no push is triggered when the hash finishes). Open-with actions and rules still open.
+- 3C.7 (part): automatic SHA-256 of finished downloads (background thread, shown in kb://downloads). Not live-tested; a UI refresh is posted when the hash finishes. Open-with actions and rules still open.

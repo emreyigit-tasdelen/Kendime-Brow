@@ -80,6 +80,9 @@ fn start_hash(id: u32, path: String) {
             .unwrap_or_else(|| "unavailable".into());
         let mut g = SHA.lock().unwrap_or_else(|e| e.into_inner());
         g.get_or_insert_with(Default::default).insert(id, Some(hex));
+        drop(g);
+        let mut task = crate::shell::RefreshTask::new();
+        post_task(ThreadId::UI, Some(&mut task));
     });
 }
 
