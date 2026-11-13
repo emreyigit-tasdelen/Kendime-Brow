@@ -4,6 +4,7 @@ Decision log and hand-off notes between sessions. Newest entry on top.
 In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
+- BLOCKED summary (needs outside help, nothing doable left alone): 1.10b/1.15/7.x need Linux VM or macOS; 3A.4 qpdf, 3A.5 lcms2, 3A.6 Tesseract, 3A.8 signing certs, 3B.x LibreOffice, 3C.5 C decoders; 4A.8 RDP test host; 4B.5 Npcap + elevation; 5.x user server + tsnet; 6.6 MV3. Partial but usable: 3A.9, 3C.1, 3C.2, 3C.6.
 - 6.5 follow-up: GM_listValues, GM_openInTab, GM_setClipboard, no-op GM_registerMenuCommand added. GM_xmlhttpRequest blocked: web pages have no shell bridge (needs a content-process message route). 3C.5 AVIF/HEIC/RAW: blocked, only C-based decoders (dav1d/libheif) or heavy RAW demosaic; not started.
 - 3A.9: batch UI added to kb://pdf (paths separated by |; rotate 90° / extract pages). Type-checked, not live-tested.
 - 3C.3: `image.edit` in kb-doc (rotate/flip/crop/resize/grayscale/brightness/contrast, unit-tested) + `image-edit` command + three buttons in the image viewer; always writes a copy. Crop and resize have a text-box UI too (type-checked only).
