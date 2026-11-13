@@ -397,3 +397,4 @@ Newest on top. Format: task · done · decision · next step.
 - 2.12: verified download (store_verified/download_verified, https only, signature checked, never executed) done; still needs maintainer public key + apply step.
 - 2026-11-13 STATUS: every remaining open roadmap item needs outside help (Mac, Linux VM, user's server/credentials, elevated session, RDP server, LibreOffice Kit/FFmpeg bundle, maintainer key, native image libs). No doable item left; resume when one is unblocked.
 - 2026-11-13 re-checked 3C.2: UI/features complete; only the sandboxed media host remains (depends on module-host sandbox 1.10b, Linux VM).
+- 2026-11-13 6.6 forced attempt: cef-rs 156.4.0 Windows bindings contain no LoadExtension / extension API, so loading Chrome MV3 extensions is not possible without a different CEF binding or the Chrome runtime. Kept as best-effort/blocked.
