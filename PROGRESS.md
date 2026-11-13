@@ -356,3 +356,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.8: signing done (sign.rs, Sign button in the PDF viewer). Verified: OpenSSL cms -verify and qpdf --check pass. Pending: verifying other signatures, visible appearance, RFC 3161 timestamps, PDFs that already have AcroForm.
 
 - 3A.8: Verify signatures (digest + RSA check, no trust store) added and tested.
+
+- 3B.3: office preview via PDF conversion (not LOK tiles). Type-checked, not live-tested.

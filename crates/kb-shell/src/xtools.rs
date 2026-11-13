@@ -63,6 +63,11 @@ const OFFICE_TARGETS: &[&str] = &[
 
 /// Converts an office document with headless LibreOffice into `<name> (converted).<fmt>`.
 fn office_convert(path: &str, fmt: &str) -> Result<PathBuf, String> {
+    office_convert_to(path, fmt, None)
+}
+
+/// With `cache` the result goes there (replacing an older preview) instead of next to the source.
+fn office_convert_to(path: &str, fmt: &str, cache: Option<&Path>) -> Result<PathBuf, String> {
     if !OFFICE_TARGETS.contains(&fmt) {
         return Err(format!("unsupported target format: {fmt}"));
     }
@@ -94,8 +99,16 @@ fn office_convert(path: &str, fmt: &str) -> Result<PathBuf, String> {
     let made = work.join(format!("{stem}.{fmt}"));
     let res = match r {
         Ok(()) if made.is_file() => {
-            let dir = src.parent().unwrap_or(Path::new("."));
-            let dest = kb_platform::files::unique_path(dir, &format!("{stem} (converted).{fmt}"));
+            let dest = match cache {
+                Some(dir) => {
+                    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+                    dir.join(format!("{stem}.{fmt}"))
+                }
+                None => {
+                    let dir = src.parent().unwrap_or(Path::new("."));
+                    kb_platform::files::unique_path(dir, &format!("{stem} (converted).{fmt}"))
+                }
+            };
             std::fs::copy(&made, &dest)
                 .map(|_| dest)
                 .map_err(|e| e.to_string())
@@ -221,6 +234,11 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             let p = pdf_path(args)?;
             let bytes = std::fs::read(p).map_err(|e| e.to_string())?;
             Ok(json!({ "signatures": crate::sign::verify_pdf(&bytes)? }).to_string())
+        }
+        "office-preview" => {
+            let dir = std::env::temp_dir().join("kb-office-preview");
+            let out = office_convert_to(s("path"), "pdf", Some(&dir))?;
+            Ok(json!({ "path": out.display().to_string() }).to_string())
         }
         "office-batch" => {
             let paths: Vec<&str> = args

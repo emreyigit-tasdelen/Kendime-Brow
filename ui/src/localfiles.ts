@@ -143,6 +143,13 @@ const bar = el(
     const s = activePane.selected;
     if (s) void run(() => fs('zip-extract', { from: join(activePane.path, s.name), to: join(other().path, s.name.replace(/\.zip$/i, '')) }));
   }),
+  button('Preview office file', () => {
+    const s = activePane.selected;
+    if (s && !s.dir) void run(async () => {
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'office-preview', args: { path: join(activePane.path, s.name) } })) as { path: string };
+      await send({ cmd: 'new-tab', url: `kb://pdf/?file=${encodeURIComponent(r.path)}` });
+    });
+  }),
   button('Convert to PDF', () => {
     const s = activePane.selected;
     if (s && !s.dir) void run(() => send({ cmd: 'pdf-tool', op: 'office-convert', args: { path: join(activePane.path, s.name), format: 'pdf' } }));
