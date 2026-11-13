@@ -204,6 +204,21 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             let out = office_convert(s("path"), s("format"))?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "office-batch" => {
+            let paths: Vec<&str> = args
+                .get("paths")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(Value::as_str).take(100).collect())
+                .unwrap_or_default();
+            let results: Vec<Value> = paths
+                .iter()
+                .map(|p| match office_convert(p, s("format")) {
+                    Ok(o) => json!({ "path": p, "output": o.display().to_string() }),
+                    Err(e) => json!({ "path": p, "error": e }),
+                })
+                .collect();
+            Ok(json!({ "results": results }).to_string())
+        }
         "ocr" => {
             let p = pdf_path(args)?;
             let lang = s("lang");

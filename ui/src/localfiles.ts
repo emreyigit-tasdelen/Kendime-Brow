@@ -35,6 +35,7 @@ const parentOf = (p: string) => {
 class Pane {
   path = '';
   selected: Entry | null = null;
+  entries: Entry[] = [];
   readonly box = el('div', { class: 'card' });
   readonly head = el('div', { class: 'meta' });
 
@@ -43,6 +44,7 @@ class Pane {
       const r = JSON.parse(await fs('list', { path })) as { path: string; entries: Entry[] };
       this.path = r.path;
       this.selected = null;
+      this.entries = r.entries;
       status.textContent = '';
       this.draw(r.entries);
     } catch (e) {
@@ -144,6 +146,10 @@ const bar = el(
   button('Convert to PDF', () => {
     const s = activePane.selected;
     if (s && !s.dir) void run(() => send({ cmd: 'pdf-tool', op: 'office-convert', args: { path: join(activePane.path, s.name), format: 'pdf' } }));
+  }),
+  button('Convert folder office files → PDF', () => {
+    const paths = activePane.entries.filter((e) => !e.dir && /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf)$/i.test(e.name)).map((e) => join(activePane.path, e.name));
+    if (paths.length) void run(() => send({ cmd: 'pdf-tool', op: 'office-batch', args: { paths, format: 'pdf' } }));
   }),
   delBtn,
   nameBox,
