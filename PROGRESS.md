@@ -350,3 +350,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.9: palette actions pdf.open / media.open added. 3A.8 (PAdES signing) not started: needs a CMS/X.509 signing stack; noted as the next PDF item.
 
 - 3B.4 batch: "Convert folder office files" button (office-batch). 3B.4 considered done apart from live test.
+
+- BLOCKED/DEFERRED (reason): 3A.8 PAdES signing = needs a CMS/X.509 stack plus key storage design (large, own session); 3B.2/3B.3/3B.5/3B.6 = LibreOffice Kit tile rendering + editing subprocess (large; headless convert already covers 3B.4); 5.2-5.9 = need the user's server and credentials; 7.1-7.5 = need macOS hardware; 1.10b/1.15 = need Linux VM; 6.6 = Chrome MV3 best effort. Remaining doable work needs the user or a dedicated session.
