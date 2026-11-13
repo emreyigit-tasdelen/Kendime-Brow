@@ -1,6 +1,6 @@
 //! Merge / extract / rotate with the real PDFium (skipped when it is not available).
 
-use kb_doc::edit::{extract, merge, rotate};
+use kb_doc::edit::{extract, merge, rotate, unlock};
 use kb_doc::{info, load_pdfium};
 
 /// A PDF with `n` pages of 200×100 pt; page i shows the text `P<i>`.
@@ -98,4 +98,18 @@ fn merge_extract_rotate() {
     assert_eq!(found.iter().map(|(i, _)| *i).collect::<Vec<_>>(), vec![4]);
     assert!(kb_doc::search_pages(&texts, "zzz").is_empty());
     assert!(kb_doc::search_pages(&texts, "  ").is_empty());
+}
+
+#[test]
+fn unlock_removes_the_password() {
+    let Ok(pdfium) = load_pdfium() else { return };
+    let enc = std::fs::read(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/encrypted.pdf"
+    ))
+    .unwrap();
+    assert!(info(&pdfium, &enc, None).is_err(), "needs a password");
+    assert!(unlock(&pdfium, &enc, "wrong").is_err());
+    let clean = unlock(&pdfium, &enc, "secret").unwrap();
+    assert_eq!(info(&pdfium, &clean, None).unwrap().pages, 1);
 }

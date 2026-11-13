@@ -161,6 +161,15 @@ pub fn handle(
             let pages = crate::edit::parse_page_ranges(&req.pages, total)?;
             crate::edit::extract(pdfium, data, &pages).map_err(|e| e.to_string())
         }
+        "pdf.unlock" => {
+            // body: password, a newline, then the (encrypted) file bytes.
+            let nl = body
+                .iter()
+                .position(|b| *b == 10)
+                .ok_or("missing password")?;
+            let password = String::from_utf8_lossy(&body[..nl]).to_string();
+            crate::edit::unlock(pdfium, &body[nl + 1..], &password).map_err(|e| e.to_string())
+        }
         "pdf.rotate" => {
             let req: RotateRequest = serde_json::from_slice(body).map_err(|e| e.to_string())?;
             let data = doc.as_ref().ok_or("no document open")?;

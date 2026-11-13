@@ -260,6 +260,20 @@ function Viewer() {
       </Show>
       <Show when={error()}>
         <p class="error">{error()}</p>
+        <Show when={/password/i.test(error())}>
+          <form
+            onSubmit={(ev) => {
+              ev.preventDefault();
+              const pw = (ev.currentTarget.elements.namedItem('pw') as HTMLInputElement).value;
+              void send({ cmd: 'pdf-unlock', path: file!, password: pw })
+                .then((r) => openResult((JSON.parse(r) as { path: string }).path))
+                .catch((e) => setError(String(e)));
+            }}
+          >
+            <input name="pw" type="password" placeholder="PDF password" autocomplete="off" />
+            <button type="submit">Open unlocked copy</button>
+          </form>
+        </Show>
       </Show>
       <main>
         <Show when={info()}>

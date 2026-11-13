@@ -20,6 +20,19 @@ fn err(e: impl std::fmt::Display) -> DocError {
     DocError::Render(e.to_string())
 }
 
+/// Opens a password-protected PDF with `password` and returns an unencrypted copy (task 3A.4,
+/// password removal). Errors when the password is wrong.
+pub fn unlock(pdfium: &Pdfium, data: &[u8], password: &str) -> Result<Vec<u8>, DocError> {
+    let doc = pdfium
+        .load_pdf_from_byte_slice(data, Some(password))
+        .map_err(|e| DocError::Open(format!("cannot open with that password: {e}")))?;
+    // Saving the opened document would keep its security handler; copying the pages into a new
+    // document yields a file that opens without a password.
+    let mut out = pdfium.create_new_pdf().map_err(err)?;
+    out.pages_mut().append(&doc).map_err(err)?;
+    save(&out)
+}
+
 /// Appends all pages of every input, in order.
 pub fn merge(pdfium: &Pdfium, inputs: &[&[u8]]) -> Result<Vec<u8>, DocError> {
     if inputs.is_empty() {

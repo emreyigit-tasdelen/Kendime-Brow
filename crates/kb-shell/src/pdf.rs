@@ -98,6 +98,17 @@ pub fn call_host(method: &'static str, body: Vec<u8>) -> Result<Vec<u8>, String>
 }
 
 /// `<dir>/<stem> (<suffix>).pdf`, made unique.
+/// Writes `<name> (unlocked).pdf` without encryption after opening `path` with `password`.
+pub fn unlock_file(path: &str, password: &str) -> Result<String, String> {
+    let mut body = password.as_bytes().to_vec();
+    body.push(10);
+    body.extend_from_slice(&read_pdf(path)?);
+    let out = call_host("pdf.unlock", body)?;
+    let target = output_path(path, "unlocked");
+    std::fs::write(&target, out).map_err(|e| e.to_string())?;
+    Ok(target.to_string_lossy().to_string())
+}
+
 pub fn output_path(input: &str, suffix: &str) -> PathBuf {
     let p = Path::new(input);
     let dir = p.parent().unwrap_or(Path::new("."));

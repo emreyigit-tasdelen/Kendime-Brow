@@ -100,6 +100,11 @@ pub enum Command {
         path: String,
         pages: String,
     },
+    /// Writes `<name> (unlocked).pdf`: a password-free copy of a protected PDF.
+    PdfUnlock {
+        path: String,
+        password: String,
+    },
     /// Writes `<name> (rotated).pdf`; `pages` empty = all.
     PdfRotate {
         path: String,

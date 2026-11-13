@@ -121,6 +121,9 @@ impl BrowserSideHandler for ShellQueryHandler {
                     crate::pdf::edit_file(&path, "pdf.extract", json, "pages")
                 });
             }
+            Command::PdfUnlock { path, password } => {
+                spawn_pdf_edit(callback, move || crate::pdf::unlock_file(&path, &password));
+            }
             Command::PdfRotate {
                 path,
                 pages,
