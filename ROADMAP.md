@@ -103,18 +103,18 @@ Versions `0.6`–`0.7`.
 
 **4A — Vault and remote connections (§10)**
 - [~] 4A.1 `kb-vault`: vault format, keyring, master password, auto-lock (§10.2) → crypto core + file format done (kb-vault lib); host process, keyring unlock, auto-lock pending
-- [ ] 4A.2 Terminal infrastructure: xterm.js, `kb://term`, local shell (ConPTY)
-- [ ] 4A.3 SSH (russh): password + key (vault signing), `known_hosts`
-- [ ] 4A.4 Connection profiles + import (`ssh config`, PuTTY, `.rdp`) (§10.3)
-- [ ] 4A.5 SFTP/SCP → `kb://files` remote pane
-- [ ] 4A.6 Tunneling (local/remote/dynamic) + container proxy binding (§10.4)
+- [x] 4A.2 Terminal infrastructure: xterm.js, `kb://term`, local shell (ConPTY)
+- [x] 4A.3 SSH (russh): password + key (vault signing), `known_hosts`
+- [x] 4A.4 Connection profiles + import (`ssh config`, PuTTY, `.rdp`) (§10.3)
+- [x] 4A.5 SFTP/SCP → `kb://files` remote pane
+- [x] 4A.6 Tunneling (local/remote/dynamic) + container proxy binding (§10.4)
 - [x] 4A.7 Telnet, FTP/FTPS
 - [ ] 4A.8 **Validation:** V8 → RDP (IronRDP), native child window rendering, clipboard
 - [x] 4A.9 Multi-session: split panes, groups, broadcast, encrypted session log (§10.5)
 
 **4B — Network analysis (§9)**
 - [x] 4B.1 `kb-net` + CDP Network observer, `kb://net` request list and details
-- [ ] 4B.2 NetLog integration (DNS/TLS/socket events)
+- [x] 4B.2 NetLog integration (DNS/TLS/socket events)
 - [x] 4B.3 Filter language (DSL) + field registry
 - [x] 4B.4 HAR/cURL export, edit-and-resend request
 - [ ] 4B.5 `kb-capture`: Npcap/pktmon capture, browser-specific filtering
@@ -125,7 +125,7 @@ Versions `0.6`–`0.7`.
 
 Version `0.8`. (§11)
 
-- [ ] 5.1 `docs/SERVER-SETUP.md`: Headscale installation + hardening + backup/restore steps; `deploy/headscale/*.example`
+- [x] 5.1 `docs/SERVER-SETUP.md`: Headscale installation + hardening + backup/restore steps; `deploy/headscale/*.example`
 - [ ] 5.2 Server setup (together with the user; credentials never enter the repo)
 - [ ] 5.3 **Validation:** V10 → `kb-mesh` (Go/tsnet): Up/Down/Status/Dial, state in the vault
 - [ ] 5.4 `kb://mesh`: setup wizard, device list, path type/latency
@@ -134,7 +134,7 @@ Version `0.8`. (§11)
 - [ ] 5.7 Companion readiness checker + status API
 - [ ] 5.8 Companion installer + enrollment flow (pre-auth key)
 - [ ] 5.9 One-click connect (RDP/SSH/SFTP) end to end
-- [ ] 5.10 ACL template, Headscale admin panel (optional)
+- [x] 5.10 ACL template, Headscale admin panel (optional)
 
 ## Phase 6 — Extra power-user tools
 
@@ -143,11 +143,11 @@ Scope: P1 list (decision 0.6). Version `0.9`.
 The other P1 items already exist in earlier phases: command palette → 1.11, resource monitor → 2.10,
 local terminal → 4A.2, archives → 3C.6, checksum → 3C.7.
 
-- [ ] 6.1 Password manager: login entries on top of `kb-vault`, password generator, `kb://vault` UI
-- [ ] 6.2 Password manager: secure autofill (origin matching, only on user action)
-- [ ] 6.3 Password manager: KeePass (KDBX) and CSV import/export
+- [x] 6.1 Password manager: login entries on top of `kb-vault`, password generator, `kb://vault` UI
+- [x] 6.2 Password manager: secure autofill (origin matching, only on user action)
+- [x] 6.3 Password manager: KeePass (KDBX) and CSV import/export
 - [x] 6.4 `kb://tools`: regex tester, JSON format/query, hash, base64/URL/JWT encoding; all in the action registry
-- [ ] 6.5 User scripts: manager, `@match`, `GM_*` subset, editor (CodeMirror)
+- [x] 6.5 User scripts: manager, `@match`, `GM_*` subset, editor (CodeMirror)
 - [ ] 6.6 **Validation:** V5 → Chrome extension (MV3) loading, best effort
 
 Note: every task in Phases 2–6 implements its platform-specific part on both platforms via `kb-platform`
