@@ -242,6 +242,27 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             create_zip(&from, &to)?;
             Ok("{}".into())
         }
+        "archive-extract" => {
+            // tar, tar.gz, 7z, rar, iso...: whatever the system bsdtar (libarchive) can read.
+            let from = path_arg(args, "from")?;
+            let to = path_arg(args, "to")?;
+            if to.exists() {
+                return Err("the target already exists".into());
+            }
+            std::fs::create_dir_all(&to).map_err(io)?;
+            let out = std::process::Command::new("tar")
+                .arg("-xf")
+                .arg(&from)
+                .arg("-C")
+                .arg(&to)
+                .output()
+                .map_err(|e| format!("tar not available: {e}"))?;
+            if !out.status.success() {
+                let _ = std::fs::remove_dir_all(&to);
+                return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+            }
+            Ok("{}".into())
+        }
         _ => Err(format!("unknown localfs op: {op}")),
     }
 }
@@ -277,6 +298,30 @@ mod tests {
             serde_json::from_str(&call("list", &json!({ "path": s(&d) })).unwrap()).unwrap();
         assert_eq!(list["entries"][0]["name"], "a");
         assert!(call("delete", &json!({ "path": "/", "confirm": true })).is_err());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn archive_extract_reads_tar_gz() {
+        let d = std::env::temp_dir().join(format!("kb-tar-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(d.join("src")).unwrap();
+        std::fs::write(d.join("src/a.txt"), "hi").unwrap();
+        let made = std::process::Command::new("tar")
+            .arg("-czf")
+            .arg(d.join("o.tgz"))
+            .arg("-C")
+            .arg(d.join("src"))
+            .arg("a.txt")
+            .status();
+        if !matches!(made, Ok(s) if s.success()) {
+            return; // no tar on this machine
+        }
+        let s = |p: &Path| p.display().to_string();
+        let x = json!({ "from": s(&d.join("o.tgz")), "to": s(&d.join("out")) });
+        call("archive-extract", &x).unwrap();
+        assert_eq!(std::fs::read_to_string(d.join("out/a.txt")).unwrap(), "hi");
+        assert!(call("archive-extract", &x).is_err());
         let _ = std::fs::remove_dir_all(&d);
     }
 

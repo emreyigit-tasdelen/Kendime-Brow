@@ -368,3 +368,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3C.5: JXL already supported; AVIF/HEIC/RAW deferred (native libs dav1d/libheif/libraw not in the build). Moving on.
 
 - 3A.8: visible signature box added (sign visible=true, UI uses it); test verifies with OpenSSL and qpdf. Timestamps still need a TSA (network).
+
+- 3C.6: archive-extract op (system bsdtar/libarchive: tar, tgz, 7z, rar, iso) + button; tested with tar.gz. Needs tar on PATH (Windows 10+ has it).

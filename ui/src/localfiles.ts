@@ -158,6 +158,10 @@ const bar = el(
     const s = activePane.selected;
     if (s) void run(() => fs('zip-extract', { from: join(activePane.path, s.name), to: join(other().path, s.name.replace(/\.zip$/i, '')) }));
   }),
+  button('Extract archive (tar/7z/rar…) → other pane', () => {
+    const s = activePane.selected;
+    if (s) void run(() => fs('archive-extract', { from: join(activePane.path, s.name), to: join(other().path, s.name.replace(/\.(tar\.gz|tgz|tar|7z|rar|iso)$/i, '') || s.name + '-out') }));
+  }),
   button('Preview office file', () => {
     const s = activePane.selected;
     if (s && !s.dir) void run(async () => {
