@@ -292,3 +292,73 @@ wLMDjy9FLAuxZ3q4NlEvkgtyhrr0gtTu6KC4KBJdITbbOeAi1zBIYo0v4iTgt8jJpIidRJnp94ABQkJA
         assert_eq!(check_for_update(), Check::Disabled);
     }
 }
+
+/// Component downloader (task 3B.2): fetches `url` over https, checks its SHA-256 against
+/// `sha256_hex` and stores it as `<dir>/<name>`. Nothing is extracted or executed here, and an
+/// existing file is never overwritten.
+pub fn download_component(
+    url: &str,
+    sha256_hex: &str,
+    dir: &std::path::Path,
+    name: &str,
+) -> Result<std::path::PathBuf, String> {
+    if !url.starts_with("https://") {
+        return Err("components must come over https".into());
+    }
+    let data = ureq::get(url)
+        .call()
+        .map_err(|e| e.to_string())?
+        .body_mut()
+        .with_config()
+        .limit(1 << 31)
+        .read_to_vec()
+        .map_err(|e| e.to_string())?;
+    store_checked(dir, name, &data, sha256_hex)
+}
+
+pub(crate) fn store_checked(
+    dir: &std::path::Path,
+    name: &str,
+    data: &[u8],
+    sha256_hex: &str,
+) -> Result<std::path::PathBuf, String> {
+    use sha2::{Digest, Sha256};
+    if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
+        return Err("bad file name".into());
+    }
+    let got: String = Sha256::digest(data)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    if !got.eq_ignore_ascii_case(sha256_hex.trim()) {
+        return Err("checksum mismatch".into());
+    }
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let path = dir.join(name);
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    std::io::Write::write_all(&mut f, data).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+#[cfg(test)]
+mod component_tests {
+    use super::*;
+
+    #[test]
+    fn component_checksum_enforced() {
+        let d = std::env::temp_dir().join(format!("kb-comp-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        // sha256("test")
+        let h = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+        assert!(store_checked(&d, "c.bin", b"nope", h).is_err());
+        assert!(store_checked(&d, "../c", b"test", h).is_err());
+        assert!(store_checked(&d, "c.bin", b"test", h).is_ok());
+        assert!(store_checked(&d, "c.bin", b"test", h).is_err());
+        assert!(download_component("http://x", h, &d, "c").is_err());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+}
