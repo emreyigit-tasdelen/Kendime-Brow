@@ -493,6 +493,14 @@ mod tests {
     }
 
     #[test]
+    fn batch_validates_input() {
+        assert!(batch("explode", &["a.pdf".into()], "", 0, "").is_err());
+        assert!(batch("rotate", &[], "", 90, "").is_err());
+        let r = batch("unlock", &["/no/such.pdf".into()], "", 0, "x").unwrap();
+        assert!(r["results"][0]["error"].is_string(), "per-file error, no abort");
+    }
+
+    #[test]
     fn transport_errors() {
         assert!(is_transport("The pipe is being closed. (os error 232)"));
         assert!(!is_transport("cannot open PDF: password required"));
