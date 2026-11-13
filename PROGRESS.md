@@ -378,3 +378,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2.11 measurement (release, this machine): default 1319 MB/13 procs; with PERF_ARGS="--disable-features=SpareRendererForSitePerProcess,TranslateUI,OptimizationHints --disable-background-networking" 849 MB, start 351 ms. Single runs, very noisy (earlier 454 MB), working-set metric double-counts shared pages. Not applied as defaults; needs repeated runs and a private-bytes metric.
 
 - 2.11: perf.mjs now also prints private bytes of the process tree (Windows). Repeat runs: 455 MB working set / ~310 MB private, flags tried did not change it (earlier 849/1319 MB readings were noise from a stale run). Remaining gap ~60 MB private is the browser process itself.
+
+- 2.11: per-process breakdown attempt gave only the main process (helpers are named differently); no further reduction found. Left open.
