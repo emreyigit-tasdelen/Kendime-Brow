@@ -174,7 +174,7 @@ pub fn sheet_preview(path: &str) -> Result<Vec<u8>, String> {
 
 /// Image formats the metadata viewer opens.
 pub const IMAGE_EXTENSIONS: &[&str] = &[
-    "jpg", "jpeg", "png", "webp", "tif", "tiff", "heic", "heif", "gif",
+    "jpg", "jpeg", "png", "webp", "tif", "tiff", "heic", "heif", "gif", "jxl", "bmp",
 ];
 
 fn read_image(path: &str) -> Result<Vec<u8>, String> {
