@@ -400,3 +400,4 @@ Newest on top. Format: task · done · decision · next step.
 - 2026-11-13 6.6 forced attempt: cef-rs 156.4.0 Windows bindings contain no LoadExtension / extension API, so loading Chrome MV3 extensions is not possible without a different CEF binding or the Chrome runtime. Kept as best-effort/blocked.
 - 2026-11-13 3B.2: checksum-verified component downloader (updater::download_component, https only, SHA-256, no overwrite, never executes) done + tested. Still missing: pinned LibreOffice URL/hash, extraction, kb-doc-lok subprocess.
 - 2026-11-13 3B.2: exposed as pdf-tool op component-download {tool,url,sha256,name} (stores in <profile>/components/<tool>).
+- 2026-11-13 3C.1: FFmpeg is already usable here (winget install on PATH); bundled download needs a pinned release URL+hash and zip extraction wiring (not done).
