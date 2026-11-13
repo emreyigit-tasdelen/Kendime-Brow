@@ -34,6 +34,41 @@ async function copy(text: string, what: string): Promise<void> {
   }
 }
 
+// Edit & resend: raw "METHOD URL / headers / blank line / body" text, sent fresh (no cookies, not logged).
+async function editor(id: string): Promise<void> {
+  const out = el('pre', { style: 'white-space:pre-wrap;max-height:40vh;overflow:auto' });
+  const NL = String.fromCharCode(10);
+  const hdrs = (h: [string, string][]) => h.map(([k, v]) => `${k}: ${v}`).join(NL);
+  let raw = '';
+  try {
+    const g = JSON.parse(await net('get', { id })) as { method: string; url: string; headers: [string, string][]; body: string | null };
+    raw = `${g.method} ${g.url}${NL}${hdrs(g.headers)}${NL}${NL}${g.body ?? ''}`;
+  } catch (e) {
+    status.textContent = msg(e);
+    return;
+  }
+  const area = el('textarea', { value: raw, spellcheck: false, rows: 14, style: 'width:100%;font-family:monospace' });
+  const send = el('button', { class: 'primary' }, 'Send');
+  send.onclick = async () => {
+    const text = area.value.split(String.fromCharCode(13)).join('');
+    const cut = text.indexOf(NL + NL);
+    const head = cut < 0 ? text : text.slice(0, cut);
+    const body = cut < 0 ? '' : text.slice(cut + 2);
+    const lines = head.split(NL);
+    const [method, ...u] = (lines.shift() ?? '').trim().split(' ').filter(Boolean);
+    const headers = lines.filter(Boolean).map((l) => [l.slice(0, l.indexOf(':')).trim(), l.slice(l.indexOf(':') + 1).trim()]);
+    try {
+      const r = JSON.parse(await net('resend', { method, url: u.join(' '), headers, body })) as { status: number; headers: [string, string][]; body: string };
+      out.textContent = `${r.status}${NL}${hdrs(r.headers)}${NL}${NL}${r.body}`;
+    } catch (e) {
+      out.textContent = msg(e);
+    }
+  };
+  const back = el('button', {}, 'Back');
+  back.onclick = () => void refresh();
+  list.replaceChildren(area, el('div', { class: 'actions' }, send, back), out);
+}
+
 async function refresh(): Promise<void> {
   let rows: Row[];
   try {
@@ -55,9 +90,11 @@ async function refresh(): Promise<void> {
         status.textContent = msg(e);
       }
     };
+    const edit = el('button', {}, 'Edit & resend');
+    edit.onclick = () => void editor(r.id);
     const code = r.error ?? (r.status === null ? '…' : String(r.status));
     const meta = [r.type, r.mime, r.protocol, r.ip, r.ms === null ? null : `${r.ms.toFixed(0)} ms`, human(r.bytes)].filter(Boolean).join(' · ');
-    list.append(el('div', { class: 'row' }, el('div', {}, `${r.method} ${code}  ${r.url.length > 110 ? r.url.slice(0, 110) + '…' : r.url}`, el('div', { class: 'meta' }, meta)), el('div', { class: 'actions' }, curl)));
+    list.append(el('div', { class: 'row' }, el('div', {}, `${r.method} ${code}  ${r.url.length > 110 ? r.url.slice(0, 110) + '…' : r.url}`, el('div', { class: 'meta' }, meta)), el('div', { class: 'actions' }, edit, curl)));
   }
 }
 

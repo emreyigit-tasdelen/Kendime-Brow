@@ -57,7 +57,68 @@ pub fn attach(browser: &mut Browser) {
 }
 
 /// Answers `kb://net` operations: list, har, curl, clear.
+/// Sends an edited copy of a captured request (task 4B.4) and returns status, headers and the
+/// first 256 KB of the body. It is a fresh request from the shell: no cookies, no cache, not
+/// logged in the inspector, and only http(s) URLs are allowed.
+fn resend(args: &Value) -> Result<String, String> {
+    let s = |k: &str| args.get(k).and_then(Value::as_str).unwrap_or_default();
+    let url = s("url");
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return Err("only http(s) URLs can be sent".into());
+    }
+    let method = s("method").to_ascii_uppercase();
+    let mut b = ureq::http::Request::builder()
+        .method(method.as_str())
+        .uri(url);
+    for h in args
+        .get("headers")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        if let (Some(k), Some(v)) = (
+            h.get(0).and_then(Value::as_str),
+            h.get(1).and_then(Value::as_str),
+        ) {
+            // Hop-by-hop / framing headers are set by the HTTP client.
+            if !["host", "content-length", "connection", "cookie"]
+                .contains(&k.to_ascii_lowercase().as_str())
+            {
+                b = b.header(k, v);
+            }
+        }
+    }
+    let req = b
+        .body(s("body").as_bytes().to_vec())
+        .map_err(|e| e.to_string())?;
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(std::time::Duration::from_secs(30)))
+        .http_status_as_error(false)
+        .build()
+        .into();
+    let mut resp = agent.run(req).map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    let headers: Vec<Value> = resp
+        .headers()
+        .iter()
+        .map(|(k, v)| json!([k.as_str(), String::from_utf8_lossy(v.as_bytes())]))
+        .collect();
+    let mut buf = Vec::new();
+    std::io::Read::read_to_end(
+        &mut std::io::Read::take(resp.body_mut().as_reader(), 256 * 1024),
+        &mut buf,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(
+        json!({ "status": status, "headers": headers, "body": String::from_utf8_lossy(&buf) })
+            .to_string(),
+    )
+}
+
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
+    if op == "resend" {
+        return resend(args);
+    }
     let mut l = log().lock().map_err(|_| "poisoned")?;
     match op {
         "list" => {
@@ -99,6 +160,19 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
                 .rev()
                 .find(|r| r.id == id)
                 .map(|r| json!({ "curl": r.to_curl() }).to_string())
+                .ok_or_else(|| "request not found".into())
+        }
+        "get" => {
+            let id = args.get("id").and_then(Value::as_str).unwrap_or_default();
+            l.requests()
+                .iter()
+                .rev()
+                .find(|r| r.id == id)
+                .map(|r| {
+                    json!({ "method": r.method, "url": r.url,
+                            "headers": r.request_headers, "body": r.post_data })
+                    .to_string()
+                })
                 .ok_or_else(|| "request not found".into())
         }
         "clear" => {
