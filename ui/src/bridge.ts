@@ -73,6 +73,8 @@ export type Command =
   | { cmd: 'new-tab'; url?: string; container?: string }
   | { cmd: 'close-tab'; id: number }
   | { cmd: 'activate-tab'; id: number }
+  | { cmd: 'move-tab'; id: number }
+  | { cmd: 'detach-tab'; id: number; x: number; y: number }
   | { cmd: 'navigate'; text: string }
   | { cmd: 'back' }
   | { cmd: 'forward' }

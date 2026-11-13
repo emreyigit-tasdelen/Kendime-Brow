@@ -24,6 +24,16 @@ pub enum Command {
     ActivateTab {
         id: u64,
     },
+    /// Tab dropped on this window's strip: move it here from whatever window it is in.
+    MoveTab {
+        id: u64,
+    },
+    /// Tab dragged out of the strip and dropped at screen point (x, y): new window there.
+    DetachTab {
+        id: u64,
+        x: i32,
+        y: i32,
+    },
     /// Address bar input (URL or search terms) for the active tab.
     Navigate {
         text: String,

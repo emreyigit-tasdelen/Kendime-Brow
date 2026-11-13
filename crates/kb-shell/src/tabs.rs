@@ -4,11 +4,13 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TabId(pub u64);
 
+/// Tab ids are unique across all windows (tabs move between windows and keep their id).
+static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
 #[derive(Debug)]
 pub struct Tabs<T> {
     items: Vec<(TabId, T)>,
     active: Option<TabId>,
-    next_id: u64,
 }
 
 impl<T> Default for Tabs<T> {
@@ -16,7 +18,6 @@ impl<T> Default for Tabs<T> {
         Self {
             items: Vec::new(),
             active: None,
-            next_id: 1,
         }
     }
 }
@@ -67,8 +68,13 @@ impl<T> Tabs<T> {
 
     /// Opens a tab right after the active one (or at the end) and optionally activates it.
     pub fn open(&mut self, item: T, activate: bool) -> TabId {
-        let id = TabId(self.next_id);
-        self.next_id += 1;
+        let id = TabId(NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+        self.adopt(id, item, activate);
+        id
+    }
+
+    /// Inserts a tab that keeps its id (moved in from another window).
+    pub fn adopt(&mut self, id: TabId, item: T, activate: bool) {
         let at = self
             .active
             .and_then(|a| self.index(a))
@@ -77,7 +83,6 @@ impl<T> Tabs<T> {
         if activate || self.active.is_none() {
             self.active = Some(id);
         }
-        id
     }
 
     pub fn activate(&mut self, id: TabId) -> bool {

@@ -28,7 +28,8 @@ static BROWSER_ROUTER: OnceLock<Arc<BrowserSideRouter>> = OnceLock::new();
 static TERM_QUERIES: std::sync::LazyLock<Mutex<std::collections::HashMap<i64, u32>>> =
     std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
 
-type Subscriber = (i64, Arc<Mutex<dyn BrowserSideCallback>>);
+/// (query id, browser id of the subscribing page, callback)
+type Subscriber = (i64, i32, Arc<Mutex<dyn BrowserSideCallback>>);
 static SUBSCRIBERS: Mutex<Vec<Subscriber>> = Mutex::new(Vec::new());
 
 /// Creates the browser-side router and its handler. Call once on the UI thread.
@@ -41,11 +42,13 @@ pub fn browser_router() -> Option<&'static Arc<BrowserSideRouter>> {
     BROWSER_ROUTER.get()
 }
 
-/// Pushes the current state to every subscribed `kb://` page.
-pub fn broadcast(state: &protocol::State) {
-    let json = state.to_json();
-    if let Ok(subs) = SUBSCRIBERS.lock() {
-        for (_, cb) in subs.iter() {
+/// Pushes state to every subscribed `kb://` page; `state_json(browser id)` gives the JSON for
+/// that page (each window's strip sees its own tabs).
+pub fn broadcast_with(state_json: impl Fn(i32) -> String) {
+    let subs: Vec<Subscriber> = SUBSCRIBERS.lock().map(|s| s.clone()).unwrap_or_default();
+    for (_, browser, cb) in subs {
+        let json = state_json(browser);
+        {
             if let Ok(cb) = cb.lock() {
                 cb.success_str(&json);
             }
@@ -58,7 +61,7 @@ struct ShellQueryHandler;
 impl BrowserSideHandler for ShellQueryHandler {
     fn on_query_str(
         &self,
-        _browser: Option<Browser>,
+        browser: Option<Browser>,
         frame: Option<Frame>,
         query_id: i64,
         request: &str,
@@ -77,6 +80,7 @@ impl BrowserSideHandler for ShellQueryHandler {
         if !protocol::is_trusted_origin(&url) {
             return fail(403, "bridge is only available to kb:// pages");
         }
+        let browser_id = browser.as_ref().map_or(0, |b| b.identifier());
         let cmd = match protocol::parse(request) {
             Ok(c) => c,
             Err(e) => return fail(400, &e),
@@ -87,10 +91,10 @@ impl BrowserSideHandler for ShellQueryHandler {
                     return fail(400, "subscribe must be a persistent query");
                 }
                 if let Ok(cb) = callback.lock() {
-                    cb.success_str(&shell::state().to_json());
+                    cb.success_str(&shell::state_for_browser(browser_id).to_json());
                 }
                 if let Ok(mut subs) = SUBSCRIBERS.lock() {
-                    subs.push((query_id, callback));
+                    subs.push((query_id, browser_id, callback));
                 }
             }
             Command::Actions { query } => {
@@ -445,7 +449,7 @@ impl BrowserSideHandler for ShellQueryHandler {
             }
             Command::State => {
                 if let Ok(cb) = callback.lock() {
-                    cb.success_str(&shell::state().to_json());
+                    cb.success_str(&shell::state_for_browser(browser_id).to_json());
                 }
             }
             other => {
@@ -455,7 +459,7 @@ impl BrowserSideHandler for ShellQueryHandler {
                 if let Ok(cb) = callback.lock() {
                     cb.success_str("{\"ok\":true}");
                 }
-                let mut task = RunCommandTask::new(Arc::new(Mutex::new(Some(other))));
+                let mut task = RunCommandTask::new(Arc::new(Mutex::new(Some(other))), browser_id);
                 post_task(ThreadId::UI, Some(&mut task));
             }
         }
@@ -472,7 +476,7 @@ impl BrowserSideHandler for ShellQueryHandler {
             crate::terminal::close(id);
         }
         if let Ok(mut subs) = SUBSCRIBERS.lock() {
-            subs.retain(|(id, _)| *id != query_id);
+            subs.retain(|(id, ..)| *id != query_id);
         }
     }
 }
@@ -496,11 +500,14 @@ fn spawn_pdf_edit(
 wrap_task! {
     struct RunCommandTask {
         cmd: Arc<Mutex<Option<Command>>>,
+        browser_id: i32,
     }
 
     impl Task {
         fn execute(&self) {
             if let Some(cmd) = self.cmd.lock().ok().and_then(|mut c| c.take()) {
+                // Commands act on the window of the page that sent them.
+                shell::set_current_browser(self.browser_id);
                 shell::run_bridge_command(cmd);
             }
         }

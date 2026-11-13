@@ -102,18 +102,26 @@ impl Tab {
 /// Window/view background (ARGB), matches the UI's dark theme.
 const BACKGROUND: u32 = 0xFF1E1F22;
 
+/// One browser window: its strip, its tabs and per-window UI state.
 struct Shell {
+    wid: u32,
     window: Window,
     client: Client,
     ui: BrowserView,
     tabs: Tabs<Tab>,
+    palette: bool,
+    /// Set once the window is closing (its tabs disappear one by one).
+    closing: bool,
 }
 
 thread_local! {
-    static SHELL: RefCell<Option<Shell>> = const { RefCell::new(None) };
+    static SHELLS: RefCell<Vec<Shell>> = const { RefCell::new(Vec::new()) };
+    /// Window that commands, shortcuts and new tabs go to (last activated / last used).
+    static CURRENT: RefCell<u32> = const { RefCell::new(0) };
+    static NEXT_WID: RefCell<u32> = const { RefCell::new(1) };
+    /// Tab detached into a window that is being created (`detach_tab` → `init_window`).
+    static PENDING_TAB: RefCell<Option<(TabId, Tab)>> = const { RefCell::new(None) };
     static BROWSER_COUNT: RefCell<usize> = const { RefCell::new(0) };
-    static WINDOW_CLOSING: RefCell<bool> = const { RefCell::new(false) };
-    static PALETTE_OPEN: RefCell<bool> = const { RefCell::new(false) };
     static STORE: RefCell<Option<Store>> = const { RefCell::new(None) };
 }
 
@@ -245,29 +253,105 @@ pub fn profile_json(history_query: &str) -> String {
 }
 
 fn save_session() {
-    let tabs: Vec<SessionTab> = with_shell(|s| {
-        let active = s.tabs.active();
-        s.tabs
-            .iter()
-            // Private (non-persistent) tabs never reach the disk.
-            .filter(|(_, t)| crate::containers::get(t.container).is_some_and(|c| c.persistent))
-            .map(|(id, t)| SessionTab {
-                url: t.url.clone(),
-                active: Some(id) == active,
-                container: t.container.to_string(),
-            })
-            .collect()
-    })
-    .unwrap_or_default();
-    // Never wipe the saved session while the window is closing (tabs disappear one by one).
-    if WINDOW_CLOSING.with(|c| *c.borrow()) {
+    // Never wipe the saved session while a window is closing (tabs disappear one by one).
+    if SHELLS.with(|v| v.borrow().iter().any(|s| s.closing)) {
         return;
     }
+    let current = CURRENT.with(|c| *c.borrow());
+    let tabs: Vec<SessionTab> = SHELLS.with(|v| {
+        v.borrow()
+            .iter()
+            .flat_map(|s| {
+                let active = if s.wid == current {
+                    s.tabs.active()
+                } else {
+                    None
+                };
+                s.tabs
+                    .iter()
+                    // Private (non-persistent) tabs never reach the disk.
+                    .filter(|(_, t)| {
+                        crate::containers::get(t.container).is_some_and(|c| c.persistent)
+                    })
+                    .map(|(id, t)| SessionTab {
+                        url: t.url.clone(),
+                        active: Some(id) == active,
+                        container: t.container.to_string(),
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    });
     with_store(|s| s.save_session(&tabs));
 }
 
+/// Runs `f` on the current window (falls back to the first window).
 fn with_shell<R>(f: impl FnOnce(&mut Shell) -> R) -> Option<R> {
-    SHELL.with(|s| s.borrow_mut().as_mut().map(f))
+    let current = CURRENT.with(|c| *c.borrow());
+    with_wid(current, f)
+}
+
+/// Runs `f` on window `wid` (falls back to the first window if it is gone).
+fn with_wid<R>(wid: u32, f: impl FnOnce(&mut Shell) -> R) -> Option<R> {
+    SHELLS.with(|v| {
+        let mut v = v.borrow_mut();
+        let i =
+            v.iter()
+                .position(|s| s.wid == wid)
+                .or(if v.is_empty() { None } else { Some(0) })?;
+        Some(f(&mut v[i]))
+    })
+}
+
+fn wids() -> Vec<u32> {
+    SHELLS.with(|v| v.borrow().iter().map(|s| s.wid).collect())
+}
+
+/// Window that shows browser `id` (its strip or one of its tabs).
+fn wid_of_browser(id: i32) -> Option<u32> {
+    let is = |v: &BrowserView| v.browser().is_some_and(|b| b.identifier() == id);
+    SHELLS.with(|v| {
+        v.borrow()
+            .iter()
+            .find(|s| is(&s.ui) || s.tabs.iter().any(|(_, t)| is(&t.view)))
+            .map(|s| s.wid)
+    })
+}
+
+fn wid_of_tab(id: TabId) -> Option<u32> {
+    SHELLS.with(|v| {
+        v.borrow()
+            .iter()
+            .find(|s| s.tabs.get(id).is_some())
+            .map(|s| s.wid)
+    })
+}
+
+fn wid_of_window(window: &Window) -> Option<u32> {
+    SHELLS.with(|v| {
+        v.borrow()
+            .iter()
+            .find(|s| View::from(&s.window).is_same(Some(&mut View::from(window))) != 0)
+            .map(|s| s.wid)
+    })
+}
+
+/// Makes the window that shows browser `id` the current one (bridge commands, shortcuts).
+pub fn set_current_browser(id: i32) {
+    if let Some(w) = wid_of_browser(id) {
+        CURRENT.with(|c| *c.borrow_mut() = w);
+    }
+}
+
+/// Makes `window` the current one (window activated).
+pub fn set_current_window(window: &Window) {
+    if let Some(w) = wid_of_window(window) {
+        CURRENT.with(|c| *c.borrow_mut() = w);
+    }
+}
+
+fn palette_open() -> bool {
+    with_shell(|s| s.palette).unwrap_or(false)
 }
 
 /// Builds the layout inside a freshly created window. Called from `on_window_created`.
@@ -287,14 +371,112 @@ pub fn init_window(window: &mut Window, ui_view: BrowserView, client: Client) {
         window.set_accelerator(*cmd, *key, *shift as i32, *ctrl as i32, *alt as i32, 0);
     }
 
-    SHELL.with(|s| {
-        *s.borrow_mut() = Some(Shell {
+    let wid = NEXT_WID.with(|n| {
+        let mut n = n.borrow_mut();
+        *n += 1;
+        *n - 1
+    });
+    SHELLS.with(|v| {
+        v.borrow_mut().push(Shell {
+            wid,
             window: window.clone(),
             client,
             ui: ui_view,
             tabs: Tabs::new(),
+            palette: false,
+            closing: false,
         })
     });
+    CURRENT.with(|c| *c.borrow_mut() = wid);
+}
+
+/// Puts a tab detached by `detach_tab` into the (new, current) window. False if none waits.
+pub fn adopt_pending_tab() -> bool {
+    let Some((id, tab)) = PENDING_TAB.with(|p| p.borrow_mut().take()) else {
+        return false;
+    };
+    attach(id, tab);
+    true
+}
+
+/// Adds a tab (with its id) to the current window and shows it.
+fn attach(id: TabId, tab: Tab) {
+    let view = tab.view.clone();
+    let Some(window) = with_shell(|s| {
+        s.tabs.adopt(id, tab, true);
+        s.window.clone()
+    }) else {
+        return;
+    };
+    let mut v = View::from(&view);
+    v.set_background_color(BACKGROUND);
+    window.add_child_view_at(Some(&mut v), 0);
+    refresh();
+}
+
+/// Removes tab `id` from its window (the browser keeps running). Returns the tab and whether
+/// that window is now empty.
+fn detach(id: TabId) -> Option<(Tab, Window, bool)> {
+    let wid = wid_of_tab(id)?;
+    let (tab, window, empty) = with_wid(wid, |s| {
+        let t = s.tabs.close(id)?;
+        Some((t, s.window.clone(), s.tabs.is_empty()))
+    })??;
+    window.remove_child_view(Some(&mut View::from(&tab.view)));
+    Some((tab, window, empty))
+}
+
+/// Moves tab `id` (from any window) into the current window (tab dropped on a strip).
+pub fn move_tab_here(id: TabId) {
+    let here = CURRENT.with(|c| *c.borrow());
+    if wid_of_tab(id).is_none_or(|w| w == here) {
+        return;
+    }
+    let Some((tab, old, empty)) = detach(id) else {
+        return;
+    };
+    attach(id, tab);
+    if empty {
+        old.close();
+    }
+    refresh();
+}
+
+/// Tab dragged out of the strip and dropped at screen point (`x`, `y`): it gets its own window
+/// there. A window's only tab just moves the window.
+pub fn detach_tab(id: TabId, x: i32, y: i32) {
+    let Some(wid) = wid_of_tab(id) else {
+        return;
+    };
+    let only = with_wid(wid, |s| s.tabs.len() == 1).unwrap_or(true);
+    if only {
+        if let Some(w) = with_wid(wid, |s| s.window.clone()) {
+            w.set_position(Some(&Point {
+                x: x - 60,
+                y: y - 16,
+            }));
+        }
+        return;
+    }
+    let Some((tab, _, _)) = detach(id) else {
+        return;
+    };
+    PENDING_TAB.with(|p| *p.borrow_mut() = Some((id, tab)));
+    refresh();
+    crate::app::open_window(Vec::new(), Some((x - 60, y - 16)));
+}
+
+/// A window was destroyed: forget it; the session is saved again if others remain.
+pub fn window_destroyed(window: &Window) {
+    let Some(wid) = wid_of_window(window) else {
+        return;
+    };
+    SHELLS.with(|v| v.borrow_mut().retain(|s| s.wid != wid));
+    let next = wids().first().copied();
+    if let Some(next) = next {
+        CURRENT.with(|c| *c.borrow_mut() = next);
+        save_session();
+    }
 }
 
 /// Creates a new Chrome-style tab browser and shows it.
@@ -315,7 +497,10 @@ pub fn container_of_view(view: &BrowserView) -> &'static str {
     let Some(mut b) = view.browser() else {
         return crate::containers::DEFAULT;
     };
-    with_shell(|s| {
+    let Some(wid) = wid_of_browser(b.identifier()) else {
+        return crate::containers::DEFAULT;
+    };
+    with_wid(wid, |s| {
         s.tabs
             .find(|t| t.is(&mut b))
             .and_then(|id| s.tabs.get(id).map(|t| t.container))
@@ -407,19 +592,30 @@ pub fn set_fullscreen(on: bool) {
     }
 }
 
-pub fn apply_layout(width: i32, height: i32) {
-    let Some((ui, views)) = with_shell(|s| {
+pub fn apply_layout(window: &Window, width: i32, height: i32) {
+    let Some(wid) = wid_of_window(window) else {
+        return;
+    };
+    apply_layout_wid(wid, width, height);
+}
+
+fn apply_layout_wid(wid: u32, width: i32, height: i32) {
+    let Some((ui, views, palette, fullscreen)) = with_wid(wid, |s| {
         let views: Vec<BrowserView> = s.tabs.iter().map(|(_, t)| t.view.clone()).collect();
-        (s.ui.clone(), views)
+        (
+            s.ui.clone(),
+            views,
+            s.palette,
+            s.window.is_fullscreen() != 0,
+        )
     }) else {
         return;
     };
-    let wanted = if PALETTE_OPEN.with(|p| *p.borrow()) {
+    let wanted = if palette {
         UI_PALETTE_HEIGHT
     } else {
         UI_STRIP_HEIGHT
     };
-    let fullscreen = with_shell(|s| s.window.is_fullscreen() != 0).unwrap_or(false);
     let strip = if fullscreen { 0 } else { wanted.min(height) };
     set_bounds_if_changed(
         &ui,
@@ -460,9 +656,11 @@ fn relayout() {
 }
 
 fn relayout_now() {
-    if let Some(window) = with_shell(|s| s.window.clone()) {
-        let b = window.client_area_bounds_in_screen();
-        apply_layout(b.width, b.height);
+    for wid in wids() {
+        if let Some(window) = with_wid(wid, |s| s.window.clone()) {
+            let b = window.client_area_bounds_in_screen();
+            apply_layout_wid(wid, b.width, b.height);
+        }
     }
     debug_bounds();
 }
@@ -508,7 +706,14 @@ pub fn discard_idle_tabs() {
     if power.low_memory() {
         limit = limit.min(std::time::Duration::from_secs(60)); // memory pressure (§5.2)
     }
-    let views: Vec<(BrowserView, String)> = with_shell(|s| {
+    for wid in wids() {
+        discard_idle_in(wid, limit);
+    }
+    refresh();
+}
+
+fn discard_idle_in(wid: u32, limit: std::time::Duration) {
+    let views: Vec<(BrowserView, String)> = with_wid(wid, |s| {
         let active = s.tabs.active();
         s.tabs
             .iter()
@@ -527,7 +732,7 @@ pub fn discard_idle_tabs() {
     })
     .unwrap_or_default();
     for (view, url) in views {
-        with_shell(|s| {
+        with_wid(wid, |s| {
             let bid = view.browser().map(|b| b.identifier());
             if let Some(id) = s
                 .tabs
@@ -542,7 +747,6 @@ pub fn discard_idle_tabs() {
         }
         debug_log(&format!("discarded tab {url}"));
     }
-    refresh();
 }
 
 wrap_task! {
@@ -562,22 +766,34 @@ pub fn schedule_lifecycle() {
     post_delayed_task(ThreadId::UI, Some(&mut task), 30_000);
 }
 
-/// Shows only the active tab, focuses it and updates the window title.
+/// Refreshes every window (only the current one takes focus) and pushes state to the strips.
 pub fn refresh() {
-    let snapshot = with_shell(|s| {
+    let current = CURRENT.with(|c| *c.borrow());
+    for wid in wids() {
+        refresh_wid(wid, wid == current);
+    }
+    relayout();
+    crate::bridge::broadcast_with(|browser| state_for_browser(browser).to_json());
+    save_session();
+    debug_bounds();
+}
+
+/// Shows only the active tab of window `wid`, focuses it (if `focus`) and updates the title.
+fn refresh_wid(wid: u32, focus: bool) {
+    let snapshot = with_wid(wid, |s| {
         let active = s.tabs.active();
         let views: Vec<(bool, BrowserView)> = s
             .tabs
             .iter()
             .map(|(id, t)| (Some(id) == active, t.view.clone()))
             .collect();
-        (s.window.clone(), views)
+        (s.window.clone(), views, s.palette)
     });
-    let Some((window, views)) = snapshot else {
+    let Some((window, views, palette)) = snapshot else {
         return;
     };
     // Activating a discarded tab restores its page; the active tab is never "idle".
-    let restore = with_shell(|s| {
+    let restore = with_wid(wid, |s| {
         let id = s.tabs.active()?;
         let t = s.tabs.get_mut(id)?;
         t.last_active = std::time::Instant::now();
@@ -593,7 +809,7 @@ pub fn refresh() {
     for (is_active, view) in &views {
         view.set_visible(*is_active as i32);
         if *is_active {
-            if !PALETTE_OPEN.with(|p| *p.borrow()) {
+            if focus && !palette {
                 view.request_focus();
             }
             if let Some(entry) = view
@@ -608,16 +824,21 @@ pub fn refresh() {
             }
         }
     }
-    relayout();
     window.set_title(Some(&CefString::from(title.as_str())));
-    crate::bridge::broadcast(&state());
-    save_session();
-    debug_bounds();
 }
 
-/// Snapshot of all tabs for the UI strip.
+/// Snapshot of the current window's tabs for the UI strip.
 pub fn state() -> protocol::State {
-    with_shell(|s| {
+    state_for_wid(CURRENT.with(|c| *c.borrow()))
+}
+
+/// State for the window that shows browser `id` (each strip sees its own window's tabs).
+pub fn state_for_browser(id: i32) -> protocol::State {
+    state_for_wid(wid_of_browser(id).unwrap_or_else(|| CURRENT.with(|c| *c.borrow())))
+}
+
+fn state_for_wid(wid: u32) -> protocol::State {
+    with_wid(wid, |s| {
         let active = s.tabs.active();
         protocol::State {
             tabs: s
@@ -639,7 +860,7 @@ pub fn state() -> protocol::State {
                     container: t.container.to_string(),
                 })
                 .collect(),
-            palette: PALETTE_OPEN.with(|p| *p.borrow()),
+            palette: s.palette,
             downloads: crate::downloads::list(),
         }
     })
@@ -648,7 +869,7 @@ pub fn state() -> protocol::State {
 
 /// Opens or closes the command palette: resizes the strip and tells the UI.
 pub fn set_palette(open: bool) {
-    PALETTE_OPEN.with(|p| *p.borrow_mut() = open);
+    with_shell(|s| s.palette = open);
     if open && let Some(ui) = with_shell(|s| s.ui.clone()) {
         ui.request_focus();
     }
@@ -711,6 +932,8 @@ pub fn run_bridge_command(cmd: Command) {
             }
         }
         Command::CloseActiveTab => close_active_tab(),
+        Command::MoveTab { id } => move_tab_here(TabId(id)),
+        Command::DetachTab { id, x, y } => detach_tab(TabId(id), x, y),
         Command::CycleTab { forward } => {
             with_shell(|s| s.tabs.cycle(forward));
             refresh();
@@ -862,7 +1085,10 @@ pub struct TabUpdate {
 
 /// Updates the stored state of the tab showing `browser` and notifies the UI.
 pub fn update_tab(browser: &mut Browser, upd: TabUpdate) {
-    let changed = with_shell(|s| {
+    let Some(wid) = wid_of_browser(browser.identifier()) else {
+        return;
+    };
+    let changed = with_wid(wid, |s| {
         let id = s.tabs.find(|t| t.is(browser))?;
         let tab = s.tabs.get_mut(id)?;
         if tab.discarded.is_some() {
@@ -898,8 +1124,10 @@ fn active_view() -> Option<BrowserView> {
     with_shell(|s| s.tabs.active_item().map(|t| t.view.clone())).flatten()
 }
 
-fn tab_of(browser: &mut Browser) -> Option<TabId> {
-    with_shell(|s| s.tabs.find(|t| t.is(browser))).flatten()
+/// (window, tab) showing `browser`.
+fn tab_of(browser: &mut Browser) -> Option<(u32, TabId)> {
+    let wid = wid_of_browser(browser.identifier())?;
+    with_wid(wid, |s| s.tabs.find(|t| t.is(browser)).map(|id| (wid, id))).flatten()
 }
 
 /// Maps a key-down (Windows virtual key code + modifiers) to a command.
@@ -917,7 +1145,7 @@ pub fn run_command(cmd: i32) -> bool {
     }
     match cmd {
         command::NEW_TAB => new_tab(NEW_TAB_URL),
-        command::PALETTE => set_palette(!PALETTE_OPEN.with(|p| *p.borrow())),
+        command::PALETTE => set_palette(!palette_open()),
         command::FULLSCREEN => {
             let on = with_shell(|s| s.window.is_fullscreen() == 0).unwrap_or(false);
             set_fullscreen(on);
@@ -950,12 +1178,15 @@ pub fn close_active_tab() {
 
 /// Closes a tab; closing the last tab closes the window.
 pub fn close_tab(id: TabId) {
-    let Some(view) = with_shell(|s| s.tabs.get(id).map(|t| t.view.clone())).flatten() else {
+    let Some(wid) = wid_of_tab(id) else {
         return;
     };
-    let last = with_shell(|s| s.tabs.len() == 1).unwrap_or(true);
+    let Some(view) = with_wid(wid, |s| s.tabs.get(id).map(|t| t.view.clone())).flatten() else {
+        return;
+    };
+    let last = with_wid(wid, |s| s.tabs.len() == 1).unwrap_or(true);
     if last {
-        if let Some(window) = with_shell(|s| s.window.clone()) {
+        if let Some(window) = with_wid(wid, |s| s.window.clone()) {
             window.close();
         }
         return;
@@ -990,32 +1221,34 @@ pub fn debug_bounds() {
     if std::env::var_os("KB_DEBUG").is_none() {
         return;
     }
-    with_shell(|s| {
-        let w = s.window.bounds();
-        eprintln!(
-            "[kb] window {}x{} children={}",
-            w.width,
-            w.height,
-            s.window.child_view_count()
-        );
-        let u = s.ui.bounds();
-        eprintln!(
-            "[kb] ui y={} {}x{} visible={}",
-            u.y,
-            u.width,
-            u.height,
-            s.ui.is_visible()
-        );
-        for (id, t) in s.tabs.iter() {
-            let b = t.view.bounds();
+    SHELLS.with(|v| {
+        for s in v.borrow().iter() {
+            let w = s.window.bounds();
             eprintln!(
-                "[kb] tab {} y={} {}x{} visible={}",
-                id.0,
-                b.y,
-                b.width,
-                b.height,
-                t.view.is_visible()
+                "[kb] window {}x{} children={}",
+                w.width,
+                w.height,
+                s.window.child_view_count()
             );
+            let u = s.ui.bounds();
+            eprintln!(
+                "[kb] ui y={} {}x{} visible={}",
+                u.y,
+                u.width,
+                u.height,
+                s.ui.is_visible()
+            );
+            for (id, t) in s.tabs.iter() {
+                let b = t.view.bounds();
+                eprintln!(
+                    "[kb] tab {} y={} {}x{} visible={}",
+                    id.0,
+                    b.y,
+                    b.width,
+                    b.height,
+                    t.view.is_visible()
+                );
+            }
         }
     });
 }
@@ -1030,28 +1263,30 @@ fn debug_log(msg: &str) {
 /// close the whole window: a single tab is closed by removing its BrowserView from the
 /// hierarchy (dropping our references destroys the browser).
 pub fn do_close(browser: &mut Browser) -> bool {
-    if WINDOW_CLOSING.with(|c| *c.borrow()) {
-        return false;
-    }
-    let Some(id) = tab_of(browser) else {
+    let Some((wid, id)) = tab_of(browser) else {
         return false; // kb://ui strip or unknown browser
     };
-    let removed = with_shell(|s| {
-        if s.tabs.len() <= 1 {
+    let removed = with_wid(wid, |s| {
+        if s.closing || s.tabs.len() <= 1 {
             return None; // last tab: let the window close
         }
-        s.tabs.close(id).map(|t| {
-            let gone = t.container;
-            if !s.tabs.iter().any(|(_, o)| o.container == gone) {
-                crate::containers::discard(gone);
-            }
-            (t.view, s.window.clone())
-        })
+        s.tabs
+            .close(id)
+            .map(|t| (t.view, t.container, s.window.clone()))
     })
     .flatten();
-    let Some((view, window)) = removed else {
+    let Some((view, gone, window)) = removed else {
         return false;
     };
+    // Drop a container's context once no tab in any window uses it.
+    let used = SHELLS.with(|v| {
+        v.borrow()
+            .iter()
+            .any(|s| s.tabs.iter().any(|(_, t)| t.container == gone))
+    });
+    if !used {
+        crate::containers::discard(gone);
+    }
     let mut v = View::from(&view);
     window.remove_child_view(Some(&mut v));
     drop(v);
@@ -1062,8 +1297,8 @@ pub fn do_close(browser: &mut Browser) -> bool {
 
 /// A browser is gone: drop any remaining tab entry and quit when nothing is left.
 pub fn on_before_close(browser: &mut Browser) {
-    if let Some(id) = tab_of(browser) {
-        with_shell(|s| s.tabs.close(id));
+    if let Some((wid, id)) = tab_of(browser) {
+        with_wid(wid, |s| s.tabs.close(id));
     }
     let left = BROWSER_COUNT.with(|c| {
         let mut c = c.borrow_mut();
@@ -1072,16 +1307,27 @@ pub fn on_before_close(browser: &mut Browser) {
     });
     debug_log(&format!("browser closed, count={left}"));
     if left == 0 {
-        SHELL.with(|s| s.borrow_mut().take());
+        SHELLS.with(|s| s.borrow_mut().clear());
         quit_message_loop();
     }
 }
 
 /// Window close requested: ask every browser to close; allow once all agree.
-pub fn can_close_window(ui_view: Option<&BrowserView>) -> bool {
-    WINDOW_CLOSING.with(|c| *c.borrow_mut() = true);
-    let mut views: Vec<BrowserView> =
-        with_shell(|s| s.tabs.iter().map(|(_, t)| t.view.clone()).collect()).unwrap_or_default();
+pub fn can_close_window(window: &Window, ui_view: Option<&BrowserView>) -> bool {
+    let Some(wid) = wid_of_window(window) else {
+        return true;
+    };
+    // The last window keeps the saved session; other windows just go away.
+    let last = wids().len() == 1;
+    let mut views: Vec<BrowserView> = with_wid(wid, |s| {
+        s.closing = last;
+        s.tabs.iter().map(|(_, t)| t.view.clone()).collect()
+    })
+    .unwrap_or_default();
+    if !last {
+        // Its tabs leave the session now.
+        with_wid(wid, |s| s.closing = true);
+    }
     views.extend(ui_view.cloned());
     let mut all = true;
     for view in views {

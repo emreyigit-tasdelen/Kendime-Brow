@@ -136,25 +136,28 @@ wrap_browser_process_handler! {
                 }]
             };
 
-            let mut client = KbClient::new();
-            let mut ui_delegate = UiViewDelegate::new();
-            let ui_view = browser_view_create(
-                Some(&mut client),
-                Some(&CefString::from(shell::UI_URL)),
-                Some(&BrowserSettings::default()),
-                None,
-                None,
-                Some(&mut ui_delegate),
-            );
-
-            let mut window_delegate = KbWindowDelegate::new(
-                Rc::new(RefCell::new(ui_view)),
-                client,
-                start_tabs,
-            );
-            window_create_top_level(Some(&mut window_delegate));
+            open_window(start_tabs, None);
         }
     }
+}
+
+/// Opens a browser window with its own strip. `position`: top-left screen point (a tab dragged
+/// out of a strip); `None` lets CEF centre it. A tab waiting in `shell::adopt_pending_tab` is
+/// moved into the new window instead of opening `start_tabs`.
+pub fn open_window(start_tabs: Vec<crate::store::SessionTab>, position: Option<(i32, i32)>) {
+    let mut client = KbClient::new();
+    let mut ui_delegate = UiViewDelegate::new();
+    let ui_view = browser_view_create(
+        Some(&mut client),
+        Some(&CefString::from(shell::UI_URL)),
+        Some(&BrowserSettings::default()),
+        None,
+        None,
+        Some(&mut ui_delegate),
+    );
+    let mut window_delegate =
+        KbWindowDelegate::new(Rc::new(RefCell::new(ui_view)), client, start_tabs, position);
+    window_create_top_level(Some(&mut window_delegate));
 }
 
 wrap_window_delegate! {
@@ -162,6 +165,7 @@ wrap_window_delegate! {
         ui_view: Rc<RefCell<Option<BrowserView>>>,
         client: Client,
         start_tabs: Vec<crate::store::SessionTab>,
+        position: Option<(i32, i32)>,
     }
 
     impl ViewDelegate {
@@ -174,7 +178,7 @@ wrap_window_delegate! {
             // Children are positioned relative to the client area.
             if let Some(window) = view.and_then(|v| v.window()) {
                 let b = window.client_area_bounds_in_screen();
-                shell::apply_layout(b.width, b.height);
+                shell::apply_layout(&window, b.width, b.height);
             }
         }
     }
@@ -187,23 +191,48 @@ wrap_window_delegate! {
                 return;
             };
             shell::init_window(window, ui_view, self.client.clone());
-            shell::open_startup_tabs(&self.start_tabs);
+            if !shell::adopt_pending_tab() {
+                shell::open_startup_tabs(&self.start_tabs);
+            }
             window.show();
             shell::debug_bounds();
         }
 
-        fn on_window_destroyed(&self, _window: Option<&mut Window>) {
+        fn on_window_destroyed(&self, window: Option<&mut Window>) {
+            if let Some(w) = window {
+                shell::window_destroyed(w);
+            }
             self.ui_view.borrow_mut().take();
         }
 
-        fn can_close(&self, _window: Option<&mut Window>) -> i32 {
+        fn on_window_activation_changed(&self, window: Option<&mut Window>, active: i32) {
+            if active != 0 && let Some(w) = window {
+                shell::set_current_window(w);
+            }
+        }
+
+        fn initial_bounds(&self, _window: Option<&mut Window>) -> Rect {
+            // Empty rect: CEF centres the window at its preferred size.
+            self.position.map_or_else(Rect::default, |(x, y)| {
+                let (width, height) = shell::DEFAULT_WINDOW_SIZE;
+                Rect { x, y, width, height }
+            })
+        }
+
+        fn can_close(&self, window: Option<&mut Window>) -> i32 {
             if std::env::var_os("KB_DEBUG").is_some() {
                 eprintln!("[kb] window can_close");
             }
-            shell::can_close_window(self.ui_view.borrow().as_ref()) as i32
+            let Some(window) = window else {
+                return 1;
+            };
+            shell::can_close_window(window, self.ui_view.borrow().as_ref()) as i32
         }
 
-        fn on_key_event(&self, _window: Option<&mut Window>, event: Option<&KeyEvent>) -> i32 {
+        fn on_key_event(&self, window: Option<&mut Window>, event: Option<&KeyEvent>) -> i32 {
+            if let Some(w) = window {
+                shell::set_current_window(w);
+            }
             event.map_or(0, |e| handle_key(e) as i32)
         }
 
@@ -281,6 +310,10 @@ wrap_browser_view_delegate! {
             }
             match popup_browser_view {
                 Some(view) => {
+                    // The popup opens as a tab in its opener's window.
+                    if let Some(b) = browser_view.as_ref().and_then(|v| v.browser()) {
+                        shell::set_current_browser(b.identifier());
+                    }
                     let container = browser_view
                         .map_or(crate::containers::DEFAULT, |o| shell::container_of_view(o));
                     shell::add_tab_view(view.clone(), container);
@@ -569,11 +602,14 @@ wrap_keyboard_handler! {
     impl KeyboardHandler {
         fn on_pre_key_event(
             &self,
-            _browser: Option<&mut Browser>,
+            browser: Option<&mut Browser>,
             event: Option<&KeyEvent>,
             _os_event: OsKeyEvent<'_>,
             _is_keyboard_shortcut: Option<&mut i32>,
         ) -> i32 {
+            if let Some(b) = browser {
+                shell::set_current_browser(b.identifier());
+            }
             event.map_or(0, |e| handle_key(e) as i32)
         }
     }

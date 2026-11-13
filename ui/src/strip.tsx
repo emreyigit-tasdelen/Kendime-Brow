@@ -45,8 +45,34 @@ function Strip() {
     }
   };
 
+  // Tab drag & drop between windows: the tab id travels in a custom MIME type. Dropped on a
+  // strip (any window) -> move-tab there; dropped anywhere else -> detach-tab (new window).
+  const TAB_MIME = 'application/x-kb-tab';
+  const onDragStart = (e: DragEvent, t: TabState) => {
+    e.dataTransfer?.setData(TAB_MIME, String(t.id));
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  };
+  const onDragEnd = (e: DragEvent, t: TabState) => {
+    if (e.dataTransfer?.dropEffect === 'none') {
+      void send({ cmd: 'detach-tab', id: t.id, x: Math.round(e.screenX), y: Math.round(e.screenY) });
+    }
+  };
+  const onDragOver = (e: DragEvent) => {
+    if (e.dataTransfer?.types.includes(TAB_MIME)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+  const onDrop = (e: DragEvent) => {
+    const id = Number(e.dataTransfer?.getData(TAB_MIME));
+    if (id) {
+      e.preventDefault();
+      void send({ cmd: 'move-tab', id });
+    }
+  };
+
   return (
-    <div class="strip">
+    <div class="strip" onDragOver={onDragOver} onDrop={onDrop}>
       <div class="tabs" role="tablist">
         <For each={state().tabs}>
           {(t) => (
@@ -62,6 +88,9 @@ function Strip() {
               aria-selected={t.active}
               title={t.url}
               onMouseDown={(e) => onTabMouseDown(e, t)}
+              draggable={true}
+              onDragStart={(e) => onDragStart(e, t)}
+              onDragEnd={(e) => onDragEnd(e, t)}
             >
               <span class="spinner" aria-hidden="true" />
               <Show when={t.container === 'temporary'}>
