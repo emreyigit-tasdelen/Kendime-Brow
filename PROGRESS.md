@@ -346,3 +346,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.6: OCR pipeline wired (pdfium render -> tesseract -> qpdf merge); needs a live app test. Language pack download pending.
 
 - 3A.5: lossless compress (qpdf) button; DPI resampling + lcms2 pending.
+
+- 3A.9: palette actions pdf.open / media.open added. 3A.8 (PAdES signing) not started: needs a CMS/X.509 signing stack; noted as the next PDF item.

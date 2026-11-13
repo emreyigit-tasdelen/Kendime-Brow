@@ -86,6 +86,22 @@ fn table() -> Vec<(&'static str, &'static str, Command)> {
             },
         ),
         (
+            "pdf.open",
+            "Open PDF viewer (merge, split, rotate, OCR, compress, encrypt)",
+            Command::NewTab {
+                url: Some("kb://pdf/".into()),
+                container: None,
+            },
+        ),
+        (
+            "media.open",
+            "Open media tools (convert, trim, queue)",
+            Command::NewTab {
+                url: Some("kb://avinfo/".into()),
+                container: None,
+            },
+        ),
+        (
             "scripts.open",
             "Open userscripts",
             Command::NewTab {
