@@ -358,3 +358,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.8: Verify signatures (digest + RSA check, no trust store) added and tested.
 
 - 3B.3: office preview via PDF conversion (not LOK tiles). Type-checked, not live-tested.
+
+- 2.3: built-in scriptlets (aopr/aopw/set/nostif/nosiif) loaded via adblock-rust resources; tested, generated JS syntax-checked. Full uBO resources not bundled.

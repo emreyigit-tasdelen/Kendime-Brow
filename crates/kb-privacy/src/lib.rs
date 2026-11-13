@@ -3,6 +3,7 @@
 //! List download/update (2.3), cosmetic filtering + scriptlets (2.3) and per-site shields (2.4)
 //! build on this.
 
+mod scriptlets;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
@@ -91,7 +92,8 @@ impl Blocker {
             set.add_filter_list(text.into(), ParseOptions::default());
             n += 1;
         }
-        let engine = Engine::new_with_filter_set(set);
+        let mut engine = Engine::new_with_filter_set(set);
+        engine.use_resources(scriptlets::builtin());
         if let Ok(mut e) = self.engine.write() {
             *e = Some(engine);
         }
@@ -333,5 +335,19 @@ news.org#@#.ad-box
         assert!(is_filterable("WSS://x"));
         assert!(!is_filterable("kb://ui/"));
         assert!(!is_filterable("data:text/plain,1"));
+    }
+
+    #[test]
+    fn scriptlet_rule_injects_script() {
+        let b = Blocker::new();
+        b.load_lists(["example.org##+js(aopr, ads.detect)
+example.org##+js(set, adsOn, false)
+example.org##+js(nostif, popup)"
+            .to_string()]);
+        let c = b.cosmetic("https://example.org/page");
+        assert!(c.script.contains("ads.detect"), "{}", c.script);
+        assert!(c.script.contains("adsOn"));
+        assert!(c.script.contains("popup"));
+        assert!(b.cosmetic("https://other.org/").script.is_empty());
     }
 }
