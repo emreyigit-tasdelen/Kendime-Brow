@@ -338,3 +338,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.4 (part): password removal. kb-doc edit::unlock (opens with the password, copies pages into a fresh document because PDFium keeps the security handler on save), host pdf.unlock, shell pdf-unlock -> "<name> (unlocked).pdf", and a password form in kb://pdf when opening fails with a password error. Tested with a real PDFium on an RC4-128 fixture (crates/kb-doc/tests/fixtures/encrypted.pdf, password "secret"). Adding encryption, linearization and repair need qpdf (open); the copy drops form fields/bookmarks beyond what page import keeps.
 
 - 3A.4/3A.6 backend: kb-shell xtools.rs (qpdf encrypt/linearize/repair, tesseract ocr); UI and page rasterising pending.
+
+- 3A.4 UI: Encrypt/Linearize/Repair buttons in pdf.tsx (type-checked only). LibreOffice installed via winget (3B.x next).

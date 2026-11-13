@@ -70,6 +70,16 @@ function Viewer() {
   const [pages, setPages] = createSignal('');
   const [mergeList, setMergeList] = createSignal('');
   const [batchList, setBatchList] = createSignal('');
+  const [toolPw, setToolPw] = createSignal('');
+  const tool = async (op: 'encrypt' | 'linearize' | 'repair') => {
+    setStatus({ text: `${op}…` });
+    try {
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op, args: { path: file, password: toolPw() } })) as { path: string };
+      setStatus({ text: `Saved ${r.path}` });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
   const batch = async (op: 'rotate' | 'extract') => {
     const paths = [file, ...batchList().split('|').map((p) => p.trim()).filter(Boolean)];
     setStatus({ text: `Batch ${op} on ${paths.length} files…` });
@@ -238,6 +248,10 @@ function Viewer() {
           />
           <button onClick={() => void batch('rotate')}>Batch rotate 90°</button>
           <button disabled={!pages().trim()} onClick={() => void batch('extract')}>Batch extract pages</button>
+          <input type="password" placeholder="password (for Encrypt)" value={toolPw()} onInput={(e) => setToolPw(e.currentTarget.value)} />
+          <button disabled={!toolPw()} onClick={() => void tool('encrypt')}>Encrypt</button>
+          <button onClick={() => void tool('linearize')}>Linearize</button>
+          <button onClick={() => void tool('repair')}>Repair</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>
