@@ -10,6 +10,7 @@ pub mod content_blocking;
 pub mod downloads;
 pub mod kb_scheme;
 pub mod localfs;
+pub mod media;
 pub mod net;
 pub mod net_privacy;
 pub mod pdf;

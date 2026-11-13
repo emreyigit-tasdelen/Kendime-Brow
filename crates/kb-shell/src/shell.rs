@@ -782,6 +782,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::Net { .. }
         | Command::SessionLog { .. }
         | Command::Userscripts { .. }
+        | Command::Media { .. }
         | Command::LocalFs { .. }
         | Command::TermOpen { .. }
         | Command::TermWrite { .. }

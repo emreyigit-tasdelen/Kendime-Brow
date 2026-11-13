@@ -33,6 +33,7 @@ const HOSTS: &[(&str, &str)] = &[
     ("net", "net"),
     ("logs", "logs"),
     ("scripts", "scripts"),
+    ("avinfo", "avinfo"),
     ("localfiles", "localfiles"),
 ];
 

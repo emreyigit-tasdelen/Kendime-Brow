@@ -30,6 +30,7 @@ export default defineConfig({
         net: resolve(import.meta.dirname, 'net/index.html'),
         logs: resolve(import.meta.dirname, 'logs/index.html'),
         scripts: resolve(import.meta.dirname, 'scripts/index.html'),
+        avinfo: resolve(import.meta.dirname, 'avinfo/index.html'),
         localfiles: resolve(import.meta.dirname, 'localfiles/index.html'),
       },
     },
