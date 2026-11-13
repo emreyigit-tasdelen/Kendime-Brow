@@ -68,6 +68,32 @@ impl Writer {
     }
 }
 
+/// Reads the enhanced packet blocks of a little-endian pcapng file: `(micros, bytes)` per packet.
+/// Other block types are skipped. Errors on truncated or malformed block lengths.
+pub fn read_packets(b: &[u8]) -> Result<Vec<(u64, Vec<u8>)>, String> {
+    let u32_at = |i: usize| -> Result<u32, String> {
+        let s = b.get(i..i + 4).ok_or("truncated file")?;
+        Ok(u32::from_le_bytes([s[0], s[1], s[2], s[3]]))
+    };
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        let kind = u32_at(i)?;
+        let total = u32_at(i + 4)? as usize;
+        if total < 12 || !total.is_multiple_of(4) || i + total > b.len() {
+            return Err("bad block length".into());
+        }
+        if kind == EPB {
+            let caplen = u32_at(i + 20)? as usize;
+            let data = b.get(i + 28..i + 28 + caplen).ok_or("truncated packet")?;
+            let micros = (u64::from(u32_at(i + 12)?) << 32) | u64::from(u32_at(i + 16)?);
+            out.push((micros, data.to_vec()));
+        }
+        i += total;
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,5 +153,22 @@ mod tests {
         assert_eq!(u32_at(body, 0), TLS_KEYLOG);
         assert_eq!(u32_at(body, 4) as usize, log.len());
         assert_eq!(&body[8..8 + log.len()], log.as_bytes());
+    }
+
+    #[test]
+    fn reader_round_trips_the_writer() {
+        let mut w = Writer::new(LINKTYPE_ETHERNET);
+        w.packet(1_700_000_000_123_456, &[1, 2, 3, 4, 5]);
+        w.tls_keys(
+            "CLIENT_RANDOM aa bb
+",
+        );
+        w.packet(7, &[9]);
+        let got = read_packets(&w.finish()).unwrap();
+        assert_eq!(
+            got,
+            vec![(1_700_000_000_123_456, vec![1, 2, 3, 4, 5]), (7, vec![9])]
+        );
+        assert!(read_packets(&[1, 2, 3]).is_err());
     }
 }
