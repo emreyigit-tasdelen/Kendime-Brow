@@ -95,6 +95,23 @@ pub fn reveal(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Download rules: one `ext1,ext2 = Subfolder` per line (`#` comments). Returns the subfolder (a
+/// single sanitized path segment inside the downloads folder) for the first rule matching the file.
+pub fn rule_subdir(rules: &str, file_name: &str) -> Option<String> {
+    let ext = Path::new(file_name)
+        .extension()?
+        .to_str()?
+        .to_ascii_lowercase();
+    rules.lines().find_map(|line| {
+        let (exts, dir) = line.split_once('=')?;
+        let hit = exts
+            .split(',')
+            .any(|e| e.trim().trim_start_matches('.').eq_ignore_ascii_case(&ext));
+        let dir = sanitize_file_name(dir.trim());
+        (hit && !line.trim_start().starts_with('#') && dir != "download").then_some(dir)
+    })
+}
+
 /// File types that run code when opened; the browser never opens these itself.
 pub fn is_executable_type(path: &Path) -> bool {
     const RISKY: &[&str] = &[
@@ -130,6 +147,20 @@ pub fn open_default(path: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rules_pick_a_safe_subfolder() {
+        let r = "# comment
+pdf, .docx = Documents
+jpg,png=Pictures
+zip = ../../evil
+";
+        assert_eq!(rule_subdir(r, "a.PDF").as_deref(), Some("Documents"));
+        assert_eq!(rule_subdir(r, "b.png").as_deref(), Some("Pictures"));
+        assert_eq!(rule_subdir(r, "c.zip").as_deref(), Some("evil"));
+        assert_eq!(rule_subdir(r, "d.txt"), None);
+        assert_eq!(rule_subdir(r, "noext"), None);
+    }
 
     #[test]
     fn executables_are_never_opened() {

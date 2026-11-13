@@ -111,8 +111,13 @@ pub fn on_before_download(
     let Some(dir) = kb_platform::files::downloads_dir() else {
         return false; // let CEF fall back to its default behaviour
     };
-    let _ = std::fs::create_dir_all(&dir);
     let name = kb_platform::files::sanitize_file_name(suggested_name);
+    // Optional <profile>/download-rules.txt: "pdf,docx = Documents" sorts files into subfolders.
+    let dir = crate::shell::profile_dir()
+        .and_then(|p| std::fs::read_to_string(p.join("download-rules.txt")).ok())
+        .and_then(|rules| kb_platform::files::rule_subdir(&rules, &name))
+        .map_or(dir.clone(), |sub| dir.join(sub));
+    let _ = std::fs::create_dir_all(&dir);
     let path = kb_platform::files::unique_path(&dir, &name);
     let path_str = path.to_string_lossy().to_string();
     DOWNLOADS.with(|d| {

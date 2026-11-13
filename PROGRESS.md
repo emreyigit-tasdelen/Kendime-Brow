@@ -318,3 +318,4 @@ Newest on top. Format: task · done · decision · next step.
 - 4B.7 (part): kb://net "Statistics" view (per-host and per-type requests/bytes/failures, op net stats). Not live-tested; dissectors, stream reassembly and three-pane view open (they need 4B.5 capture).
 - 3C.7 (part): automatic SHA-256 of finished downloads (background thread, shown in kb://downloads). Not live-tested; a UI refresh is posted when the hash finishes. Open-with actions and rules still open.
 - 3C.7 (part): "Open" button for finished downloads (default app); executable/script/installer types and extension-less files are refused (use Show in folder). Unit-tested type check; not live-tested. Download rules still open.
+- 3C.7 rules: optional <profile>/download-rules.txt ("pdf,docx = Documents" per line) sorts downloads into a safe subfolder of the downloads dir (sanitized single segment, unit-tested). File-based only, no editor UI yet. 3C.7 otherwise done.
