@@ -1,0 +1,41 @@
+# Example Headscale configuration for Kendime-Brow (task 5.1).
+# Copy to /etc/headscale/config.yaml and replace every placeholder (<...>).
+# Always diff against config-example.yaml of the Headscale release you install: keys change between versions.
+server_url: https://<headscale.example.org>:443
+listen_addr: 127.0.0.1:8080          # behind a TLS reverse proxy (see SERVER-SETUP.md)
+metrics_listen_addr: 127.0.0.1:9090
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+
+derp:
+  server:
+    enabled: true                    # embedded DERP: no third-party relay
+    region_id: 999
+    region_code: "own"
+    region_name: "Own DERP"
+    stun_listen_addr: 0.0.0.0:3478
+    private_key_path: /var/lib/headscale/derp_server_private.key
+    automatically_add_embedded_derp_region: true
+  urls: []                           # do not use Tailscale's public DERP map
+  auto_update_enabled: false
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+
+dns:
+  magic_dns: true
+  base_domain: mesh.internal         # must differ from server_url's domain
+  nameservers:
+    global: []
+
+log:
+  level: info
