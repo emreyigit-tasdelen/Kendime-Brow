@@ -390,3 +390,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2.11: opt-in low memory mode: env KB_LOW_MEMORY=1 adds --disable-gpu. Release, with low-end flag: 134 MB private (vs 259 MB without) — under the 250 MB budget on private bytes. Software rendering; a settings toggle is still to do. Working-set readings right after a build are unreliable (700-1000 MB).
 
 - 2.11: perf.mjs budget check now uses private bytes on Windows. Default 259-287 MB (OVER), KB_LOW_MEMORY=1 134-145 MB (WITHIN). Open: decide whether low memory mode should become a settings toggle or default.
+
+- 2.11: Settings page now has a "Low memory mode" checkbox (setting low_memory writes <profile>/lowmem.on, read at next start; KB_LOW_MEMORY=1 still works). Clippy and tsc clean; not exercised in the app.

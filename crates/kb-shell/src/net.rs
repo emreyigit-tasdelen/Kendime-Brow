@@ -121,6 +121,11 @@ pub fn netlog_marker() -> Option<std::path::PathBuf> {
     crate::shell::profile_dir().map(|d| d.join("netlog.on"))
 }
 
+/// Marker file: present = start with software rendering (low memory mode, task 2.11).
+pub fn lowmem_marker() -> Option<std::path::PathBuf> {
+    crate::shell::profile_dir().map(|d| d.join("lowmem.on"))
+}
+
 pub fn netlog_path() -> Option<std::path::PathBuf> {
     crate::shell::profile_dir().map(|d| d.join("netlog.json"))
 }

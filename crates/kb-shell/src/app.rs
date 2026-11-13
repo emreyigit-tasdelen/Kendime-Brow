@@ -40,7 +40,9 @@ wrap_app! {
                 cl.append_switch(Some(&CefString::from(*s)));
             }
             // Opt-in low memory mode (task 2.11): software rendering, ~140 MB less private memory.
-            if std::env::var("KB_LOW_MEMORY").is_ok_and(|v| v == "1") {
+            if std::env::var("KB_LOW_MEMORY").is_ok_and(|v| v == "1")
+                || crate::net::lowmem_marker().is_some_and(|m| m.exists())
+            {
                 cl.append_switch(Some(&CefString::from("disable-gpu")));
             }
             if let (Some(m), Some(p)) = (crate::net::netlog_marker(), crate::net::netlog_path())

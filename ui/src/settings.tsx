@@ -63,6 +63,14 @@ function Settings() {
           />
         </label>
         <label class="row">
+          <span>Low memory mode (software rendering, applies after restart)</span>
+          <input
+            type="checkbox"
+            checked={bool('low_memory')}
+            onChange={(e) => void setSetting('low_memory', String(e.currentTarget.checked))}
+          />
+        </label>
+        <label class="row">
           <span>DNS-over-HTTPS</span>
           <select value={data()?.settings.doh ?? 'off'} onChange={(e) => void setSetting('doh', e.currentTarget.value)}>
             <option value="off">Off (system resolver)</option>

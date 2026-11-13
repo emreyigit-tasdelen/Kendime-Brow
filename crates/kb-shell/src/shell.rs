@@ -707,6 +707,16 @@ pub fn run_bridge_command(cmd: Command) {
             if key == "doh" || key == "https_only" || key.starts_with("proxy_") {
                 apply_network_settings();
             }
+            if key == "low_memory"
+                && let Some(m) = crate::net::lowmem_marker()
+            {
+                // Read at the next start (GPU switches cannot change in a running browser).
+                if value == "true" {
+                    let _ = std::fs::write(&m, b"1");
+                } else {
+                    let _ = std::fs::remove_file(&m);
+                }
+            }
             if key == "fingerprint_protection" {
                 // Applies to renderer processes started from now on (new tabs / reloads).
                 crate::privacy_flags::set_fingerprint_level(kb_privacy::fingerprint::Level::parse(
