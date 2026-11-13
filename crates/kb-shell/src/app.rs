@@ -536,6 +536,11 @@ fn handle_key(event: &KeyEvent) -> bool {
     let shift = flag(sys::cef_event_flags_t::EVENTFLAG_SHIFT_DOWN);
     let ctrl = flag(sys::cef_event_flags_t::EVENTFLAG_CONTROL_DOWN);
     let alt = flag(sys::cef_event_flags_t::EVENTFLAG_ALT_DOWN);
+    const VK_ESCAPE: i32 = 0x1B;
+    if event.windows_key_code == VK_ESCAPE && !(shift || ctrl || alt) && shell::is_fullscreen() {
+        shell::set_fullscreen(false);
+        return true;
+    }
     shell::command_for_key(event.windows_key_code, shift, ctrl, alt).is_some_and(shell::run_command)
 }
 

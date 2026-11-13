@@ -387,6 +387,11 @@ pub fn add_tab_view(view: BrowserView, container: &'static str) {
 
 /// Positions the UI strip and the tab views inside a client area of `width`×`height`.
 /// Enters or leaves fullscreen; the UI strip is hidden while fullscreen.
+/// Whether the window is fullscreen (Esc leaves it, see app.rs `handle_key`).
+pub fn is_fullscreen() -> bool {
+    with_shell(|s| s.window.is_fullscreen() != 0).unwrap_or(false)
+}
+
 pub fn set_fullscreen(on: bool) {
     if let Some(w) = with_shell(|s| s.window.clone()) {
         w.set_fullscreen(on as i32);
