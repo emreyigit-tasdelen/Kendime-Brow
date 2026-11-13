@@ -117,7 +117,7 @@ Versions `0.6`–`0.7`.
 - [x] 4B.2 NetLog integration (DNS/TLS/socket events)
 - [x] 4B.3 Filter language (DSL) + field registry
 - [x] 4B.4 HAR/cURL export, edit-and-resend request
-- [ ] 4B.5 `kb-capture`: Npcap/pktmon capture, browser-specific filtering
+- [ ] 4B.5 (blocked here: pktmon needs an elevated session, this one is not admin, so it cannot be tested) `kb-capture`: Npcap/pktmon capture, browser-specific filtering
 - [x] 4B.6 TLS key log + pcapng (DSB) writing
 - [x] 4B.7 Protocol dissectors, stream reassembly, three-pane view, statistics (offline capture viewer: packets, streams, stats)
 

@@ -380,3 +380,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2.11: perf.mjs now also prints private bytes of the process tree (Windows). Repeat runs: 455 MB working set / ~310 MB private, flags tried did not change it (earlier 849/1319 MB readings were noise from a stale run). Remaining gap ~60 MB private is the browser process itself.
 
 - 2.11: per-process breakdown attempt gave only the main process (helpers are named differently); no further reduction found. Left open.
+
+- 4B.5: checked pktmon exists but the session is not elevated, so capture cannot be tested; left open.
