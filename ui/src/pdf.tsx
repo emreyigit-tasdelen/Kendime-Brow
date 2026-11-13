@@ -69,6 +69,18 @@ function Viewer() {
   const [zoom, setZoom] = createSignal(1);
   const [pages, setPages] = createSignal('');
   const [mergeList, setMergeList] = createSignal('');
+  const [batchList, setBatchList] = createSignal('');
+  const batch = async (op: 'rotate' | 'extract') => {
+    const paths = [file, ...batchList().split('|').map((p) => p.trim()).filter(Boolean)];
+    setStatus({ text: `Batch ${op} on ${paths.length} files…` });
+    try {
+      const r = JSON.parse(await send({ cmd: 'pdf-batch', op, paths, pages: pages(), degrees: 90 })) as { results: { error?: string }[] };
+      const failed = r.results.filter((x) => x.error).length;
+      setStatus({ text: `Batch ${op}: ${r.results.length - failed} done, ${failed} failed (copies saved next to the originals)` });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
   const [texts, setTexts] = createSignal<string[] | null>(null);
   const [query, setQuery] = createSignal('');
   const hits = () => {
@@ -217,6 +229,15 @@ function Viewer() {
           >
             Merge
           </button>
+          <input
+            type="text"
+            class="wide"
+            placeholder="Batch: more PDF paths, separated by | (this file included; uses the pages box above)"
+            value={batchList()}
+            onInput={(e) => setBatchList(e.currentTarget.value)}
+          />
+          <button onClick={() => void batch('rotate')}>Batch rotate 90°</button>
+          <button disabled={!pages().trim()} onClick={() => void batch('extract')}>Batch extract pages</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>

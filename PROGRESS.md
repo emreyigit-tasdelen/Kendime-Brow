@@ -4,6 +4,7 @@ Decision log and hand-off notes between sessions. Newest entry on top.
 In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
+- 3A.9: batch UI added to kb://pdf (paths separated by |; rotate 90° / extract pages). Type-checked, not live-tested.
 - 3C.3: `image.edit` in kb-doc (rotate/flip/crop/resize/grayscale/brightness/contrast, unit-tested) + `image-edit` command + three buttons in the image viewer; always writes a copy. Crop/resize UI open.
 - 3C.2: sequential conversion queue (`enqueue`/`queue` ops, worker thread, status list in kb://avinfo); tested with real FFmpeg. In-memory only (lost on restart).
 - 3C.2: raw ffmpeg output-args editor added (rejects -i, -y and paths); verified with real FFmpeg. Queue still open.
