@@ -39,6 +39,14 @@ wrap_app! {
             for s in crate::privacy_flags::SWITCHES {
                 cl.append_switch(Some(&CefString::from(*s)));
             }
+            if let (Some(m), Some(p)) = (crate::net::netlog_marker(), crate::net::netlog_path())
+                && m.exists()
+            {
+                cl.append_switch_with_value(
+                    Some(&CefString::from("log-net-log")),
+                    Some(&CefString::from(p.display().to_string().as_str())),
+                );
+            }
             for (s, v) in crate::privacy_flags::valued_switches() {
                 cl.append_switch_with_value(
                     Some(&CefString::from(s)),

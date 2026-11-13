@@ -115,9 +115,37 @@ fn resend(args: &Value) -> Result<String, String> {
     )
 }
 
+/// NetLog (task 4B.2) is opt-in: a marker file in the profile makes the next start pass
+/// `--log-net-log` (sensitive data such as cookies stays stripped, Chromium's default capture mode).
+pub fn netlog_marker() -> Option<std::path::PathBuf> {
+    crate::shell::profile_dir().map(|d| d.join("netlog.on"))
+}
+
+pub fn netlog_path() -> Option<std::path::PathBuf> {
+    crate::shell::profile_dir().map(|d| d.join("netlog.json"))
+}
+
+fn netlog(op: &str, args: &Value) -> Result<String, String> {
+    let marker = netlog_marker().ok_or("no profile directory")?;
+    if op == "netlog-set" {
+        if args.get("on").and_then(Value::as_bool).unwrap_or(false) {
+            std::fs::write(&marker, b"").map_err(|e| e.to_string())?;
+        } else {
+            let _ = std::fs::remove_file(&marker);
+        }
+    }
+    Ok(
+        json!({ "on": marker.exists(), "path": netlog_path().map(|p| p.display().to_string()) })
+            .to_string(),
+    )
+}
+
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     if op == "resend" {
         return resend(args);
+    }
+    if op.starts_with("netlog-") {
+        return netlog(op, args);
     }
     let mut l = log().lock().map_err(|_| "poisoned")?;
     match op {

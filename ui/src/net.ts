@@ -119,5 +119,17 @@ clear.onclick = async () => {
   await refresh();
 };
 
-root.replaceChildren(el('h1', {}, 'Network'), el('div', { class: 'bar' }, search, el('div', { class: 'actions' }, reload, har, clear)), status, list);
+const nlog = el('button', {}, 'NetLog: …');
+async function nlogState(set?: boolean): Promise<void> {
+  try {
+    const r = JSON.parse(await net(set === undefined ? 'netlog-status' : 'netlog-set', { on: set })) as { on: boolean; path: string | null };
+    nlog.textContent = r.on ? 'NetLog: on (next start)' : 'NetLog: off';
+    nlog.title = r.on ? `Writes ${r.path} on the next start; cookies and auth stay stripped. Click to turn off.` : 'Record Chromium NetLog (for chrome://net-export viewers) from the next start.';
+    nlog.onclick = () => void nlogState(!r.on);
+  } catch (e) {
+    status.textContent = msg(e);
+  }
+}
+void nlogState();
+root.replaceChildren(el('h1', {}, 'Network'), el('div', { class: 'bar' }, search, el('div', { class: 'actions' }, reload, har, clear, nlog)), status, list);
 void refresh();
