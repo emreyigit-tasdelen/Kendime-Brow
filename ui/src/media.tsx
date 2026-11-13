@@ -70,6 +70,10 @@ function Viewer() {
     }
   };
 
+  const [size, setSize] = createSignal('');
+  const [crop, setCrop] = createSignal('');
+  const nums = (t: string) => t.split(/[x, ]+/).filter(Boolean).map(Number);
+
   const isJpeg = /\.jpe?g$/i.test(file);
   return (
     <div class="media">
@@ -80,6 +84,10 @@ function Viewer() {
         <button onClick={() => void edit([{ op: 'rotate', degrees: 90 }], 'rotate 90°')}>Rotate 90°</button>
         <button onClick={() => void edit([{ op: 'flip-h' }], 'mirror')}>Mirror</button>
         <button onClick={() => void edit([{ op: 'grayscale' }], 'grayscale')}>Grayscale</button>
+        <input placeholder="resize WxH" size={9} value={size()} onInput={(e) => setSize(e.currentTarget.value)} />
+        <button disabled={nums(size()).length !== 2} onClick={() => { const [width, height] = nums(size()); void edit([{ op: 'resize', width, height }], `resize ${width}×${height}`); }}>Resize</button>
+        <input placeholder="crop x,y,w,h" size={12} value={crop()} onInput={(e) => setCrop(e.currentTarget.value)} />
+        <button disabled={nums(crop()).length !== 4} onClick={() => { const [x, y, w, h] = nums(crop()); void edit([{ op: 'crop', x, y, w, h }], 'crop'); }}>Crop</button>
         <Show when={meta() && meta()!.entries.length > 0 && isJpeg}>
           <button onClick={() => void strip()}>Remove metadata (save copy)</button>
         </Show>
