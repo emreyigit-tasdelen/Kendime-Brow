@@ -354,3 +354,5 @@ Newest on top. Format: task · done · decision · next step.
 - BLOCKED/DEFERRED (reason): 3A.8 PAdES signing = needs a CMS/X.509 stack plus key storage design (large, own session); 3B.2/3B.3/3B.5/3B.6 = LibreOffice Kit tile rendering + editing subprocess (large; headless convert already covers 3B.4); 5.2-5.9 = need the user's server and credentials; 7.1-7.5 = need macOS hardware; 1.10b/1.15 = need Linux VM; 6.6 = Chrome MV3 best effort. Remaining doable work needs the user or a dedicated session.
 
 - 3A.8: signing done (sign.rs, Sign button in the PDF viewer). Verified: OpenSSL cms -verify and qpdf --check pass. Pending: verifying other signatures, visible appearance, RFC 3161 timestamps, PDFs that already have AcroForm.
+
+- 3A.8: Verify signatures (digest + RSA check, no trust store) added and tested.

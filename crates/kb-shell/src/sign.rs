@@ -279,6 +279,91 @@ fn sign_inner(
     Ok(pdf)
 }
 
+/// One verified signature: who signed and whether the digest and signature both check out.
+pub fn verify_pdf(pdf: &[u8]) -> Result<Vec<serde_json::Value>, String> {
+    use rsa::pkcs1v15::{Signature, VerifyingKey};
+    use rsa::pkcs8::DecodePublicKey;
+    use signature::Verifier;
+    let text = String::from_utf8_lossy(pdf);
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(i) = text[from..].find("/ByteRange [") {
+        let at = from + i + 12;
+        from = at;
+        let Some(end) = text[at..].find(']') else {
+            break;
+        };
+        let nums: Vec<usize> = text[at..at + end]
+            .split_whitespace()
+            .filter_map(|n| n.parse().ok())
+            .collect();
+        if nums.len() != 4 || nums[2] < nums[1] + 2 || nums[2] + nums[3] > pdf.len() {
+            out.push(serde_json::json!({ "ok": false, "error": "bad ByteRange" }));
+            continue;
+        }
+        let mut signed = pdf[nums[0]..nums[0] + nums[1]].to_vec();
+        signed.extend_from_slice(&pdf[nums[2]..nums[2] + nums[3]]);
+        let hex = String::from_utf8_lossy(&pdf[nums[1] + 1..nums[2] - 1]).into_owned();
+        let hex = hex.trim_end_matches('0');
+        let hex = if hex.len() % 2 == 1 {
+            format!("{hex}0")
+        } else {
+            hex.to_string()
+        };
+        let der: Result<Vec<u8>, _> = (0..hex.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
+            .collect();
+        let r = (|| -> Result<(String, bool, bool), String> {
+            let der = der.map_err(|_| "bad signature hex".to_string())?;
+            let ci = ContentInfo::from_der(&der).map_err(|e| e.to_string())?;
+            let sd: cms::signed_data::SignedData =
+                ci.content.decode_as().map_err(|e| e.to_string())?;
+            let si = sd.signer_infos.0.iter().next().ok_or("no signer")?;
+            let cert = sd
+                .certificates
+                .as_ref()
+                .and_then(|c| {
+                    c.0.iter().find_map(|c| match c {
+                        CertificateChoices::Certificate(c) => Some(c.clone()),
+                        _ => None,
+                    })
+                })
+                .ok_or("no certificate in the signature")?;
+            let attrs = si.signed_attrs.as_ref().ok_or("no signed attributes")?;
+            let md = attrs
+                .iter()
+                .find(|a| a.oid == const_oid::db::rfc5911::ID_MESSAGE_DIGEST)
+                .and_then(|a| a.values.iter().next())
+                .and_then(|v| OctetString::from_der(&v.to_der().ok()?).ok())
+                .ok_or("no message digest")?;
+            let digest_ok = md.as_bytes() == Sha256::digest(&signed).as_slice();
+            let spki = cert
+                .tbs_certificate
+                .subject_public_key_info
+                .to_der()
+                .map_err(|e| e.to_string())?;
+            let pk = rsa::RsaPublicKey::from_public_key_der(&spki)
+                .map_err(|_| "only RSA signatures are supported".to_string())?;
+            let vk = VerifyingKey::<Sha256>::new(pk);
+            let sig = Signature::try_from(si.signature.as_bytes()).map_err(|e| e.to_string())?;
+            let sig_ok = vk
+                .verify(&attrs.to_der().map_err(|e| e.to_string())?, &sig)
+                .is_ok();
+            Ok((cert.tbs_certificate.subject.to_string(), digest_ok, sig_ok))
+        })();
+        out.push(match r {
+            Ok((who, d, s)) => serde_json::json!({
+                "ok": d && s, "signer": who, "digest_ok": d, "signature_ok": s,
+                "covers_whole_file": nums[2] + nums[3] == pdf.len(),
+                "note": "the certificate is not checked against a trust store"
+            }),
+            Err(e) => serde_json::json!({ "ok": false, "error": e }),
+        });
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,6 +487,12 @@ trailer
             .output()
             .unwrap();
         assert!(v.status.success(), "{}", String::from_utf8_lossy(&v.stderr));
+        let v = verify_pdf(&pdf).unwrap();
+        assert_eq!(v.len(), 1);
+        assert_eq!(v[0]["ok"], true, "{:?}", v[0]);
+        let mut bad = pdf.clone();
+        bad[20] ^= 1;
+        assert_eq!(verify_pdf(&bad).unwrap()[0]["ok"], false);
         let _ = std::fs::remove_dir_all(&d);
     }
 }

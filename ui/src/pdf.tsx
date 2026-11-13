@@ -79,6 +79,14 @@ function Viewer() {
       setStatus({ text: String(e) });
     }
   };
+  const verify = async () => {
+    try {
+      const r = JSON.parse(await send({ cmd: 'pdf-tool', op: 'verify', args: { path: file } })) as { signatures: { ok: boolean; signer?: string; error?: string }[] };
+      setStatus({ text: r.signatures.length ? r.signatures.map((x) => (x.ok ? `Valid: ${x.signer}` : `INVALID ${x.error ?? ''}`)).join('; ') + ' (certificate trust not checked)' : 'No signatures found' });
+    } catch (e) {
+      setStatus({ text: String(e) });
+    }
+  };
   const [keyPath, setKeyPath] = createSignal('');
   const [certPath, setCertPath] = createSignal('');
   const sign = async () => {
@@ -277,6 +285,7 @@ function Viewer() {
           <input type="text" placeholder="signing key (PKCS#8 PEM path)" value={keyPath()} onInput={(e) => setKeyPath(e.currentTarget.value)} />
           <input type="text" placeholder="certificate (PEM path)" value={certPath()} onInput={(e) => setCertPath(e.currentTarget.value)} />
           <button disabled={!keyPath() || !certPath()} onClick={() => void sign()}>Sign</button>
+          <button onClick={() => void verify()}>Verify signatures</button>
           <button onClick={() => void loadForm()}>Fill form</button>
           <Show when={status().text}>
             <span class="muted">{status().text}</span>

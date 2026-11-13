@@ -217,6 +217,11 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             crate::sign::sign_pdf(&qpdf(), &p, &out, &key, &cert, name)?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "verify" => {
+            let p = pdf_path(args)?;
+            let bytes = std::fs::read(p).map_err(|e| e.to_string())?;
+            Ok(json!({ "signatures": crate::sign::verify_pdf(&bytes)? }).to_string())
+        }
         "office-batch" => {
             let paths: Vec<&str> = args
                 .get("paths")
