@@ -140,9 +140,47 @@ fn netlog(op: &str, args: &Value) -> Result<String, String> {
     )
 }
 
+/// Opens a pcapng capture (base64 in `data`) and returns dissected packets, reassembled TCP
+/// streams (text preview) and statistics (task 4B.7).
+fn pcap_open(args: &Value) -> Result<String, String> {
+    use base64::Engine;
+    let data = base64::engine::general_purpose::STANDARD
+        .decode(args.get("data").and_then(Value::as_str).unwrap_or_default())
+        .map_err(|e| e.to_string())?;
+    let raw = kb_net::pcapng::read_packets(&data)?;
+    let packets: Vec<kb_net::dissect::Packet> = raw
+        .iter()
+        .filter_map(|(_, frame)| kb_net::dissect::dissect(frame))
+        .collect();
+    let rows: Vec<Value> = packets
+        .iter()
+        .take(5000)
+        .enumerate()
+        .map(|(i, p)| {
+            json!({ "n": i + 1, "src": p.src, "dst": p.dst, "proto": p.proto, "sport": p.sport,
+                    "dport": p.dport, "len": p.payload.len(), "summary": p.summary })
+        })
+        .collect();
+    let streams: Vec<Value> = kb_net::dissect::reassemble(&packets)
+        .into_iter()
+        .take(200)
+        .map(|(k, v)| {
+            let end = v.len().min(4000);
+            json!({ "key": k, "bytes": v.len(), "text": String::from_utf8_lossy(&v[..end]) })
+        })
+        .collect();
+    let s = kb_net::dissect::stats(&packets);
+    Ok(json!({ "packets": rows, "streams": streams,
+               "stats": { "packets": s.packets, "bytes": s.bytes, "by_proto": s.by_proto } })
+    .to_string())
+}
+
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     if op == "resend" {
         return resend(args);
+    }
+    if op == "pcap-open" {
+        return pcap_open(args);
     }
     if op.starts_with("netlog-") {
         return netlog(op, args);
@@ -242,5 +280,45 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             Ok("{}".into())
         }
         _ => Err(format!("unknown net op: {op}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base64::Engine;
+
+    #[test]
+    fn opens_a_capture_and_reassembles_the_stream() {
+        let payload = b"GET /x HTTP/1.1
+Host: a.test
+
+";
+        let mut f = vec![0u8; 12];
+        f.extend([0x08, 0x00]);
+        let mut ip = vec![
+            0x45, 0, 0, 0, 0, 0, 0, 0, 64, 6, 0, 0, 10, 0, 0, 1, 10, 0, 0, 2,
+        ];
+        let mut tcp = vec![0u8; 20];
+        tcp[0..2].copy_from_slice(&5000u16.to_be_bytes());
+        tcp[2..4].copy_from_slice(&80u16.to_be_bytes());
+        tcp[12] = 0x50;
+        ip.extend(&tcp);
+        ip.extend(payload);
+        f.extend(ip);
+        let mut w = kb_net::pcapng::Writer::new(1);
+        w.packet(1, &f);
+        let b64 = base64::engine::general_purpose::STANDARD.encode(w.finish());
+        let out: Value =
+            serde_json::from_str(&pcap_open(&json!({ "data": b64 })).unwrap()).unwrap();
+        assert_eq!(out["stats"]["packets"], 1);
+        assert_eq!(out["packets"][0]["proto"], "TCP");
+        assert!(
+            out["streams"][0]["text"]
+                .as_str()
+                .unwrap()
+                .starts_with("GET /x")
+        );
+        assert!(pcap_open(&json!({ "data": "!!" })).is_err());
     }
 }

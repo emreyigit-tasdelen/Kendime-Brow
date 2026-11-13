@@ -137,6 +137,48 @@ statsBtn.onclick = async () => {
     status.textContent = msg(e);
   }
 };
+// Capture viewer (task 4B.7): open a .pcapng file; packets, reassembled streams and statistics.
+const capPick = el('input', { type: 'file', accept: '.pcapng,.pcap', hidden: true });
+capPick.onchange = async () => {
+  const f = capPick.files?.[0];
+  if (!f) return;
+  try {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    const r = JSON.parse(await net('pcap-open', { data: btoa(bin) })) as {
+      packets: { n: number; src: string; dst: string; proto: string; sport: number; dport: number; len: number; summary: string }[];
+      streams: { key: string; bytes: number; text: string }[];
+      stats: { packets: number; bytes: number; by_proto: Record<string, number> };
+    };
+    const detail = el('pre', { style: 'white-space:pre-wrap;max-height:40vh;overflow:auto' });
+    const back = el('button', {}, 'Back');
+    back.onclick = () => void refresh();
+    const protos = Object.entries(r.stats.by_proto).map(([k, v]) => `${k}: ${v}`).join(' · ');
+    const pk = r.packets.map((p) => {
+      const row = el('div', { class: 'row' }, `${p.n}  ${p.proto}  ${p.src}:${p.sport} → ${p.dst}:${p.dport}  ${p.len} B  ${p.summary}`);
+      return row;
+    });
+    const st = r.streams.map((s) => {
+      const row = el('div', { class: 'row' }, `${s.key}  (${human(s.bytes)})`);
+      row.onclick = () => (detail.textContent = s.text);
+      return row;
+    });
+    list.replaceChildren(
+      el('div', { class: 'actions' }, back),
+      el('div', { class: 'meta' }, `${r.stats.packets} packets · ${human(r.stats.bytes)} payload · ${protos}`),
+      el('h2', {}, 'Packets'),
+      ...pk,
+      el('h2', {}, 'TCP streams (click to read)'),
+      ...st,
+      detail,
+    );
+  } catch (e) {
+    status.textContent = msg(e);
+  }
+};
+const capBtn = el('button', {}, 'Open capture');
+capBtn.onclick = () => capPick.click();
 const nlog = el('button', {}, 'NetLog: …');
 async function nlogState(set?: boolean): Promise<void> {
   try {
@@ -149,5 +191,5 @@ async function nlogState(set?: boolean): Promise<void> {
   }
 }
 void nlogState();
-root.replaceChildren(el('h1', {}, 'Network'), el('div', { class: 'bar' }, search, el('div', { class: 'actions' }, reload, har, statsBtn, clear, nlog)), status, list);
+root.replaceChildren(el('h1', {}, 'Network'), el('div', { class: 'bar' }, search, el('div', { class: 'actions' }, reload, har, statsBtn, capBtn, capPick, clear, nlog)), status, list);
 void refresh();

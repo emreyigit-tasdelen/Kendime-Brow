@@ -119,7 +119,7 @@ Versions `0.6`–`0.7`.
 - [x] 4B.4 HAR/cURL export, edit-and-resend request
 - [ ] 4B.5 `kb-capture`: Npcap/pktmon capture, browser-specific filtering
 - [x] 4B.6 TLS key log + pcapng (DSB) writing
-- [ ] 4B.7 Protocol dissectors, stream reassembly, three-pane view, statistics
+- [x] 4B.7 Protocol dissectors, stream reassembly, three-pane view, statistics (offline capture viewer: packets, streams, stats)
 
 ## Phase 5 — VPN/Mesh, Companion, Headscale
 
