@@ -315,3 +315,4 @@ Newest on top. Format: task · done · decision · next step.
 - 4B.2 NetLog done (opt-in): kb://net "NetLog" toggle writes <profile>/netlog.on; next start passes --log-net-log=<profile>/netlog.json (default capture mode: cookies/auth stripped). Live-verified file is created. Off by default.
 - 5.1 docs done: docs/SERVER-SETUP.md + deploy/headscale/config.yaml.example (placeholders only, no secrets). 5.2 needs the user (server + credentials).
 - 5.10 ACL template: deploy/headscale/acl.hujson.example (browser -> companion on 22/3389/8443 only). Admin panel not done.
+- 4B.7 (part): kb://net "Statistics" view (per-host and per-type requests/bytes/failures, op net stats). Not live-tested; dissectors, stream reassembly and three-pane view open (they need 4B.5 capture).

@@ -119,6 +119,24 @@ clear.onclick = async () => {
   await refresh();
 };
 
+const statsBtn = el('button', {}, 'Statistics');
+statsBtn.onclick = async () => {
+  try {
+    const s = JSON.parse(await net('stats')) as { hosts: { host: string; requests: number; bytes: number; failed: number }[]; types: { type: string; requests: number; bytes: number }[] };
+    const back = el('button', {}, 'Back');
+    back.onclick = () => void refresh();
+    const rows = (items: string[]) => items.map((t) => el('div', { class: 'row' }, t));
+    list.replaceChildren(
+      el('div', { class: 'actions' }, back),
+      el('h2', {}, 'By host (top 30 by bytes)'),
+      ...rows(s.hosts.map((h) => `${h.host} · ${h.requests} req · ${human(h.bytes)}${h.failed ? ` · ${h.failed} failed` : ''}`)),
+      el('h2', {}, 'By type'),
+      ...rows(s.types.map((t) => `${t.type || 'other'} · ${t.requests} req · ${human(t.bytes)}`)),
+    );
+  } catch (e) {
+    status.textContent = msg(e);
+  }
+};
 const nlog = el('button', {}, 'NetLog: …');
 async function nlogState(set?: boolean): Promise<void> {
   try {
@@ -131,5 +149,5 @@ async function nlogState(set?: boolean): Promise<void> {
   }
 }
 void nlogState();
-root.replaceChildren(el('h1', {}, 'Network'), el('div', { class: 'bar' }, search, el('div', { class: 'actions' }, reload, har, clear, nlog)), status, list);
+root.replaceChildren(el('h1', {}, 'Network'), el('div', { class: 'bar' }, search, el('div', { class: 'actions' }, reload, har, statsBtn, clear, nlog)), status, list);
 void refresh();

@@ -190,6 +190,40 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
                 .map(|r| json!({ "curl": r.to_curl() }).to_string())
                 .ok_or_else(|| "request not found".into())
         }
+        "stats" => {
+            // Per-host and per-type request counts, bytes and errors (task 4B.7, statistics).
+            let mut hosts: std::collections::BTreeMap<String, (u64, u64, u64)> = Default::default();
+            let mut types: std::collections::BTreeMap<String, (u64, u64)> = Default::default();
+            for r in l.requests() {
+                if r.url.starts_with("kb://") || r.url.starts_with("devtools://") {
+                    continue;
+                }
+                let host = r
+                    .url
+                    .split_once("://")
+                    .map(|(_, rest)| rest.split(['/', '?', '#']).next().unwrap_or_default())
+                    .unwrap_or_default()
+                    .rsplit('@')
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                let bytes = r.encoded_bytes.unwrap_or(0);
+                let h = hosts.entry(host).or_default();
+                h.0 += 1;
+                h.1 += bytes;
+                h.2 += u64::from(r.error.is_some() || r.status.is_some_and(|s| s >= 400));
+                let t = types.entry(r.resource_type.clone()).or_default();
+                t.0 += 1;
+                t.1 += bytes;
+            }
+            let mut hv: Vec<_> = hosts.into_iter().collect();
+            hv.sort_by_key(|(_, v)| std::cmp::Reverse(v.1));
+            Ok(json!({
+                "hosts": hv.iter().take(30).map(|(h, v)| json!({"host": h, "requests": v.0, "bytes": v.1, "failed": v.2})).collect::<Vec<_>>(),
+                "types": types.iter().map(|(t, v)| json!({"type": t, "requests": v.0, "bytes": v.1})).collect::<Vec<_>>(),
+            })
+            .to_string())
+        }
         "get" => {
             let id = args.get("id").and_then(Value::as_str).unwrap_or_default();
             l.requests()
