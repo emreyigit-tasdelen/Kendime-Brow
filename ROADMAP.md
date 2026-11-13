@@ -90,7 +90,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 
 **3C — Media and files (§8)**
 - [ ] 3C.1 `kb-media` host + FFmpeg component, info panel via `ffprobe` (partial: ffprobe info page kb://avinfo, no sandboxed host or bundled FFmpeg yet)
-- [ ] 3C.2 Video: trimming, conversion, presets, raw argument editor, queue (partial: presets + trim via ffmpeg; raw output args done; no queue yet)
+- [ ] 3C.2 Video: trimming, conversion, presets, raw argument editor, queue (partial: presets + trim via ffmpeg; raw output args and a sequential queue done; no sandboxed host yet)
 - [x] 3C.3 Photo: viewer, non-destructive editing, format conversion (format conversion done; non-destructive editing open)
 - [x] 3C.4 **Validation:** V11 → metadata/EXIF viewing and selective removal → EXIF read + lossless JPEG strip
 - [ ] 3C.5 RAW, AVIF, JXL, HEIC support; color management

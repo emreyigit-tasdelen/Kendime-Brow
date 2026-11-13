@@ -48,12 +48,30 @@ go.onclick = async () => {
   }
 };
 
+const queueBox = el('div', { class: 'meta' });
+const enq = el('button', {}, 'Add to queue');
+enq.onclick = async () => {
+  const num = (i: HTMLInputElement) => (i.value.trim() === '' ? null : Number(i.value));
+  try {
+    await media('enqueue', { path: file, preset: preset.value, start: num(start), end: num(end), raw: raw.value, ext: ext.value || undefined });
+    status.textContent = '';
+  } catch (e) {
+    status.textContent = msg(e);
+  }
+};
+setInterval(async () => {
+  try {
+    const q = JSON.parse(await media('queue', {})) as { jobs: { id: number; status: string; detail: string; file: string }[] };
+    queueBox.replaceChildren(...q.jobs.map((j) => el('div', {}, `#${j.id} ${j.file.split(/[\/]/).pop()} — ${j.status}${j.status === 'failed' ? ': ' + j.detail : ''}`)));
+  } catch { /* ignore */ }
+}, 1500);
+
 root.replaceChildren(
   el('h1', {}, file.split(/[\\/]/).pop() ?? 'Media'),
   el('div', { class: 'meta' }, 'Runs FFmpeg on this computer. Open only media you trust.'),
   status,
   info,
-  el('div', { class: 'card' }, el('div', { class: 'actions' }, preset, start, end, go), el('div', { class: 'actions' }, raw, ext), out),
+  el('div', { class: 'card' }, el('div', { class: 'actions' }, preset, start, end, go), el('div', { class: 'actions' }, raw, ext, enq), queueBox, out),
 );
 
 void (async () => {

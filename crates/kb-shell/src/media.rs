@@ -130,6 +130,46 @@ pub fn convert_args(
     Ok(a)
 }
 
+/// Conversion queue (task 3C.2): jobs run one at a time on a worker thread.
+static QUEUE: std::sync::Mutex<Vec<Value>> = std::sync::Mutex::new(Vec::new());
+static WORKER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+fn set_job(id: usize, status: &str, detail: &str) {
+    if let Ok(mut q) = QUEUE.lock()
+        && let Some(j) = q.get_mut(id)
+    {
+        j["status"] = status.into();
+        j["detail"] = detail.into();
+    }
+}
+
+fn run_queue() {
+    loop {
+        let next = {
+            let Ok(q) = QUEUE.lock() else { break };
+            q.iter()
+                .position(|j| j["status"] == "queued")
+                .map(|i| (i, q[i]["args"].clone()))
+        };
+        let Some((id, args)) = next else {
+            WORKER.store(false, std::sync::atomic::Ordering::SeqCst);
+            // A job may have been added between the scan and the flag reset.
+            let again = QUEUE
+                .lock()
+                .is_ok_and(|q| q.iter().any(|j| j["status"] == "queued"));
+            if again && !WORKER.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                continue;
+            }
+            break;
+        };
+        set_job(id, "running", "");
+        match call("convert", &args) {
+            Ok(r) => set_job(id, "done", &r),
+            Err(e) => set_job(id, "failed", &e),
+        }
+    }
+}
+
 pub fn call(op: &str, args: &Value) -> Result<String, String> {
     match op {
         "probe" => {
@@ -227,6 +267,33 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             }
             Ok(json!({ "path": target.display().to_string() }).to_string())
         }
+        "enqueue" => {
+            media_path(args)?;
+            let id = {
+                let mut q = QUEUE.lock().map_err(|e| e.to_string())?;
+                if q.len() >= 500 {
+                    return Err("queue is full".into());
+                }
+                q.push(json!({ "status": "queued", "detail": "", "args": args }));
+                q.len() - 1
+            };
+            if !WORKER.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                std::thread::spawn(run_queue);
+            }
+            Ok(json!({ "id": id }).to_string())
+        }
+        "queue" => {
+            let q = QUEUE.lock().map_err(|e| e.to_string())?;
+            let jobs: Vec<Value> = q
+                .iter()
+                .enumerate()
+                .map(|(i, j)| {
+                    json!({ "id": i, "status": j["status"], "detail": j["detail"],
+                                      "file": j["args"]["path"], "preset": j["args"]["preset"] })
+                })
+                .collect();
+            Ok(json!({ "jobs": jobs }).to_string())
+        }
         _ => Err(format!("unknown media op: {op}")),
     }
 }
@@ -308,6 +375,25 @@ mod tests {
         let raw: Value = serde_json::from_str(&raw).unwrap();
         assert!(raw["path"].as_str().unwrap().ends_with(".mp3"));
         assert!(call("convert", &json!({ "path": p, "raw": "-i /etc/passwd" })).is_err());
+        let id = serde_json::from_str::<Value>(
+            &call("enqueue", &json!({ "path": p, "preset": "mp3" })).unwrap(),
+        )
+        .unwrap()["id"]
+            .as_u64()
+            .unwrap();
+        let mut status = String::new();
+        for _ in 0..100 {
+            let q: Value = serde_json::from_str(&call("queue", &json!({})).unwrap()).unwrap();
+            status = q["jobs"][id as usize]["status"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            if status == "done" || status == "failed" {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        assert_eq!(status, "done");
         let _ = std::fs::remove_dir_all(&d);
     }
 }

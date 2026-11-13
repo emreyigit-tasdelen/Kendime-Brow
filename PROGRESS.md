@@ -4,6 +4,7 @@ Decision log and hand-off notes between sessions. Newest entry on top.
 In a new session, read this file and [ROADMAP.md](ROADMAP.md) first.
 
 ## Current status (summary)
+- 3C.2: sequential conversion queue (`enqueue`/`queue` ops, worker thread, status list in kb://avinfo); tested with real FFmpeg. In-memory only (lost on restart).
 - 3C.2: raw ffmpeg output-args editor added (rejects -i, -y and paths); verified with real FFmpeg. Queue still open.
 - 3A.9 partial: `Command::PdfBatch` + `pdf::batch` (per-file results, 200 file cap). Unit-tested for validation and per-file errors (not live); UI and action-registry entries still open.
 - 3C.6 zip: `zip-list/zip-extract/zip-create` in localfs.rs (zip-slip safe, size cap, no overwrite) + Zip/Unzip buttons; unit-tested. Other formats and drag and drop open.
