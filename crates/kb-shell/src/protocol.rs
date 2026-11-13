@@ -141,6 +141,12 @@ pub enum Command {
         path: String,
         format: String,
     },
+    /// Writes `<name> (edited).<ext>` after applying `ops` (JSON array) to the image.
+    ImageEdit {
+        path: String,
+        ops: String,
+        format: String,
+    },
     /// The image as a `data:` URL for display.
     ImageData {
         path: String,

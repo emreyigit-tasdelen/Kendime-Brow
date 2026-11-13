@@ -283,6 +283,26 @@ pub fn image_convert(path: &str, format: &str) -> Result<String, String> {
     Ok(target.to_string_lossy().to_string())
 }
 
+/// Applies edit ops (JSON array) to a copy of the image: `<name> (edited).<ext>`.
+pub fn image_edit(path: &str, ops: &str, format: &str) -> Result<String, String> {
+    if ops.contains('\n') {
+        return Err("ops must be single-line JSON".into());
+    }
+    let mut body = format.as_bytes().to_vec();
+    body.push(10);
+    body.extend_from_slice(ops.as_bytes());
+    body.push(10);
+    body.extend_from_slice(&read_image(path)?);
+    let out = call_host("image.edit", body)?;
+    let ext = if format == "jpeg" { "jpg" } else { format };
+    let p = Path::new(path);
+    let dir = p.parent().unwrap_or(Path::new("."));
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
+    let target = kb_platform::files::unique_path(dir, &format!("{stem} (edited).{ext}"));
+    std::fs::write(&target, out).map_err(|e| e.to_string())?;
+    Ok(target.to_string_lossy().to_string())
+}
+
 /// The image as a base64 `data:` URL for the viewer (no parsing).
 pub fn image_data_url(path: &str) -> Result<String, String> {
     use base64::Engine;

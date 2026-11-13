@@ -125,6 +125,7 @@ export type Command =
   | { cmd: 'pdf-extract'; path: string; pages: string }
   | { cmd: 'pdf-rotate'; path: string; pages?: string; degrees: number }
   | { cmd: 'pdf-merge'; paths: string[] }
+  | { cmd: 'image-edit'; path: string; ops: string; format: string }
   | { cmd: 'pdf-batch'; op: 'rotate' | 'extract' | 'unlock'; paths: string[]; pages?: string; degrees?: number; password?: string }
   | { cmd: 'pdf-render'; page: number; dpi?: number };
 

@@ -358,6 +358,11 @@ impl BrowserSideHandler for ShellQueryHandler {
             Command::ImageConvert { path, format } => {
                 spawn_pdf_edit(callback, move || crate::pdf::image_convert(&path, &format));
             }
+            Command::ImageEdit { path, ops, format } => {
+                spawn_pdf_edit(callback, move || {
+                    crate::pdf::image_edit(&path, &ops, &format)
+                });
+            }
             Command::ImageStrip { path } => {
                 spawn_pdf_edit(callback, move || crate::pdf::image_strip(&path));
             }

@@ -60,6 +60,16 @@ function Viewer() {
     }
   };
 
+  const edit = async (ops: object[], label: string) => {
+    const format = /\.(png|webp)$/i.test(file) ? file.slice(file.lastIndexOf('.') + 1).toLowerCase() : 'png';
+    try {
+      const { path } = JSON.parse(await send({ cmd: 'image-edit', path: file, ops: JSON.stringify(ops), format })) as { path: string };
+      setMessage({ text: `Saved an edited copy (${label}):`, path });
+    } catch (e) {
+      setMessage({ text: String(e) });
+    }
+  };
+
   const isJpeg = /\.jpe?g$/i.test(file);
   return (
     <div class="media">
@@ -67,6 +77,9 @@ function Viewer() {
         <span class="title" title={file}>{file.split(/[\\/]/).pop()}</span>
         <span class="spacer" />
         <For each={['png', 'jpg', 'webp']}>{(f) => <button onClick={() => void convert(f)}>Save as {f.toUpperCase()}</button>}</For>
+        <button onClick={() => void edit([{ op: 'rotate', degrees: 90 }], 'rotate 90°')}>Rotate 90°</button>
+        <button onClick={() => void edit([{ op: 'flip-h' }], 'mirror')}>Mirror</button>
+        <button onClick={() => void edit([{ op: 'grayscale' }], 'grayscale')}>Grayscale</button>
         <Show when={meta() && meta()!.entries.length > 0 && isJpeg}>
           <button onClick={() => void strip()}>Remove metadata (save copy)</button>
         </Show>

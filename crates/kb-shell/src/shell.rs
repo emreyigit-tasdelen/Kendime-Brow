@@ -792,6 +792,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::ImageStrip { .. }
         | Command::PdfUnlock { .. }
         | Command::ImageConvert { .. }
+        | Command::ImageEdit { .. }
         | Command::ImageData { .. }
         | Command::PdfFill { .. }
         | Command::PdfExtract { .. }

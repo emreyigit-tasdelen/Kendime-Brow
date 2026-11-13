@@ -106,6 +106,15 @@ pub fn handle(
             let target = String::from_utf8_lossy(&body[..nl]).to_ascii_lowercase();
             crate::convert::convert(&body[nl + 1..], &target)
         }
+        "image.edit" => {
+            // body: target format, newline, JSON ops, newline, image bytes.
+            let mut parts = body.splitn(3, |b| *b == 10);
+            let target =
+                String::from_utf8_lossy(parts.next().ok_or("missing format")?).to_ascii_lowercase();
+            let ops = String::from_utf8_lossy(parts.next().ok_or("missing ops")?).to_string();
+            let img = parts.next().ok_or("missing image")?;
+            crate::convert::edit(img, &ops, &target)
+        }
         "image.strip" => crate::meta::strip_jpeg_metadata(body).map(|(bytes, _)| bytes),
         "sheet.preview" => {
             // body: extension, a newline, then the file bytes.
