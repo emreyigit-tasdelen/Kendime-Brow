@@ -382,3 +382,5 @@ Newest on top. Format: task · done · decision · next step.
 - 2.11: per-process breakdown attempt gave only the main process (helpers are named differently); no further reduction found. Left open.
 
 - 4B.5: checked pktmon exists but the session is not elevated, so capture cannot be tested; left open.
+
+- 2.11: PERF_ARGS trials: --enable-low-end-device-mode -> 281 MB private / 9 procs (now a default flag). Adding --renderer-process-limit=1 --disable-site-isolation-trials -> 262 MB / 7 procs but removes site isolation, NOT applied. Budget 250 MB still not met.

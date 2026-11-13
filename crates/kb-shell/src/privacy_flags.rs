@@ -24,6 +24,9 @@ pub const SWITCHES: &[&str] = &[
     // process: ~200 MB less on an empty window (measured 671 → 454 MB). Trade-off: the GPU
     // stack is no longer process-isolated; web content still runs in sandboxed renderers.
     "in-process-gpu",
+    // Memory (task 2.11): smaller caches and fewer helper processes; measured 310 -> 281 MB
+    // private bytes and 11 -> 9 processes on an empty window.
+    "enable-low-end-device-mode",
 ];
 
 /// Features disabled through `--disable-features` (comma-joined).
