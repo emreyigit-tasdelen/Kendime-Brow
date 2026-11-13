@@ -154,7 +154,6 @@ fn sign_inner(
 
     let sx = find_last(&pdf, b"startxref").ok_or("no startxref")?;
     let prev: u64 = String::from_utf8_lossy(&pdf[sx + 9..])
-        .trim()
         .split_whitespace()
         .next()
         .and_then(|n| n.parse().ok())
