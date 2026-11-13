@@ -1,5 +1,5 @@
 // kb://localfiles/ — dual-pane local file explorer (task 3C.6): browse, new folder, rename,
-// copy to the other pane, delete (two clicks). Zip/Unzip go to the other pane (no overwrite). Drag and drop is not done yet.
+// copy to the other pane, delete (two clicks). Zip/Unzip go to the other pane (no overwrite). Drag a row onto the other pane to copy it.
 import './base.css';
 import './vault.css';
 import { send } from './bridge';
@@ -68,6 +68,11 @@ class Pane {
         for (const r of this.box.children) (r as HTMLElement).style.background = '';
         row.style.background = 'rgba(128,128,255,.25)';
       };
+      row.draggable = true;
+      row.ondragstart = (ev) => {
+        dragged = { pane: this, name: e.name };
+        ev.dataTransfer?.setData('text/plain', e.name);
+      };
       row.ondblclick = () => {
         if (e.dir) return;
         this.selected = e;
@@ -83,10 +88,20 @@ class Pane {
   }
 }
 
+let dragged: { pane: Pane; name: string } | null = null;
 const left = new Pane();
 const right = new Pane();
 let activePane = left;
-for (const p of [left, right]) p.box.addEventListener('click', () => (activePane = p));
+for (const p of [left, right]) {
+  p.box.addEventListener('click', () => (activePane = p));
+  p.box.ondragover = (ev) => ev.preventDefault();
+  p.box.ondrop = (ev) => {
+    ev.preventDefault();
+    const d = dragged;
+    dragged = null;
+    if (d && d.pane !== p) void run(() => fs('copy', { from: join(d.pane.path, d.name), to: join(p.path, d.name) }));
+  };
+}
 const other = () => (activePane === left ? right : left);
 
 async function run(what: () => Promise<unknown>): Promise<void> {

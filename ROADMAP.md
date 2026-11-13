@@ -94,7 +94,7 @@ Each subgroup can be released independently. Versions `0.3`–`0.5`.
 - [x] 3C.3 Photo: viewer, non-destructive editing, format conversion (conversion done; edits write a copy: rotate, flip, crop, resize, grayscale, brightness, contrast; UI has rotate, mirror, grayscale, crop, resize)
 - [x] 3C.4 **Validation:** V11 → metadata/EXIF viewing and selective removal → EXIF read + lossless JPEG strip
 - [ ] 3C.5 RAW, AVIF, JXL, HEIC support; color management
-- [ ] 3C.6 `kb://files`: dual-pane explorer, drag and drop, archives (libarchive) (zip create/extract done; drag and drop and other archive formats open)
+- [ ] 3C.6 `kb://files`: dual-pane explorer, drag and drop, archives (libarchive) (zip create/extract done; drag and drop copy done; other archive formats open)
 - [x] 3C.7 Downloads: automatic checksum, "open with" actions, rules
 
 ## Phase 4 — Remote connections and network analysis
