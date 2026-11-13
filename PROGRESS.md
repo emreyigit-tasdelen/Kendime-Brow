@@ -319,3 +319,4 @@ Newest on top. Format: task · done · decision · next step.
 - 3C.7 (part): automatic SHA-256 of finished downloads (background thread, shown in kb://downloads). Not live-tested; a UI refresh is posted when the hash finishes. Open-with actions and rules still open.
 - 3C.7 (part): "Open" button for finished downloads (default app); executable/script/installer types and extension-less files are refused (use Show in folder). Unit-tested type check; not live-tested. Download rules still open.
 - 3C.7 rules: optional <profile>/download-rules.txt ("pdf,docx = Documents" per line) sorts downloads into a safe subfolder of the downloads dir (sanitized single segment, unit-tested). File-based only, no editor UI yet. 3C.7 otherwise done.
+- 4A.9 split panes LIVE-VERIFIED (scripts/split-smoke.mjs: 1 -> 2 -> 3 panes, close -> 2). Session groups still open.
