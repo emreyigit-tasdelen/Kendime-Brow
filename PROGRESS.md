@@ -374,3 +374,5 @@ Newest on top. Format: task · done · decision · next step.
 - 3A.3: annotate op (note/highlight, incremental update, tested) + buttons in kb://pdf. Position is fixed (top-left area); click-to-place and editing existing annotations still open.
 
 - STATUS: everything doable without outside help is done. Open items need a Mac (7.x), a Linux VM (1.10b, 1.15), the user server/credentials (5.x), LibreOffice Kit (3B.2/5/6), native codec libs (3C.5), a TSA (3A.8 timestamps), or the maintainer key (2.12). 2.11 RAM budget (702 MB vs 250 MB) is the largest remaining engineering task.
+
+- 2.11 measurement (release, this machine): default 1319 MB/13 procs; with PERF_ARGS="--disable-features=SpareRendererForSitePerProcess,TranslateUI,OptimizationHints --disable-background-networking" 849 MB, start 351 ms. Single runs, very noisy (earlier 454 MB), working-set metric double-counts shared pages. Not applied as defaults; needs repeated runs and a private-bytes metric.
