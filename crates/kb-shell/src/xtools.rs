@@ -253,6 +253,14 @@ pub fn call(op: &str, args: &Value) -> Result<String, String> {
             )?;
             Ok(json!({ "path": out.display().to_string() }).to_string())
         }
+        "component-download" => {
+            let dir = crate::shell::profile_dir()
+                .ok_or("no profile")?
+                .join("components")
+                .join(s("tool"));
+            let p = crate::updater::download_component(s("url"), s("sha256"), &dir, s("name"))?;
+            Ok(json!({ "path": p.display().to_string() }).to_string())
+        }
         "tools-status" => {
             let probe = |name: &str, exe: String| {
                 let out = Command::new(&exe).arg("--version").output();
