@@ -395,3 +395,4 @@ Newest on top. Format: task · done · decision · next step.
 
 - 3B.2 (partial): pdf-tool op tools-status + "Check tools" button report whether qpdf, Tesseract and LibreOffice are found (LibreOffice by file only; soffice --version can hang). The downloader and kb-doc-lok subprocess are still open.
 - 2.12: verified download (store_verified/download_verified, https only, signature checked, never executed) done; still needs maintainer public key + apply step.
+- 2026-11-13 STATUS: every remaining open roadmap item needs outside help (Mac, Linux VM, user's server/credentials, elevated session, RDP server, LibreOffice Kit/FFmpeg bundle, maintainer key, native image libs). No doable item left; resume when one is unblocked.
