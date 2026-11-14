@@ -160,10 +160,7 @@ pub fn apply_context_prefs(ctx: &cef::RequestContext) -> Vec<String> {
             Pref::Int(i) => v.set_int(*i),
             Pref::Str(t) => v.set_string(Some(&CefString::from(*t))),
         };
-        let n = CefString::from(*name);
-        if ctx.can_set_preference(Some(&n)) == 0
-            || ctx.set_preference(Some(&n), Some(&mut v), None) == 0
-        {
+        if !crate::net_privacy::set_pref(ctx, name, &mut v) {
             failed.push(name.to_string());
         }
     }
@@ -175,31 +172,25 @@ pub fn apply_context_prefs(ctx: &cef::RequestContext) -> Vec<String> {
 pub fn apply_prefs() -> Vec<String> {
     use cef::*;
     let mut failed = Vec::new();
-    let mut set = |mgr: &dyn Fn(&CefString, &mut Value) -> bool, name: &str, pref: Pref| {
+    let mut set = |mgr: &dyn Fn(&str, &mut Value) -> bool, name: &str, pref: Pref| {
         let Some(mut v) = value_create() else { return };
         match pref {
             Pref::Bool(b) => v.set_bool(b as i32),
             Pref::Int(i) => v.set_int(i),
             Pref::Str(t) => v.set_string(Some(&CefString::from(t))),
         };
-        if !mgr(&CefString::from(name), &mut v) {
+        if !mgr(name, &mut v) {
             failed.push(name.to_string());
         }
     };
     if let Some(global) = preference_manager_get_global() {
-        let apply = |name: &CefString, v: &mut Value| {
-            global.can_set_preference(Some(name)) != 0
-                && global.set_preference(Some(name), Some(v), None) != 0
-        };
+        let apply = |name: &str, v: &mut Value| crate::net_privacy::set_pref(&global, name, v);
         for (name, pref) in GLOBAL_PREFS {
             set(&apply, name, *pref);
         }
     }
     if let Some(ctx) = request_context_get_global_context() {
-        let apply = |name: &CefString, v: &mut Value| {
-            ctx.can_set_preference(Some(name)) != 0
-                && ctx.set_preference(Some(name), Some(v), None) != 0
-        };
+        let apply = |name: &str, v: &mut Value| crate::net_privacy::set_pref(&ctx, name, v);
         for (name, pref) in PROFILE_PREFS {
             set(&apply, name, *pref);
         }
@@ -219,6 +210,8 @@ pub const BLOCKED_HOSTS: &[&str] = &[
     "clientservices.googleapis.com",
     "optimizationguide-pa.googleapis.com",
     "safebrowsing.googleapis.com",
+    // Proxy auto-discovery (WPAD) lookup made at startup; any device on the LAN could answer it.
+    "wpad",
 ];
 
 pub fn host_resolver_rules() -> String {

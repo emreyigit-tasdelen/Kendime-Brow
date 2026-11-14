@@ -46,17 +46,22 @@ pub fn valid_proxy(s: &str) -> bool {
     }
 }
 
-fn set(mgr: &impl ImplRequestContext, name: &str, v: &mut Value) -> bool {
+/// Sets one preference. The error out-param must be a non-empty string: CEF rejects the call
+/// (returns false without applying anything) when it gets a null error pointer, and an empty
+/// `CefString` converts to null. Passing `None` here silently disabled every privacy pref.
+pub fn set_pref(mgr: &impl ImplPreferenceManager, name: &str, v: &mut Value) -> bool {
     let n = CefString::from(name);
-    mgr.can_set_preference(Some(&n)) != 0 && mgr.set_preference(Some(&n), Some(v), None) != 0
+    let mut err = CefString::from(" ");
+    mgr.can_set_preference(Some(&n)) != 0
+        && mgr.set_preference(Some(&n), Some(v), Some(&mut err)) != 0
+}
+
+fn set(mgr: &impl ImplRequestContext, name: &str, v: &mut Value) -> bool {
+    set_pref(mgr, name, v)
 }
 
 fn set_global(name: &str, v: &mut Value) -> bool {
-    let Some(g) = preference_manager_get_global() else {
-        return false;
-    };
-    let n = CefString::from(name);
-    g.can_set_preference(Some(&n)) != 0 && g.set_preference(Some(&n), Some(v), None) != 0
+    preference_manager_get_global().is_some_and(|g| set_pref(&g, name, v))
 }
 
 fn string_value(s: &str) -> Option<Value> {
