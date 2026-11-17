@@ -201,7 +201,7 @@ if (target?.telnet) {
 // Ctrl+Shift+B toggles broadcast: keystrokes go to every open terminal session.
 let broadcast = false;
 const badge = document.createElement('div');
-badge.className = 'term-overlay';
+badge.className = 'term-overlay term-badge';
 badge.textContent = 'BROADCAST: input goes to ALL terminals (Ctrl+Shift+B to stop)';
 badge.hidden = true;
 root.append(badge);
@@ -223,7 +223,7 @@ window.addEventListener('keydown', (ev) => {
 // Ctrl+Shift+L starts or stops an encrypted session log of the active pane (needs the vault unlocked).
 const logging = new Set<number>();
 const logBadge = document.createElement('div');
-logBadge.className = 'term-overlay';
+logBadge.className = 'term-overlay term-badge';
 logBadge.hidden = true;
 root.append(logBadge);
 window.addEventListener('keydown', (ev) => {
