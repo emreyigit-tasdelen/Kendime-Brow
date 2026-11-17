@@ -213,6 +213,27 @@ pub(crate) async fn connect_authed(cfg: &Config) -> Result<client::Handle<Client
     let config = Arc::new(client::Config {
         inactivity_timeout: None,
         keepalive_interval: Some(Duration::from_secs(30)),
+        preferred: russh::Preferred {
+            // The default list lacks the NIST ECDH curves many network devices offer
+            // (sha1-only DH stays refused).
+            kex: std::borrow::Cow::Borrowed(&[
+                russh::kex::MLKEM768X25519_SHA256,
+                russh::kex::CURVE25519,
+                russh::kex::CURVE25519_PRE_RFC_8731,
+                russh::kex::DH_GEX_SHA256,
+                russh::kex::DH_G18_SHA512,
+                russh::kex::DH_G17_SHA512,
+                russh::kex::DH_G16_SHA512,
+                russh::kex::DH_G15_SHA512,
+                russh::kex::DH_G14_SHA256,
+                russh::kex::ECDH_SHA2_NISTP256,
+                russh::kex::ECDH_SHA2_NISTP384,
+                russh::kex::ECDH_SHA2_NISTP521,
+                russh::kex::EXTENSION_SUPPORT_AS_CLIENT,
+                russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT,
+            ]),
+            ..Default::default()
+        },
         ..Default::default()
     });
     let connect = tokio::time::timeout(
