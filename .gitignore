@@ -87,6 +87,7 @@ profiles/
 *.db
 *.log
 logs/
+!ui/logs/
 crash-reports/
 *.dmp
 
