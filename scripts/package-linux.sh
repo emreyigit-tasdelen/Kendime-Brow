@@ -17,6 +17,15 @@ if [[ "${1:-}" != "--skip-build" ]]; then
 fi
 
 release=target/release
+# cef-dll-sys copies the CEF runtime next to the binaries only while its build script runs; with a
+# restored build cache it is skipped, so fall back to the CEF dir it downloaded.
+if [[ ! -e "$release/libcef.so" ]]; then
+  lib=$(find "$release/build" -path '*cef-dll-sys*' -name libcef.so 2>/dev/null | head -1)
+  if [[ -n "$lib" ]]; then
+    echo "Copying CEF runtime from $(dirname "$lib")"
+    cp -a "$(dirname "$lib")"/. "$release/"
+  fi
+fi
 pkg=target/package
 app="$pkg/kendime-brow"
 rm -rf "$app" && mkdir -p "$app"

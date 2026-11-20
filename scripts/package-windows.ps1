@@ -29,6 +29,17 @@ $stage = Join-Path $pkgRoot 'Kendime-Brow'
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
+# cef-dll-sys copies the CEF runtime next to the binaries only while its build script runs. With a
+# restored build cache the script is skipped, so fall back to the CEF dir it downloaded.
+if (-not (Test-Path (Join-Path $release 'libcef.dll'))) {
+    $lib = Get-ChildItem -Path (Join-Path $release 'build') -Recurse -Filter libcef.dll -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match 'cef-dll-sys' } | Select-Object -First 1
+    if ($lib) {
+        Write-Host "Copying CEF runtime from $($lib.DirectoryName)"
+        Copy-Item -Path (Join-Path $lib.DirectoryName '*') -Destination $release -Recurse -Force
+    }
+}
+
 # App binaries + the CEF runtime that cef-dll-sys copied next to them.
 $files = @(
     'kendime-brow.exe', 'kb-shell-helper.exe', 'kb-doc-host.exe',
