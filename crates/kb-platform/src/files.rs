@@ -112,6 +112,39 @@ pub fn rule_subdir(rules: &str, file_name: &str) -> Option<String> {
     })
 }
 
+/// Default subfolder for a file type ("Images", "Documents", ...), `None` for unknown types.
+pub fn type_subdir(file_name: &str) -> Option<&'static str> {
+    let ext = Path::new(file_name)
+        .extension()?
+        .to_str()?
+        .to_ascii_lowercase();
+    Some(match ext.as_str() {
+        "jpg" | "jpeg" | "png" | "gif" | "webp" | "svg" | "bmp" | "ico" | "tif" | "tiff"
+        | "avif" | "heic" | "jxl" => "Images",
+        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" | "odt" | "ods" | "odp"
+        | "txt" | "rtf" | "csv" | "md" | "epub" => "Documents",
+        "mp4" | "mkv" | "avi" | "mov" | "webm" | "wmv" | "flv" => "Video",
+        "mp3" | "wav" | "flac" | "ogg" | "m4a" | "aac" | "opus" => "Music",
+        "zip" | "rar" | "7z" | "tar" | "gz" | "tgz" | "bz2" | "xz" | "iso" => "Archives",
+        _ if is_executable_type(Path::new(file_name)) => "Programs",
+        _ => return None,
+    })
+}
+
+/// True for names like `invoice.pdf.exe`: a document extension hiding an executable one.
+pub fn has_disguised_extension(file_name: &str) -> bool {
+    const DOCS: &[&str] = &[
+        "pdf", "doc", "docx", "xls", "xlsx", "txt", "jpg", "jpeg", "png", "mp3", "mp4", "zip",
+    ];
+    let lower = file_name.to_ascii_lowercase();
+    let mut parts = lower.rsplit('.');
+    let last = parts.next().unwrap_or_default();
+    let prev = parts.next().unwrap_or_default();
+    parts.next().is_some()
+        && DOCS.contains(&prev)
+        && is_executable_type(Path::new(&format!("x.{last}")))
+}
+
 /// File types that run code when opened; the browser never opens these itself.
 pub fn is_executable_type(path: &Path) -> bool {
     const RISKY: &[&str] = &[

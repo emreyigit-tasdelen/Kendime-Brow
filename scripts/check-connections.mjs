@@ -65,6 +65,8 @@ const rs = readFileSync(join(import.meta.dirname, '..', 'crates', 'kb-shell', 's
 const blockedPatterns = [...rs.slice(rs.indexOf('BLOCKED_HOSTS')).split('];')[0].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 const listsRs = readFileSync(join(import.meta.dirname, '..', 'crates', 'kb-privacy', 'src', 'lists.rs'), 'utf8');
 for (const m of listsRs.matchAll(/url: "https:\/\/([^/"]+)/g)) ALLOWLIST.push(m[1]);
+// Update service (crates/kb-shell/src/updater.rs): only contacted once UPDATE_PUBLIC_KEY is set.
+ALLOWLIST.push('api.github.com', 'github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com');
 const isBlocked = (h) => blockedPatterns.some((p) => (p.startsWith('*.') ? h.endsWith(p.slice(1)) : h === p));
 
 const eventName = Object.fromEntries(Object.entries(log.constants?.logEventTypes ?? {}).map(([k, v]) => [v, k]));

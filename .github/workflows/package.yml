@@ -64,3 +64,27 @@ jobs:
             target/package/*.deb
             target/package/*.AppImage
             target/package/SHA256SUMS
+
+  # Tag push (v*) → GitHub Release that the in-app updater picks up.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: kendime-brow-windows
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: kendime-brow-linux
+          path: dist-linux
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" --generate-notes \
+            dist/*.zip dist/*.sha256 dist-linux/*

@@ -216,6 +216,10 @@ pub enum Command {
         #[serde(default)]
         args: serde_json::Value,
     },
+    /// Signed app updates (see `updater.rs`): status/check/download/apply.
+    AppUpdate {
+        op: String,
+    },
     /// External PDF tools: qpdf and Tesseract (see `xtools.rs`).
     PdfTool {
         op: String,

@@ -198,10 +198,10 @@ function Strip() {
         <button
           type="button"
           class="palette-button"
-          title="Command palette (Ctrl+Shift+P)"
+          title="Menu: settings, downloads, tools… (Ctrl+Shift+P)"
           onClick={() => void send({ cmd: 'set-palette', open: !state().palette })}
         >
-          ⌘
+          ⋮
         </button>
       </form>
       <Show when={state().palette}>

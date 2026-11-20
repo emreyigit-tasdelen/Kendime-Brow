@@ -66,6 +66,11 @@ pub fn platform_suffix() -> &'static str {
 
 /// The package asset and its detached signature (`<asset>.minisig`) for this platform.
 pub fn pick_assets(release: &Release) -> Option<(&Asset, &Asset)> {
+    pick_assets_with(release, ".minisig")
+}
+
+/// Package asset plus the companion `<asset><ext>` file (signature or checksum).
+pub fn pick_assets_with<'a>(release: &'a Release, ext: &str) -> Option<(&'a Asset, &'a Asset)> {
     let pkg = release
         .assets
         .iter()
@@ -73,7 +78,7 @@ pub fn pick_assets(release: &Release) -> Option<(&Asset, &Asset)> {
     let sig = release
         .assets
         .iter()
-        .find(|a| a.name == format!("{}.minisig", pkg.name))?;
+        .find(|a| a.name == format!("{}{ext}", pkg.name))?;
     Some((pkg, sig))
 }
 
@@ -109,9 +114,6 @@ pub enum Check {
 
 /// Network check (blocking; run on a background thread). Never installs anything.
 pub fn check_for_update() -> Check {
-    if UPDATE_PUBLIC_KEY.is_empty() {
-        return Check::Disabled;
-    }
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(std::time::Duration::from_secs(20)))
         .user_agent("Kendime-Brow updater")
@@ -130,7 +132,14 @@ pub fn check_for_update() -> Check {
     if release.prerelease || !is_newer(&release.tag_name, CURRENT_VERSION) {
         return Check::UpToDate;
     }
-    match pick_assets(&release) {
+    // With a signing key: minisign signature. Without one (releases are published only from the
+    // maintainer's GitHub account): the `.sha256` asset over https guards against corruption.
+    let picked = if UPDATE_PUBLIC_KEY.is_empty() {
+        pick_assets_with(&release, ".sha256")
+    } else {
+        pick_assets(&release)
+    };
+    match picked {
         Some((pkg, sig)) => Check::Available {
             version: release.tag_name.trim_start_matches('v').to_string(),
             url: pkg.browser_download_url.clone(),
@@ -196,7 +205,225 @@ pub fn download_verified(
         .limit(1 << 30)
         .read_to_vec()
         .map_err(|e| e.to_string())?;
+    if UPDATE_PUBLIC_KEY.is_empty() {
+        use sha2::{Digest, Sha256};
+        let want = sig.split_whitespace().next().unwrap_or("").to_ascii_lowercase();
+        let got: String = Sha256::digest(&data)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        if want != got {
+            return Err("checksum mismatch".into());
+        }
+        if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
+            return Err("bad file name".into());
+        }
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        let path = dir.join(name);
+        std::fs::write(&path, &data).map_err(|e| e.to_string())?;
+        return Ok(path);
+    }
     store_verified(UPDATE_PUBLIC_KEY, dir, name, &data, &sig)
+}
+
+// ---- Update service: check → download+verify → stage → apply on exit -------------------------
+
+#[derive(Default, Clone)]
+struct Svc {
+    /// idle | checking | available | downloading | staged | applying | error
+    phase: &'static str,
+    version: String,
+    url: String,
+    sig_url: String,
+    staged: Option<std::path::PathBuf>,
+    error: String,
+}
+
+static SVC: std::sync::Mutex<Svc> = std::sync::Mutex::new(Svc {
+    phase: "",
+    version: String::new(),
+    url: String::new(),
+    sig_url: String::new(),
+    staged: None,
+    error: String::new(),
+});
+
+fn with_svc<R>(f: impl FnOnce(&mut Svc) -> R) -> R {
+    let mut g = SVC.lock().unwrap_or_else(|e| e.into_inner());
+    if g.phase.is_empty() {
+        g.phase = "idle";
+    }
+    f(&mut g)
+}
+
+fn status_json() -> serde_json::Value {
+    with_svc(|s| {
+        serde_json::json!({
+            "enabled": true,
+            "current": CURRENT_VERSION,
+            "phase": s.phase,
+            "version": s.version,
+            "error": s.error,
+            "canApply": cfg!(windows),
+        })
+    })
+}
+
+/// Background check used at startup and by the "Check now" button. Never installs anything.
+pub fn run_check() {
+    if with_svc(|s| matches!(s.phase, "checking" | "downloading" | "applying" | "staged")) {
+        return;
+    }
+    with_svc(|s| {
+        s.phase = "checking";
+        s.error.clear();
+    });
+    let r = check_for_update();
+    with_svc(|s| match r {
+        Check::Available {
+            version,
+            url,
+            sig_url,
+        } => {
+            s.phase = "available";
+            s.version = version;
+            s.url = url;
+            s.sig_url = sig_url;
+        }
+        Check::Error(e) => {
+            s.phase = "error";
+            s.error = e;
+        }
+        Check::Disabled | Check::UpToDate => s.phase = "idle",
+    });
+}
+
+/// Extracts the verified zip into `dest` (zip-slip safe) and returns the directory holding the
+/// application files (a single top-level folder is unwrapped).
+fn extract(zip_path: &std::path::Path, dest: &std::path::Path) -> Result<std::path::PathBuf, String> {
+    let f = std::fs::File::open(zip_path).map_err(|e| e.to_string())?;
+    let mut z = zip::ZipArchive::new(f).map_err(|e| e.to_string())?;
+    if dest.exists() {
+        std::fs::remove_dir_all(dest).map_err(|e| e.to_string())?;
+    }
+    std::fs::create_dir_all(dest).map_err(|e| e.to_string())?;
+    for i in 0..z.len() {
+        let mut e = z.by_index(i).map_err(|e| e.to_string())?;
+        let Some(rel) = e.enclosed_name() else {
+            return Err("unsafe path in update archive".into());
+        };
+        let out = dest.join(rel);
+        if e.is_dir() {
+            std::fs::create_dir_all(&out).map_err(|e| e.to_string())?;
+        } else {
+            if let Some(p) = out.parent() {
+                std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+            }
+            let mut w = std::fs::File::create(&out).map_err(|e| e.to_string())?;
+            std::io::copy(&mut e, &mut w).map_err(|e| e.to_string())?;
+        }
+    }
+    let entries: Vec<_> = std::fs::read_dir(dest)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    if entries.len() == 1 && entries[0].path().is_dir() {
+        Ok(entries[0].path())
+    } else {
+        Ok(dest.to_path_buf())
+    }
+}
+
+fn run_download() -> Result<(), String> {
+    let (url, sig_url, version) = with_svc(|s| (s.url.clone(), s.sig_url.clone(), s.version.clone()));
+    if url.is_empty() {
+        return Err("no update available".into());
+    }
+    let dir = crate::shell::profile_dir()
+        .ok_or("no profile directory")?
+        .join("updates");
+    let name = url.rsplit('/').next().unwrap_or("update.zip").to_string();
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_file(dir.join(&name));
+    let pkg = download_verified(&url, &sig_url, &name, &dir)?;
+    let staged = if cfg!(windows) {
+        extract(&pkg, &dir.join(format!("staged-{version}")))?
+    } else {
+        pkg
+    };
+    with_svc(|s| s.staged = Some(staged));
+    Ok(())
+}
+
+/// Spawns a detached helper that waits for this process to exit, copies the staged files over
+/// the install directory and relaunches the browser. Windows only.
+fn apply_on_exit() -> Result<(), String> {
+    let staged = with_svc(|s| s.staged.clone()).ok_or("nothing staged")?;
+    if !cfg!(windows) {
+        return Err("applying updates is only supported on Windows; the verified package is at ".to_string()
+            + &staged.display().to_string());
+    }
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let install = exe.parent().ok_or("no install directory")?;
+    let script = staged.with_extension("apply.ps1");
+    let q = |p: &std::path::Path| p.display().to_string().replace('\'', "''");
+    let body = format!(
+        "$ErrorActionPreference='Stop'\r\n\
+         Wait-Process -Id {pid} -ErrorAction SilentlyContinue\r\n\
+         Start-Sleep -Milliseconds 500\r\n\
+         Copy-Item -Path '{src}\\*' -Destination '{dst}' -Recurse -Force\r\n\
+         Start-Process -FilePath '{exe}'\r\n",
+        pid = std::process::id(),
+        src = q(&staged),
+        dst = q(install),
+        exe = q(&exe),
+    );
+    std::fs::write(&script, body).map_err(|e| e.to_string())?;
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW | DETACHED_PROCESS
+        std::process::Command::new("powershell")
+            .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File"])
+            .arg(&script)
+            .creation_flags(0x0800_0000 | 0x0000_0008)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Bridge entry point (`app-update` command): status / check / download / apply.
+pub fn call(op: &str) -> Result<String, String> {
+    match op {
+        "status" => {}
+        "check" => run_check(),
+        "download" => {
+            if with_svc(|s| s.phase != "available") {
+                return Err("no update to download".into());
+            }
+            with_svc(|s| s.phase = "downloading");
+            match run_download() {
+                Ok(()) => with_svc(|s| s.phase = "staged"),
+                Err(e) => {
+                    with_svc(|s| {
+                        s.phase = "available";
+                        s.error = e.clone();
+                    });
+                    return Err(e);
+                }
+            }
+        }
+        "apply" => {
+            if with_svc(|s| s.phase != "staged") {
+                return Err("no staged update".into());
+            }
+            apply_on_exit()?;
+            with_svc(|s| s.phase = "applying");
+        }
+        _ => return Err(format!("unknown app-update op: {op}")),
+    }
+    Ok(status_json().to_string())
 }
 
 #[cfg(test)]
@@ -288,8 +515,24 @@ wLMDjy9FLAuxZ3q4NlEvkgtyhrr0gtTu6KC4KBJdITbbOeAi1zBIYo0v4iTgt8jJpIidRJnp94ABQkJA
     }
 
     #[test]
-    fn disabled_without_key() {
-        assert_eq!(check_for_update(), Check::Disabled);
+    fn sha256_asset_selection() {
+        let name = format!("Kendime-Brow-0.2.0{}", platform_suffix());
+        let rel = Release {
+            tag_name: "v0.2.0".into(),
+            prerelease: false,
+            assets: vec![
+                Asset {
+                    name: name.clone(),
+                    browser_download_url: "u1".into(),
+                },
+                Asset {
+                    name: format!("{name}.sha256"),
+                    browser_download_url: "u2".into(),
+                },
+            ],
+        };
+        assert!(pick_assets_with(&rel, ".sha256").is_some());
+        assert!(pick_assets(&rel).is_none());
     }
 }
 

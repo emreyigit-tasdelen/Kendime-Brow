@@ -12,6 +12,17 @@ use cef::wrapper::message_router::MessageRouterBrowserSideHandlerCallbacks;
 
 use crate::{bridge, kb_scheme, shell};
 
+/// Sets the KB icon (title bar, taskbar, Alt-Tab) from the embedded PNG.
+fn set_app_icon(window: &mut Window) {
+    const PNG: &[u8] = include_bytes!("../assets/icon.png");
+    if let Some(mut img) = image_create()
+        && img.add_png(1.0, Some(PNG)) != 0
+    {
+        window.set_window_icon(Some(&mut img));
+        window.set_window_app_icon(Some(&mut img));
+    }
+}
+
 wrap_app! {
     pub struct KbApp;
 
@@ -122,6 +133,10 @@ wrap_browser_process_handler! {
             {
                 crate::content_blocking::start_update(dir, false);
             }
+            if shell::setting_bool("updates_auto_check") {
+                // No-op (no network) while the release signing key is not configured.
+                std::thread::spawn(crate::updater::run_check);
+            }
 
             let command_line = command_line_get_global().expect("no global command line");
             let url = CefString::from(&command_line.switch_value(Some(&CefString::from("url"))))
@@ -191,6 +206,7 @@ wrap_window_delegate! {
                 return;
             };
             shell::init_window(window, ui_view, self.client.clone());
+            set_app_icon(window);
             if !shell::adopt_pending_tab() {
                 shell::open_startup_tabs(&self.start_tabs);
             }
@@ -339,6 +355,10 @@ wrap_client! {
 
         fn life_span_handler(&self) -> Option<LifeSpanHandler> {
             Some(KbLifeSpanHandler::new())
+        }
+
+        fn context_menu_handler(&self) -> Option<ContextMenuHandler> {
+            Some(KbContextMenuHandler::new())
         }
 
         fn keyboard_handler(&self) -> Option<KeyboardHandler> {
@@ -596,6 +616,46 @@ type OsKeyEvent<'a> = *mut u8;
 
 // Browser shortcuts. Window accelerators do not fire while an Alloy browser has focus, so
 // key-down events are matched against `shell::ACCELERATORS` before the page sees them.
+const MENU_INSPECT: i32 = 26500 + 1; // MENU_ID_USER_FIRST + 1
+
+// Adds "Inspect" (DevTools at the clicked element) to the page context menu.
+wrap_context_menu_handler! {
+    struct KbContextMenuHandler;
+
+    impl ContextMenuHandler {
+        fn on_before_context_menu(
+            &self,
+            _browser: Option<&mut Browser>,
+            _frame: Option<&mut Frame>,
+            _params: Option<&mut ContextMenuParams>,
+            model: Option<&mut MenuModel>,
+        ) {
+            if let Some(model) = model {
+                model.add_separator();
+                model.add_item(MENU_INSPECT, Some(&CefString::from("Inspect")));
+            }
+        }
+
+        fn on_context_menu_command(
+            &self,
+            browser: Option<&mut Browser>,
+            _frame: Option<&mut Frame>,
+            params: Option<&mut ContextMenuParams>,
+            command_id: i32,
+            _event_flags: EventFlags,
+        ) -> i32 {
+            if command_id != MENU_INSPECT {
+                return 0;
+            }
+            if let Some(browser) = browser {
+                let at = params.map(|p| Point { x: p.xcoord(), y: p.ycoord() });
+                shell::show_dev_tools(browser, at);
+            }
+            1
+        }
+    }
+}
+
 wrap_keyboard_handler! {
     struct KbKeyboardHandler;
 

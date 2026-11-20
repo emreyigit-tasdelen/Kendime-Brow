@@ -263,6 +263,17 @@ impl BrowserSideHandler for ShellQueryHandler {
                     }
                 });
             }
+            Command::AppUpdate { op } => {
+                std::thread::spawn(move || {
+                    let r = crate::updater::call(&op);
+                    if let Ok(cb) = callback.lock() {
+                        match r {
+                            Ok(json) => cb.success_str(&json),
+                            Err(e) => cb.failure(500, &e),
+                        }
+                    }
+                });
+            }
             Command::PdfTool { op, args } => {
                 std::thread::spawn(move || {
                     let r = crate::xtools::call(&op, &args);

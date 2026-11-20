@@ -35,6 +35,7 @@ pub mod command {
     pub const RELOAD: i32 = 7;
     pub const PALETTE: i32 = 8;
     pub const FULLSCREEN: i32 = 9;
+    pub const DEVTOOLS: i32 = 10;
 }
 
 // Windows virtual key codes (CEF uses them on every platform for accelerators).
@@ -46,6 +47,8 @@ const VK_T: i32 = 0x54;
 const VK_W: i32 = 0x57;
 const VK_F5: i32 = 0x74;
 const VK_P: i32 = 0x50;
+const VK_I: i32 = 0x49;
+const VK_F12: i32 = 0x7B;
 
 /// (command, key, shift, ctrl, alt)
 pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
@@ -58,6 +61,8 @@ pub const ACCELERATORS: &[(i32, i32, bool, bool, bool)] = &[
     (command::RELOAD, VK_F5, false, false, false),
     (command::PALETTE, VK_P, true, true, false),
     (command::FULLSCREEN, VK_F11, false, false, false),
+    (command::DEVTOOLS, VK_F12, false, false, false),
+    (command::DEVTOOLS, VK_I, true, true, false),
 ];
 
 /// One tab: its view plus the state shown in the UI strip.
@@ -1054,6 +1059,7 @@ pub fn run_bridge_command(cmd: Command) {
         | Command::Userscripts { .. }
         | Command::Media { .. }
         | Command::PdfTool { .. }
+        | Command::AppUpdate { .. }
         | Command::LocalFs { .. }
         | Command::TermOpen { .. }
         | Command::TermWrite { .. }
@@ -1150,6 +1156,11 @@ pub fn run_command(cmd: i32) -> bool {
             let on = with_shell(|s| s.window.is_fullscreen() == 0).unwrap_or(false);
             set_fullscreen(on);
         }
+        command::DEVTOOLS => {
+            if let Some(browser) = active_view().and_then(|v| v.browser()) {
+                show_dev_tools(&browser, None);
+            }
+        }
         command::CLOSE_TAB => close_active_tab(),
         command::NEXT_TAB | command::PREV_TAB => {
             with_shell(|s| s.tabs.cycle(cmd == command::NEXT_TAB));
@@ -1167,6 +1178,18 @@ pub fn run_command(cmd: i32) -> bool {
         _ => return false,
     }
     true
+}
+
+/// Opens DevTools for a browser in its own window, optionally inspecting the element at a point.
+pub fn show_dev_tools(browser: &Browser, at: Option<Point>) {
+    if let Some(host) = browser.host() {
+        host.show_dev_tools(
+            Some(&WindowInfo::default()),
+            None,
+            Some(&BrowserSettings::default()),
+            at.as_ref(),
+        );
+    }
 }
 
 /// Closes the active tab; closing the last tab closes the window.

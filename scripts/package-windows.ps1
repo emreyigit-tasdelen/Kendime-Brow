@@ -47,6 +47,7 @@ $pdfium = Join-Path $root 'target/pdfium/bin/pdfium.dll'
 if (Test-Path $pdfium) { Copy-Item $pdfium $stage } else { Write-Warning 'pdfium.dll not found - run scripts/fetch-pdfium.ps1 first' }
 Copy-Item -Recurse (Join-Path $release 'locales') $stage
 Copy-Item LICENSE, README.md $stage
+Copy-Item crates\kb-shell\assets\icon.ico $stage
 if (Test-Path (Join-Path $release 'CREDITS.html')) {
     Copy-Item (Join-Path $release 'CREDITS.html') (Join-Path $stage 'THIRD-PARTY-CEF-CREDITS.html')
 }
@@ -64,6 +65,7 @@ $menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'Kendime-Brow.lnk'
 $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($menu)
 $sh.TargetPath = Join-Path $target 'kendime-brow.exe'
 $sh.WorkingDirectory = $target
+$sh.IconLocation = (Join-Path $target 'icon.ico') + ',0'
 $sh.Save()
 "Installed to $target"
 '@ | Set-Content -Encoding UTF8 (Join-Path $stage 'install.ps1')

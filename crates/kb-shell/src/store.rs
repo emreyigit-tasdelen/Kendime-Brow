@@ -42,12 +42,23 @@ pub const SETTINGS: &[(&str, &str)] = &[
     ("restore_session", "true"),
     ("history_enabled", "true"),
     ("filters_auto_update", "true"),
+    ("updates_auto_check", "true"),
     ("fingerprint_protection", "standard"),
     ("https_only", "true"),
     ("doh", "off"),
     ("proxy_personal", ""),
     ("proxy_work", ""),
     ("proxy_temporary", ""),
+    // Downloads: custom folder ("" = system Downloads), ask where to save each file, sort into
+    // subfolders by type, risky-file policy (block | ask | allow), block plain-http downloads,
+    // mark files as downloaded from the internet, open safe files when done.
+    ("download_dir", ""),
+    ("download_ask", "false"),
+    ("download_sort", "false"),
+    ("download_dangerous", "ask"),
+    ("download_block_http", "false"),
+    ("download_motw", "true"),
+    ("download_open_done", "false"),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

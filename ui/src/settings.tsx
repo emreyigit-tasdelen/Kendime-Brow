@@ -13,6 +13,15 @@ const SEARCH_ENGINES: [string, string][] = [
   ['Mojeek', 'https://www.mojeek.com/search?q='],
 ];
 
+interface UpdateStatus {
+  enabled: boolean;
+  current: string;
+  phase: string;
+  version: string;
+  error: string;
+  canApply: boolean;
+}
+
 function formatDate(secs: number): string {
   return new Date(secs * 1000).toLocaleString();
 }
@@ -24,6 +33,20 @@ function Settings() {
   const setSetting = async (key: string, value: string) => {
     await send({ cmd: 'set-setting', key, value });
     await refetch();
+  };
+  const [upd, { mutate: setUpd }] = createResource(async () => {
+    try {
+      return JSON.parse(await send({ cmd: 'app-update', op: 'status' })) as UpdateStatus;
+    } catch {
+      return undefined;
+    }
+  });
+  const updOp = async (op: string) => {
+    try {
+      setUpd(JSON.parse(await send({ cmd: 'app-update', op })) as UpdateStatus);
+    } catch (e) {
+      setUpd((u) => (u ? { ...u, phase: 'error', error: String(e) } : u));
+    }
   };
   const bool = (key: string) => data()?.settings[key] === 'true';
   const open = (url: string) => void send({ cmd: 'new-tab', url });
@@ -113,6 +136,72 @@ function Settings() {
       </section>
 
       <section>
+        <h2>Downloads</h2>
+        <label class="row">
+          <span>Download folder (empty = system Downloads)</span>
+          <input
+            class="search proxy"
+            type="text"
+            spellcheck={false}
+            placeholder="C:\Users\you\Downloads"
+            value={data()?.settings.download_dir ?? ''}
+            onChange={(e) => void setSetting('download_dir', e.currentTarget.value.trim())}
+          />
+        </label>
+        <label class="row">
+          <span>Ask where to save each file before downloading</span>
+          <input
+            type="checkbox"
+            checked={bool('download_ask')}
+            onChange={(e) => void setSetting('download_ask', String(e.currentTarget.checked))}
+          />
+        </label>
+        <label class="row">
+          <span>Sort downloads into subfolders by type (Images, Documents, Video…)</span>
+          <input
+            type="checkbox"
+            checked={bool('download_sort')}
+            onChange={(e) => void setSetting('download_sort', String(e.currentTarget.checked))}
+          />
+        </label>
+        <label class="row">
+          <span>Open safe files automatically when the download finishes</span>
+          <input
+            type="checkbox"
+            checked={bool('download_open_done')}
+            onChange={(e) => void setSetting('download_open_done', String(e.currentTarget.checked))}
+          />
+        </label>
+        <label class="row">
+          <span>Programs and scripts (.exe, .msi, .bat, invoice.pdf.exe…)</span>
+          <select
+            value={data()?.settings.download_dangerous ?? 'ask'}
+            onChange={(e) => void setSetting('download_dangerous', e.currentTarget.value)}
+          >
+            <option value="ask">Ask where to save (never opened automatically)</option>
+            <option value="block">Block</option>
+            <option value="allow">Allow</option>
+          </select>
+        </label>
+        <label class="row">
+          <span>Block downloads over insecure http://</span>
+          <input
+            type="checkbox"
+            checked={bool('download_block_http')}
+            onChange={(e) => void setSetting('download_block_http', String(e.currentTarget.checked))}
+          />
+        </label>
+        <label class="row">
+          <span>Mark files as downloaded from the internet (SmartScreen / Protected View)</span>
+          <input
+            type="checkbox"
+            checked={data()?.settings.download_motw !== 'false'}
+            onChange={(e) => void setSetting('download_motw', String(e.currentTarget.checked))}
+          />
+        </label>
+      </section>
+
+      <section>
         <h2>Content blocking</h2>
         <label class="row">
           <span>Update filter lists automatically (daily)</span>
@@ -158,6 +247,59 @@ function Settings() {
             Update now
           </button>
         </div>
+      </section>
+
+      <section>
+        <h2>Updates</h2>
+        <label class="row">
+          <span>Check for updates at startup</span>
+          <input
+            type="checkbox"
+            checked={bool('updates_auto_check')}
+            onChange={(e) => void setSetting('updates_auto_check', String(e.currentTarget.checked))}
+          />
+        </label>
+        <div class="row">
+          <span class="muted">
+            {!upd()?.enabled
+              ? `Version ${upd()?.current ?? ''} · updates are not enabled in this build`
+              : upd()?.phase === 'available'
+                ? `Version ${upd()?.version} is available (current ${upd()?.current})`
+                : upd()?.phase === 'staged'
+                  ? `Version ${upd()?.version} is verified and ready`
+                  : upd()?.phase === 'applying'
+                    ? 'Close the browser to finish the update'
+                    : upd()?.phase === 'error'
+                      ? `Update error: ${upd()?.error}`
+                      : upd()?.phase === 'checking' || upd()?.phase === 'downloading'
+                        ? 'Working…'
+                        : `Version ${upd()?.current ?? ''} · up to date`}
+          </span>
+          <Show when={upd()?.enabled}>
+            <Show
+              when={upd()?.phase === 'available'}
+              fallback={
+                <Show
+                  when={upd()?.phase === 'staged' && upd()?.canApply}
+                  fallback={
+                    <button class="plain" onClick={() => void updOp('check')}>
+                      Check now
+                    </button>
+                  }
+                >
+                  <button class="plain" onClick={() => void updOp('apply')}>
+                    Install on exit
+                  </button>
+                </Show>
+              }
+            >
+              <button class="plain" onClick={() => void updOp('download')}>
+                Download
+              </button>
+            </Show>
+          </Show>
+        </div>
+        <p class="muted">Updates come from the project's GitHub Releases and are checksum-verified before use.</p>
       </section>
 
       <section>

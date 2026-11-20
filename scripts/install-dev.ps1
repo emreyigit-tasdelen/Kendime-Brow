@@ -20,5 +20,6 @@ $lnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'Kendime-Brow (dev).
 $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
 $sh.TargetPath = $exe
 $sh.WorkingDirectory = Split-Path $exe
+$sh.IconLocation = (Join-Path $root 'crates\kb-shell\assets\icon.ico') + ',0'
 $sh.Save()
 "Shortcut: $lnk -> $exe"
